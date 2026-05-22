@@ -74,7 +74,7 @@ function StreamLog(props: { stream: Stream; logDelayMs: number; refreshRequestId
         setErrorMessage("");
       })
       .catch((error: unknown) => {
-        console.error("watchwall:fetchLog", error);
+        console.error("multisport:fetchLog", error);
 
         if (!isMountedRef.current) {
           return;
@@ -117,17 +117,17 @@ function StreamLog(props: { stream: Stream; logDelayMs: number; refreshRequestId
   }, [fetchAndHandleLog, props.refreshRequestId]);
 
   if (!props.stream.espn_id || props.stream.espn_id < 0) {
-    return <div className="watchwall-log-empty">No ESPN game linked.</div>;
+    return <div className="multisport-log-empty">No ESPN game linked.</div>;
   }
 
   if (!config) {
-    return <div className="watchwall-log-empty">Play-by-play is not supported for this league yet.</div>;
+    return <div className="multisport-log-empty">Play-by-play is not supported for this league yet.</div>;
   }
 
   if (!displayedLog) {
     return (
       <div
-        className="watchwall-log-empty watchwall-log-empty-refreshable"
+        className="multisport-log-empty multisport-log-empty-refreshable"
         role="button"
         tabIndex={0}
         onClick={() => {
@@ -182,7 +182,7 @@ function LogView(props: {
 
   return (
     <div
-      className="watchwall-log"
+      className="multisport-log"
       role="button"
       tabIndex={0}
       onClick={props.onClick}
@@ -193,57 +193,57 @@ function LogView(props: {
         }
       }}
     >
-      <div className="watchwall-log-content watchwall-log-top">
-        <div className="watchwall-log-topbar">
+      <div className="multisport-log-content multisport-log-top">
+        <div className="multisport-log-topbar">
           <span>{new Date(props.log.timestamp).toLocaleTimeString()}</span>
           <LogWinProbability winProbability={props.log.winProbability} />
           <LogActions espnGameUrl={props.espnGameUrl} />
         </div>
-        <div className="watchwall-log-team-summary-row">
+        <div className="multisport-log-team-summary-row">
           {props.log.teams.map((team) => (
             <div
               key={team.name}
-              className={team.isHomeTeam ? "watchwall-log-team-summary-card watchwall-log-team-summary-card-home" : "watchwall-log-team-summary-card"}
+              className={team.isHomeTeam ? "multisport-log-team-summary-card multisport-log-team-summary-card-home" : "multisport-log-team-summary-card"}
               title={JSON.stringify(team.statistics, null, 2)}
             >
-              <div className="watchwall-log-team-summary-name">{team.name}</div>
-              <div className="watchwall-log-team-summary-stats">
+              <div className="multisport-log-team-summary-name">{team.name}</div>
+              <div className="multisport-log-team-summary-stats">
                 {renderTeamStatistics(team.statistics)}
               </div>
             </div>
           ))}
         </div>
         {scoringRuns.length > 0 ? (
-          <div className="watchwall-log-scoring-run">
+          <div className="multisport-log-scoring-run">
             {scoringRuns.map((scoringRun) => (
-              <span key={scoringRun} className="watchwall-log-scoring-run-item">
+              <span key={scoringRun} className="multisport-log-scoring-run-item">
                 {scoringRun}
               </span>
             ))}
           </div>
         ) : null}
-        <div className="watchwall-log-spacer" />
+        <div className="multisport-log-spacer" />
         {playByPlay.slice().reverse().map((drive, index) => (
-          <div key={`${drive.team}-${drive.description}-${index}`} className="watchwall-log-event-row">
-            <div className="watchwall-log-header">
-              <div className="watchwall-log-event-meta">
+          <div key={`${drive.team}-${drive.description}-${index}`} className="multisport-log-event-row">
+            <div className="multisport-log-header">
+              <div className="multisport-log-event-meta">
                 <span>{drive.team || "Update"}</span>
                 {drive.score ? (
-                  <span className="watchwall-log-topbar-muted">{drive.score}</span>
+                  <span className="multisport-log-topbar-muted">{drive.score}</span>
                 ) : null}
               </div>
-              <div className="watchwall-log-event-description">{drive.description}</div>
-              {drive.meta ? <div className="watchwall-log-topbar-muted">{drive.meta}</div> : null}
+              <div className="multisport-log-event-description">{drive.description}</div>
+              {drive.meta ? <div className="multisport-log-topbar-muted">{drive.meta}</div> : null}
             </div>
             <div>
               {(drive.plays || []).slice().reverse().map((play, playIndex) => {
                 const hideText = play.text === drive.description;
                 const hasPlayMeta = Boolean(play.clock || play.down);
                 return (
-                  <div key={`${play.clock}-${playIndex}`} className="watchwall-log-play-content">
+                  <div key={`${play.clock}-${playIndex}`} className="multisport-log-play-content">
                     {!hideText ? <div>{play.text}</div> : null}
                     {hasPlayMeta ? (
-                      <div className="watchwall-log-play-meta">
+                      <div className="multisport-log-play-meta">
                         {play.down ? <span>{play.down}</span> : null}
                         {play.clock ? <span>{play.clock}</span> : null}
                       </div>
@@ -255,12 +255,12 @@ function LogView(props: {
           </div>
         ))}
       </div>
-      <div className="watchwall-log-content watchwall-log-bottom">
-        <Autoscroller className="watchwall-log-autoscroller" speed={0.1}>
+      <div className="multisport-log-content multisport-log-bottom">
+        <Autoscroller className="multisport-log-autoscroller" speed={0.1}>
           <>
             {(props.log.boxScore || []).map((boxScore) => (
-              <div key={boxScore.key} className="watchwall-log-box-score">
-                <div className="watchwall-log-header">{boxScore.key}</div>
+              <div key={boxScore.key} className="multisport-log-box-score">
+                <div className="multisport-log-header">{boxScore.key}</div>
                 <table>
                   <thead>
                     <tr>
@@ -274,9 +274,9 @@ function LogView(props: {
                     {(boxScore.players || []).map((player) => (
                       <tr
                         key={player.name}
-                        className={player.isHomeTeam ? "watchwall-log-box-score-row watchwall-log-box-score-row-home" : "watchwall-log-box-score-row"}
+                        className={player.isHomeTeam ? "multisport-log-box-score-row multisport-log-box-score-row-home" : "multisport-log-box-score-row"}
                       >
-                        <td className="watchwall-log-player-name">{player.name}</td>
+                        <td className="multisport-log-player-name">{player.name}</td>
                         {player.stats.map((stat, index) => (
                           <td key={`${player.name}-${index}`}>{stat}</td>
                         ))}
@@ -300,7 +300,7 @@ function LogActions(props: { espnGameUrl: string | null }) {
 
   return (
     <a
-      className="watchwall-log-link"
+      className="multisport-log-link"
       href={props.espnGameUrl}
       target="_blank"
       rel="noreferrer"
@@ -315,13 +315,13 @@ function LogActions(props: { espnGameUrl: string | null }) {
 
 function LogWinProbability(props: { winProbability?: WinProbabilityType | null }) {
   if (!props.winProbability?.team || !Number.isFinite(props.winProbability.probability)) {
-    return <span className="watchwall-log-topbar-probability" />;
+    return <span className="multisport-log-topbar-probability" />;
   }
 
   const probabilityLabel = `${Math.round(props.winProbability.probability * 100)}%`;
 
   return (
-    <span className="watchwall-log-topbar-probability">
+    <span className="multisport-log-topbar-probability">
       {props.winProbability.isHomeTeam ? `${probabilityLabel} \u2192` : `\u2190 ${probabilityLabel}`}
     </span>
   );
@@ -401,10 +401,10 @@ function renderStatRows(lines: string[][]) {
   return (
     <>
       {rows.map((row, rowIndex) => (
-        <div key={rowIndex} className="watchwall-log-team-summary-stat-row">
+        <div key={rowIndex} className="multisport-log-team-summary-stat-row">
           {row.map(([label, value]) => (
-            <div key={label} className="watchwall-log-team-summary-stat-line">
-              <span className="watchwall-log-team-summary-stat-label">{label}</span>
+            <div key={label} className="multisport-log-team-summary-stat-line">
+              <span className="multisport-log-team-summary-stat-label">{label}</span>
               <span>{value}</span>
             </div>
           ))}

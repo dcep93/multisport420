@@ -1,6 +1,6 @@
 const PROXY_URL = "https://proxy420.appspot.com/";
 
-const CACHE_DB_NAME = "watchwall420.proxy420";
+const CACHE_DB_NAME = "multisport420.proxy420";
 const CACHE_STORE_NAME = "responses";
 
 type ProxyFetchTextArgs = {

@@ -1,7 +1,7 @@
 (() => {
-  const APP_MESSAGE_SOURCE = "watchwall420-app";
-  const SET_MUTED = "watchwall420:set-muted";
-  const TOGGLE_MUTE = "watchwall420:toggle-mute";
+  const APP_MESSAGE_SOURCE = "multisport420-app";
+  const SET_MUTED = "multisport420:set-muted";
+  const TOGGLE_MUTE = "multisport420:toggle-mute";
   let lastSetMutedMessage = null;
   const hideDontfoid = () => {
     const dontfoid = document.querySelector("#dontfoid");

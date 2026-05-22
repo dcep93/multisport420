@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Watchwall420",
+  "name": "Multisport420",
   "version": "0.2.0",
-  "description": "Inactive Watchwall420 extension shell.",
+  "description": "Inactive Multisport420 extension shell.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
@@ -10,7 +10,7 @@
     "128": "icons/icon-128.png"
   },
   "action": {
-    "default_title": "Watchwall420",
+    "default_title": "Multisport420",
     "default_icon": {
       "16": "icons/icon-16.png",
       "32": "icons/icon-32.png"

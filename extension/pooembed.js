@@ -1,10 +1,10 @@
 (() => {
   const HOST_HOSTNAMES = new Set(["localhost", "watchwall420.web.app"]);
-  const APP_MESSAGE_SOURCE = "watchwall420-app";
-  const SET_MUTED = "watchwall420:set-muted";
-  const TOGGLE_MUTE = "watchwall420:toggle-mute";
+  const APP_MESSAGE_SOURCE = "multisport420-app";
+  const SET_MUTED = "multisport420:set-muted";
+  const TOGGLE_MUTE = "multisport420:toggle-mute";
   const ancestorOrigins = Array.from(window.location.ancestorOrigins ?? []);
-  const isDescendantOfWatchwallHost = ancestorOrigins.some((origin) =>
+  const isDescendantOfMultisportHost = ancestorOrigins.some((origin) =>
     HOST_HOSTNAMES.has(new URL(origin).hostname),
   );
   let hasUserInteracted = false;
@@ -14,7 +14,7 @@
   let didAppMuteCurrentVideo = false;
   let detachVideoListener = null;
 
-  if (!isDescendantOfWatchwallHost) {
+  if (!isDescendantOfMultisportHost) {
     return;
   }
 
@@ -109,7 +109,7 @@
     }
 
     void playResult.catch((error) => {
-      console.log("watchwall:pooembed:play-error", error);
+      console.log("multisport:pooembed:play-error", error);
     });
   }
 

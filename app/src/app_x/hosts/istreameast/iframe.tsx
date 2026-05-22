@@ -3,9 +3,9 @@ import type { IframeParams } from "./types";
 
 function scrollLockScriptRunner() {
   const topWindow = window.top ?? window;
-  const APP_MESSAGE_SOURCE = "watchwall420-app";
-  const SET_MUTED = "watchwall420:set-muted";
-  const TOGGLE_MUTE = "watchwall420:toggle-mute";
+  const APP_MESSAGE_SOURCE = "multisport420-app";
+  const SET_MUTED = "multisport420:set-muted";
+  const TOGGLE_MUTE = "multisport420:toggle-mute";
   let lastSetMutedMessage: unknown = null;
 
   const lockCurrentScrollPosition = () => {
@@ -25,7 +25,7 @@ function scrollLockScriptRunner() {
   };
 
   const attachLoadListener = () => {
-    const playerFrame = document.getElementById("watchwall-player-frame");
+    const playerFrame = document.getElementById("multisport-player-frame");
 
     if (!playerFrame) {
       return;
@@ -94,7 +94,7 @@ export function renderIstreameastPlayerDocument(iframeParams: IframeParams): Rea
         }}
       >
         <iframe
-          id="watchwall-player-frame"
+          id="multisport-player-frame"
           src={iframeParams._2_embedPageUrl}
           frameBorder="0"
           style={{

@@ -30,7 +30,7 @@ export default function Menu(props: {
           className="menu-title"
           title={shaTooltip}
         >
-          watchwall420
+          multisport420
         </h1>
         {isMobile ? (
           <button

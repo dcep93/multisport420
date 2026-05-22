@@ -313,8 +313,8 @@ function ScreenContent<T>(props: {
 
     iframeElement.contentWindow?.postMessage(
       {
-        source: "watchwall420-app",
-        type: "watchwall420:toggle-mute",
+        source: "multisport420-app",
+        type: "multisport420:toggle-mute",
       },
       "*",
     );
@@ -327,8 +327,8 @@ function ScreenContent<T>(props: {
 
     iframeElement.contentWindow?.postMessage(
       {
-        source: "watchwall420-app",
-        type: "watchwall420:set-muted",
+        source: "multisport420-app",
+        type: "multisport420:set-muted",
         muted: !isFocused,
       },
       "*",

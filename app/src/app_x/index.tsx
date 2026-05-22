@@ -1,6 +1,6 @@
-import "./styles/watchwall.css";
-import WatchwallApp from "./components/WatchwallApp";
+import "./styles/multisport.css";
+import MultisportApp from "./components/MultisportApp";
 
 export default function AppX() {
-  return <WatchwallApp />;
+  return <MultisportApp />;
 }

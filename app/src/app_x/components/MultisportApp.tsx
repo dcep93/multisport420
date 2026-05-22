@@ -31,7 +31,7 @@ function focusReplacementStream(
   setMuteToggleRequestId((current) => current + 1);
 }
 
-export default function WatchwallApp() {
+export default function MultisportApp() {
   const hostCategories = HOST.getLeagueCategories();
   const defaultCategory = getDefaultCategory(hostCategories);
   const [isAuthorized, setIsAuthorized] = useState(() => (IS_DEV ? true : getInitialAuthorized()));
@@ -216,7 +216,7 @@ export default function WatchwallApp() {
   }
 
   return (
-    <main className="watchwall-shell">
+    <main className="multisport-shell">
       <Menu
         category={category}
         categories={hostCategories}

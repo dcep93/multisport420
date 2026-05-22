@@ -38,10 +38,10 @@ export default function PasswordGate(props: { onUnlock: () => void }) {
   return (
     <main className="password-shell">
       <form className="password-card" onSubmit={onSubmit}>
-        <h1>watchwall420</h1>
+        <h1>multisport420</h1>
         <div className="password-row">
           <input
-            id="watchwall-password"
+            id="multisport-password"
             ref={inputRef}
             className="password-input"
             type="text"
