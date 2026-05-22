@@ -1,4 +1,4 @@
-# Multisport420 Chrome Extension
+# multisport420 Chrome Extension
 
 Minimal Manifest V3 extension shell.
 
