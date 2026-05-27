@@ -1,4 +1,4 @@
-export const ISTREAMEAST_URL = "https://istreameast.is/";
+export const ISTREAMEAST_URL = "https://istreameast.cx/";
 export const LOCAL_PROXY_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 export const REMOTE_PROXY_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 export const UPCOMING_WINDOW_SECONDS = 60 * 60;
