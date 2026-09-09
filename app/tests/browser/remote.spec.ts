@@ -53,6 +53,9 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
   });
   await mockStreams(context);
   await page.goto("/");
+  await expect(page.getByLabel("categories", { exact: true })).toHaveValue("NFL");
+  await expect(page.locator(".menu-card").filter({ has: page.getByRole("heading", { name: "Options", exact: true }) }).getByRole("heading", { name: "Phone remote", exact: true })).toBeVisible();
+  await page.getByLabel("categories", { exact: true }).selectOption("MLB");
   await page.locator(".stream-toggle").nth(0).click();
   await page.locator(".stream-toggle").nth(1).click();
   await page.getByRole("button", { name: "Join", exact: true }).click();
@@ -142,6 +145,7 @@ test("joining an existing named room replaces its lineup; other rooms stay indep
     focusedSlug: "old", command: { id: "old-command", type: "mute", slug: "old" },
   } });
   await page.goto("/");
+  await page.getByLabel("categories", { exact: true }).selectOption("MLB");
   await page.locator(".stream-toggle").nth(2).click();
   await page.getByLabel(/Room ID/).fill("a/b 🏀");
   await page.getByRole("button", { name: "Join", exact: true }).click();
@@ -158,6 +162,7 @@ test("joining an existing named room replaces its lineup; other rooms stay indep
 
   const viewer2 = await context.newPage();
   await viewer2.goto("/");
+  await viewer2.getByLabel("categories", { exact: true }).selectOption("MLB");
   await viewer2.locator(".stream-toggle").nth(0).click();
   await viewer2.getByLabel(/Room ID/).fill("a/b 🏀");
   await viewer2.getByRole("button", { name: "Join", exact: true }).click();
@@ -185,6 +190,7 @@ test("an empty room waits for a viewer, and failed Join leaves local controls us
   });
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
+  await page.getByLabel("categories", { exact: true }).selectOption("MLB");
   await page.locator(".stream-toggle").nth(0).click();
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await expect(page.getByText("This room could not be accessed. Check the Firebase room rules.")).toBeVisible();

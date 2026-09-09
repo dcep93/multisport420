@@ -1,6 +1,6 @@
 import type { Category, Stream, StreamCategory } from "../config/types";
 
-const PREFERRED_DEFAULT_CATEGORY: StreamCategory = "MLB";
+const PREFERRED_DEFAULT_CATEGORY: StreamCategory = "NFL";
 
 export function getDefaultCategory(categories: readonly StreamCategory[]): Category {
   if (categories.includes(PREFERRED_DEFAULT_CATEGORY)) {

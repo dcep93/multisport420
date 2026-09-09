@@ -30,7 +30,7 @@ export default function RoomControls({ room, onJoin, onLeave, disabled }: {
   return (
     <section className="room-card" aria-labelledby="room-heading">
       <div className="room-card-heading">
-        <h2 id="room-heading">Phone remote</h2>
+        <h3 id="room-heading">Phone remote</h3>
         {joined && <span className={`room-status ${room.status === "connected" ? "is-online" : ""}`}>
           {room.status === "connected" ? "Live" : "Disconnected"}
         </span>}
@@ -40,19 +40,17 @@ export default function RoomControls({ room, onJoin, onLeave, disabled }: {
         setCopyStatus("");
         onJoin(input);
       }}>
-        <label htmlFor="room-id">Room ID <span>(optional)</span></label>
         <div className="room-input-row">
-          <input id="room-id" value={input} maxLength={120} autoComplete="off"
-            autoCapitalize="none" spellCheck={false} placeholder="Default room"
+          <input id="room-id" aria-label="Room ID (optional)" value={input} maxLength={120} autoComplete="off"
+            autoCapitalize="none" spellCheck={false} placeholder="Room ID (optional)"
             onChange={(event) => setInput(event.target.value)} />
           <button type="submit" disabled={disabled || room.status === "connecting"}>
             {room.status === "connecting" ? "Joining…" : "Join"}
           </button>
         </div>
       </form>
-      <p className="room-hint">Join publishes your current streams and spotlight to this room.</p>
       {joined && <>
-        <p className="room-current">Sharing: <strong>{room.roomId || "Default room"}</strong></p>
+        <p className="room-current">{room.roomId || "Default room"}</p>
         <div className="room-links">
           <a href={path} target="_blank" rel="noreferrer">Open remote ↗</a>
           <button type="button" onClick={() => void copyLink()}>Share link</button>

@@ -1,6 +1,6 @@
 # Phone remote
 
-On the viewing screen, choose streams, enter an optional room ID in **Phone
+On the viewing screen, choose streams, enter an optional room ID in **Options → Phone
 remote**, and press **Join**. A blank ID is the default room. Joining always
 publishes the viewer's current lineup and spotlight, replacing any existing room
 state. **Open remote** and **Share link** provide the phone URL.

@@ -1,8 +1,7 @@
 .room-card {
-  padding: 16px;
-  border: 1px solid var(--ww-border);
-  border-radius: 20px;
-  background: var(--ww-panel-strong);
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ww-border);
 }
 .room-card-heading, .remote-header {
   display: flex;
@@ -10,22 +9,30 @@
   justify-content: space-between;
   gap: 12px;
 }
-.room-card h2 { margin: 0; font-size: 1rem; }
-.room-card label { display: block; margin: 16px 0 6px; font-size: .8rem; }
-.room-card label span, .room-hint { color: var(--ww-text-muted); }
-.room-input-row { display: flex; gap: 8px; }
+.room-card h3 { margin: 0; color: var(--ww-text-muted); font-size: .85rem; font-weight: 400; }
+.room-input-row { display: flex; gap: 8px; margin-top: 8px; }
 .room-input-row input {
   min-width: 0;
   flex: 1;
-  padding: 10px 12px;
-  border: 1px solid var(--ww-border-strong);
-  border-radius: 12px;
-  color: white;
-  background: #100c0a;
+  padding: 8px 10px;
+  border: 1px solid var(--ww-border);
+  border-radius: 8px;
+  color: var(--ww-text-strong);
+  background: transparent;
   font: inherit;
   font-size: 16px;
 }
-.room-input-row button, .remote-notice button {
+.room-input-row button {
+  border: 1px solid var(--ww-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: transparent;
+  color: var(--ww-text);
+  font: inherit;
+  font-size: .85rem;
+  cursor: pointer;
+}
+.remote-notice button {
   border: 0;
   border-radius: 12px;
   padding: 10px 16px;
@@ -35,8 +42,7 @@
   font-weight: 700;
   cursor: pointer;
 }
-.room-hint { font-size: .78rem; line-height: 1.5; margin: 10px 0 0; }
-.room-current { font-size: .82rem; overflow-wrap: anywhere; margin-bottom: 8px; }
+.room-current { color: var(--ww-text-muted); font-size: .8rem; overflow-wrap: anywhere; margin: 8px 0 0; }
 .room-links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
 .room-links a, .room-links button {
   padding: 6px 0;

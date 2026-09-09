@@ -43,7 +43,6 @@ export default function Menu(props: {
         ) : null}
       </div>
 
-      {props.roomControls}
       <div className="stream-list">
         {props.isLoadingStreams ? (
           <div className="stream-list-loading" aria-live="polite" aria-busy="true">
@@ -64,6 +63,7 @@ export default function Menu(props: {
 
       <Guide />
       <Options
+        roomControls={props.roomControls}
         category={props.category}
         categories={props.categories}
         displayLogs={props.displayLogs}

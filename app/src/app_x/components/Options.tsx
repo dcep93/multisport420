@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Category, StreamCategory } from "../config/types";
 import {
   clearProxyCache,
@@ -34,6 +35,7 @@ function formatApproximateSize(sizeBytes: number) {
 }
 
 export default function Options(props: {
+  roomControls?: ReactNode;
   category: Category;
   categories: readonly StreamCategory[];
   onCategoryChange: (value: Category) => void;
@@ -100,6 +102,7 @@ export default function Options(props: {
           />
         </div>
       </div>
+      {props.roomControls}
     </section>
   );
 }
