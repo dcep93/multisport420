@@ -51,6 +51,7 @@ type SelectionState = {
 };
 
 type SelectionAction =
+  | { type: "restoreSelection"; streams: Stream[] }
   | {
       type: "setSelectedSlugs";
       selectedSlugs: StreamSlug[];
@@ -107,6 +108,10 @@ function applySelectedSlugs(
 }
 
 function selectedStreamsReducer(state: SelectionState, action: SelectionAction): SelectionState {
+  if (action.type === "restoreSelection") {
+    return { selectedSlugs: action.streams.map((stream) => stream.slug),
+      selectedStreamsBySlug: Object.fromEntries(action.streams.map((stream) => [stream.slug, stream])) };
+  }
   if (action.type === "setSelectedSlugs") {
     return applySelectedSlugs(state, action.selectedSlugs, action.streams);
   }
@@ -167,7 +172,7 @@ function selectedStreamsReducer(state: SelectionState, action: SelectionAction):
   };
 }
 
-export default function useSelectedStreamIds(streams: Stream[] | null) {
+export default function useSelectedStreamIds(streams: Stream[] | null, roomStreams?: Stream[]) {
   const [initialHash] = useState(() => window.location.hash);
   const initialSelectedSlugs = useMemo(() => parseSelectedSlugsFromHash(initialHash), [initialHash]);
   const [state, dispatch] = useReducer(
@@ -201,6 +206,7 @@ export default function useSelectedStreamIds(streams: Stream[] | null) {
 
   useEffect(() => {
     const onHashChange = () => {
+      if (roomStreams) return;
       dispatch({
         type: "setSelectedSlugs",
         selectedSlugs: parseSelectedSlugsFromHash(window.location.hash),
@@ -210,7 +216,7 @@ export default function useSelectedStreamIds(streams: Stream[] | null) {
 
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
-  }, [streams]);
+  }, [streams, roomStreams]);
 
   useEffect(() => {
     dispatch({
@@ -220,10 +226,11 @@ export default function useSelectedStreamIds(streams: Stream[] | null) {
   }, [streams]);
 
   useEffect(() => {
-    if (!hashMatchesSelectedSlugs(state.selectedSlugs)) {
-      writeSelectedSlugsToHash(state.selectedSlugs);
+    const slugs = roomStreams ? roomStreams.map((stream) => stream.slug) : state.selectedSlugs;
+    if (!hashMatchesSelectedSlugs(slugs)) {
+      writeSelectedSlugsToHash(slugs);
     }
-  }, [state.selectedSlugs]);
+  }, [state.selectedSlugs, roomStreams]);
 
   const selectedStreams = useMemo(
     () =>
@@ -234,6 +241,7 @@ export default function useSelectedStreamIds(streams: Stream[] | null) {
   );
 
   return {
+    restoreSelection: (streams: Stream[]) => dispatch({ type: "restoreSelection", streams }),
     hadHashSelectionOnLoad: initialSelectedSlugs.length > 0,
     selectedSlugs: state.selectedSlugs,
     selectedStreams,

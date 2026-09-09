@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { formatShaTooltip } from "../config/sha_x";
 import type { Category, Stream, StreamCategory, StreamSlug } from "../config/types";
 import Guide from "./Guide";
@@ -7,6 +7,7 @@ import Options from "./Options";
 const MOBILE_MENU_BREAKPOINT_PX = 960;
 
 export default function Menu(props: {
+  roomControls?: ReactNode;
   category: Category;
   categories: readonly StreamCategory[];
   streams: Stream[];
@@ -42,6 +43,7 @@ export default function Menu(props: {
         ) : null}
       </div>
 
+      {props.roomControls}
       <div className="stream-list">
         {props.isLoadingStreams ? (
           <div className="stream-list-loading" aria-live="polite" aria-busy="true">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type Ref } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
 import renderLog from "../lib/renderLog";
@@ -230,6 +230,7 @@ function ScreenContent<T>(props: {
   const [srcDoc, setSrcDoc] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null);
+  const lastMuteRequest = useRef(muteToggleRequestId);
   const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [refreshOverride, setRefreshOverride] = useState<{
     sourceStreamKey: string;
@@ -307,6 +308,8 @@ function ScreenContent<T>(props: {
   ]);
 
   useEffect(() => {
+    if (lastMuteRequest.current === muteToggleRequestId) return;
+    lastMuteRequest.current = muteToggleRequestId;
     if (!iframeElement || !shouldToggleMute || muteToggleRequestId === 0) {
       return;
     }
@@ -350,7 +353,7 @@ function ScreenContent<T>(props: {
           {errorMessage}
         </pre>
       ) : (
-        <iframe
+      <iframe
           key={`${resolvedStream.slug}-${resolvedStream.raw_url}-${refreshRequestId}`}
           className="screen-iframe"
           title={indexedTitle}
@@ -358,6 +361,11 @@ function ScreenContent<T>(props: {
           loading="eager"
           referrerPolicy="no-referrer"
           ref={setIframeElement}
+          onLoad={(event) => event.currentTarget.contentWindow?.postMessage({
+            source: "multisport420-app",
+            type: "multisport420:set-muted",
+            muted: !isFocused,
+          }, "*")}
         />
       )}
     </div>
