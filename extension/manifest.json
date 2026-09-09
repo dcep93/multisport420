@@ -2,19 +2,12 @@
   "manifest_version": 3,
   "name": "multisport420",
   "version": "0.2.1",
-  "description": "TODO: describe",
+  "description": "Companion for multisport420.web.app that manages video playback, mute controls, and intrusive popups.",
   "icons": {
     "16": "icons/icon-16.png",
     "32": "icons/icon-32.png",
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
-  },
-  "action": {
-    "default_title": "multisport420",
-    "default_icon": {
-      "16": "icons/icon-16.png",
-      "32": "icons/icon-32.png"
-    }
   },
   "content_scripts": [
     {
