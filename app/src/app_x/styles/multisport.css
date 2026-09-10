@@ -19,6 +19,20 @@
   --ww-danger: #ff9fb0;
 }
 
+/* Keep viewport-sized screens and log panels clear of Windows scrollbar gutters.
+   The containers still scroll with the wheel, touch, keyboard and autoscroller. */
+html:has(.multisport-shell),
+.multisport-shell :is(.menu-column, .screen-focus, .log-entry, .multisport-log,
+  .multisport-log-content, .multisport-log-autoscroller, .multisport-log-team-summary-stats) {
+  scrollbar-width: none;
+}
+
+html:has(.multisport-shell)::-webkit-scrollbar,
+.multisport-shell :is(.menu-column, .screen-focus, .log-entry, .multisport-log,
+  .multisport-log-content, .multisport-log-autoscroller, .multisport-log-team-summary-stats)::-webkit-scrollbar {
+  display: none;
+}
+
 .password-shell {
   min-height: 100svh;
   box-sizing: border-box;
