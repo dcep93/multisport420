@@ -4,6 +4,41 @@ import { getFootballLog } from "../src/app_x/lib/renderLog/football";
 afterEach(() => vi.unstubAllGlobals());
 
 describe("ESPN football references", () => {
+  it.each([false, true])("keeps drives and plays chronological for newest-first rendering (summary fallback: %s)", async (fallback) => {
+    const makePlay = (text: string, clock: string, score: number, wallclock: string) => ({
+      text, clock: { displayValue: clock }, period: { number: 1 }, participants: [],
+      awayScore: score, homeScore: 0, wallclock,
+    });
+    const oldDrive = { id: "old", description: "Opening drive", team: { shortDisplayName: "Seahawks" }, plays: [
+      makePlay("Opening kickoff", "15:00", 0, "2026-09-10T00:20:00Z"),
+      makePlay("Opening drive punt", "11:42", 0, "2026-09-10T00:25:00Z"),
+    ] };
+    const newDrive = { id: "new", description: "Latest drive", team: { shortDisplayName: "Patriots" }, plays: [
+      makePlay("Latest drive run", "11:30", 0, "2026-09-10T00:26:00Z"),
+      makePlay("Touchdown", "10:00", 6, "2026-09-10T00:30:00Z"),
+    ] };
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      let data: unknown;
+      if (url.includes("/summary?")) data = { drives: { current: newDrive, previous: [oldDrive] } };
+      else if (url.endsWith("/drives?limit=1000")) data = { items: fallback ? [] : [oldDrive, newDrive].map(d => ({ id: d.id, $ref: `http://sports.core.api.espn.com/${d.id}` })) };
+      else if (url.endsWith("/team")) data = { shortDisplayName: "Team" };
+      else {
+        const drive = url.endsWith("/old") ? oldDrive : newDrive;
+        data = { ...drive, team: { $ref: "http://sports.core.api.espn.com/team" }, plays: { items: drive.plays } };
+      }
+      return { ok: true, json: async () => data };
+    }));
+    const log = await getFootballLog({ category: "NFL", espn_id: 401872656, title: "Patriots @ Seahawks", raw_url: "", slug: "game" }, {
+      sport: "football", espnLeague: "nfl", playType: "football", boxScoreKeys: [],
+    });
+    expect(log?.playByPlay.map(drive => drive.description)).toEqual(["Opening drive", "Latest drive"]);
+    expect(log?.playByPlay.flatMap(drive => drive.plays?.map(play => play.text))).toEqual([
+      "Opening kickoff", "Opening drive punt", "Latest drive run", "Touchdown",
+    ]);
+    expect(log?.playByPlay[1].score).toBe("6 - 0");
+    expect(log?.timestamp).toBe(Date.parse("2026-09-10T00:30:00Z"));
+  });
+
   it.each(["nfl", "college-football", "cfl"])("loads %s plays when ESPN returns HTTP drive and team refs", async (espnLeague) => {
     const base = `sports.core.api.espn.com/v2/sports/football/leagues/${espnLeague}`;
     const drivePath = `${base}/events/401872656/competitions/401872656/drives/4018726561?lang=en&region=us`;

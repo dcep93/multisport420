@@ -11,7 +11,7 @@ type FootballCoreDriveItem = {
 type FootballDrivePlay = {
   awayScore?: number;
   homeScore?: number;
-  wallclock?: number;
+  wallclock?: number | string;
   participants?: unknown[];
   text?: string;
   period?: {
@@ -111,8 +111,11 @@ export async function getFootballLog(
     )
     .filter((drive) => drive?.team);
 
-  const playByPlay = drives.map((drive) => {
-    const plays = drive.plays.slice().reverse();
+  // The shared log renderer reverses chronological data for newest-first display.
+  // `drives` is newest-first here; ESPN's plays within a drive are chronological.
+  const playByPlay = drives.slice().reverse().map((drive) => {
+    const plays = drive.plays;
+    const latestPlay = plays[plays.length - 1];
     return {
       team: drive.team?.shortDisplayName ?? "",
       result: drive.displayResult,
@@ -124,13 +127,14 @@ export async function getFootballLog(
           clock: `Q${play.period?.number ?? ""} ${play.clock?.displayValue ?? ""}`.trim(),
         })),
       description: drive.description,
-      score: `${drive.plays[0]?.awayScore ?? ""} - ${drive.plays[0]?.homeScore ?? ""}`,
+      score: `${latestPlay?.awayScore ?? ""} - ${latestPlay?.homeScore ?? ""}`,
     } satisfies DriveType;
   });
 
-  const timestamp =
-    (summaryWithDrives.drives.current?.plays ?? []).map((play) => play.wallclock).find(Boolean) ??
-    Date.now();
+  const latestWallclock = (summaryWithDrives.drives.current?.plays ?? [])
+    .slice().reverse().map((play) => play.wallclock).find(Boolean);
+  const latestTimestamp = typeof latestWallclock === "string" ? Date.parse(latestWallclock) : latestWallclock;
+  const timestamp = latestTimestamp !== undefined && Number.isFinite(latestTimestamp) ? latestTimestamp : Date.now();
 
   return {
     timestamp,
