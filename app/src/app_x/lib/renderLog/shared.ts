@@ -8,14 +8,17 @@ type TeamSummary = {
 };
 
 export async function fetchJson(url: string) {
-  const response = await fetch(url, {
+  // ESPN's HTTPS responses still contain HTTP $refs for drives and teams.
+  // Follow those references over HTTPS to avoid mixed-content blocking.
+  const requestUrl = url.replace(/^http:\/\/sports\.core\.api\.espn\.com\//, "https://sports.core.api.espn.com/");
+  const response = await fetch(requestUrl, {
     headers: {
       Accept: "application/json",
     },
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status} for ${url}`);
+    throw new Error(`Request failed with status ${response.status} for ${requestUrl}`);
   }
 
   return response.json();
