@@ -1,4 +1,5 @@
 import type { Category, Stream, StreamCategory } from "../config/types";
+import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const PREFERRED_DEFAULT_CATEGORY: StreamCategory = "NFL";
 
@@ -13,14 +14,13 @@ export function getDefaultCategory(categories: readonly StreamCategory[]): Categ
 export function filterStreamsByCategory(
   streams: Stream[] | null,
   category: Category,
+  fantasy420Installed = false,
 ): Stream[] | null {
   if (!streams) {
     return null;
   }
 
-  if (category === "ALL") {
-    return streams;
-  }
-
-  return streams.filter((stream) => stream.category === category);
+  return streams.filter((stream) => isFantasyScoreboard(stream)
+    ? category === "NFL" && fantasy420Installed
+    : category === "ALL" || stream.category === category);
 }

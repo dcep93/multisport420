@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { HOST } from "../config/data";
 import type { Category, Stream, StreamSlug } from "../config/types";
 import useSelectedStreamIds from "../hooks/useSelectedStreamIds";
@@ -9,6 +9,7 @@ import Multiscreen from "./Multiscreen";
 import { filterStreamsByCategory, getDefaultCategory } from "./optionsShared";
 import PasswordGate from "./PasswordGate";
 import RoomControls from "./RoomControls";
+import { hasFantasy420Extension, subscribeFantasy420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -38,7 +39,11 @@ export default function MultisportApp() {
   const defaultCategory = getDefaultCategory(hostCategories);
   const [isAuthorized, setIsAuthorized] = useState(() => (IS_DEV ? true : getInitialAuthorized()));
   const [category, setCategory] = useState<Category>(defaultCategory);
-  const [allStreams, setAllStreams] = useState<Stream[] | null>(null);
+  const [hostStreams, setAllStreams] = useState<Stream[] | null>(null);
+  // Keep built-in descriptors available for hash/room restoration. Menu visibility
+  // depends on the extension; the scoreboard itself also enforces its requirement.
+  const allStreams = useMemo(() => withFantasyScoreboard(hostStreams), [hostStreams]);
+  const fantasy420Installed = useSyncExternalStore(subscribeFantasy420Extension, hasFantasy420Extension, () => false);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
   const [focusedSlug, setFocusedSlug] = useState<StreamSlug>("");
   const [muteToggleSlug, setMuteToggleSlug] = useState<StreamSlug>("");
@@ -47,7 +52,7 @@ export default function MultisportApp() {
   const [logRefreshRequestId, setLogRefreshRequestId] = useState(0);
   const [localDisplayLogs, setDisplayLogs] = useState(true);
   const [logDelayMs, setLogDelayMs] = useState(120_000);
-  const streams = filterStreamsByCategory(allStreams, category);
+  const streams = filterStreamsByCategory(allStreams, category, fantasy420Installed);
   const room = useRoom((command) => {
     if (command.type === "mute") {
       setMuteToggleSlug(command.slug);

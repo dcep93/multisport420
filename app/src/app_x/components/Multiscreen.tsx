@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref 
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
 import renderLog from "../lib/renderLog";
+import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
+import FantasyScoreboard from "./FantasyScoreboard";
 
 export default function Multiscreen<T>(props: {
   containerRef?: Ref<HTMLElement>;
@@ -80,9 +82,10 @@ function ScreenCard<T>(props: {
     setRefreshScreen(() => refresh);
   }, []);
   const indexedTitle = formatIndexedStreamTitle(props.stream.title, props.streamIndex);
+  const isScoreboard = isFantasyScoreboard(props.stream);
   const screenBodyClassName = [
     "screen-spotlight-body",
-    props.isFocused && props.displayLogs ? "" : "screen-spotlight-body-no-log",
+    props.isFocused && props.displayLogs && !isScoreboard ? "" : "screen-spotlight-body-no-log",
   ]
     .filter(Boolean)
     .join(" ");
@@ -112,7 +115,7 @@ function ScreenCard<T>(props: {
         title={titleTooltip}
       />
       <div className={screenBodyClassName}>
-        {props.displayLogs ? (
+        {props.displayLogs && !isScoreboard ? (
           <div
             className={[
               "log-panel",
@@ -132,7 +135,14 @@ function ScreenCard<T>(props: {
             </div>
           </div>
         ) : null}
-        <ScreenContent
+        {isScoreboard ? <FantasyScoreboard
+          indexedTitle={indexedTitle}
+          className={`screen-focus ${props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary"}`}
+          onClick={props.isFocused ? undefined : props.onFocus}
+          onRefreshReady={handleRefreshReady}
+          refreshRequestId={props.logRefreshRequestId}
+          shouldRefresh={props.shouldRefreshLog}
+        /> : <ScreenContent
           host={props.host}
           indexedTitle={indexedTitle}
           className={[
@@ -148,7 +158,7 @@ function ScreenCard<T>(props: {
           onRefreshReady={handleRefreshReady}
           onClick={props.isFocused ? undefined : props.onFocus}
           onDebugTitleChange={setTitleTooltip}
-        />
+        />}
       </div>
     </article>
   );
