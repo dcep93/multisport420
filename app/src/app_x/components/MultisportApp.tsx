@@ -9,7 +9,7 @@ import Multiscreen from "./Multiscreen";
 import { filterStreamsByCategory, getDefaultCategory } from "./optionsShared";
 import PasswordGate from "./PasswordGate";
 import RoomControls from "./RoomControls";
-import { hasFantasy420Extension, subscribeFantasy420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
+import { hasMultisport420Extension, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -43,7 +43,7 @@ export default function MultisportApp() {
   // Keep built-in descriptors available for hash/room restoration. Menu visibility
   // depends on the extension; the scoreboard itself also enforces its requirement.
   const allStreams = useMemo(() => withFantasyScoreboard(hostStreams), [hostStreams]);
-  const fantasy420Installed = useSyncExternalStore(subscribeFantasy420Extension, hasFantasy420Extension, () => false);
+  const multisport420Installed = useSyncExternalStore(subscribeMultisport420Extension, hasMultisport420Extension, () => false);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
   const [focusedSlug, setFocusedSlug] = useState<StreamSlug>("");
   const [muteToggleSlug, setMuteToggleSlug] = useState<StreamSlug>("");
@@ -52,7 +52,7 @@ export default function MultisportApp() {
   const [logRefreshRequestId, setLogRefreshRequestId] = useState(0);
   const [localDisplayLogs, setDisplayLogs] = useState(true);
   const [logDelayMs, setLogDelayMs] = useState(120_000);
-  const streams = filterStreamsByCategory(allStreams, category, fantasy420Installed);
+  const streams = filterStreamsByCategory(allStreams, category, multisport420Installed);
   const room = useRoom((command) => {
     if (command.type === "mute") {
       setMuteToggleSlug(command.slug);

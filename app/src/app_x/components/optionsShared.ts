@@ -14,13 +14,13 @@ export function getDefaultCategory(categories: readonly StreamCategory[]): Categ
 export function filterStreamsByCategory(
   streams: Stream[] | null,
   category: Category,
-  fantasy420Installed = false,
+  multisport420Installed = false,
 ): Stream[] | null {
   if (!streams) {
     return null;
   }
 
   return streams.filter((stream) => isFantasyScoreboard(stream)
-    ? category === "NFL" && fantasy420Installed
+    ? category === "NFL" && multisport420Installed
     : category === "ALL" || stream.category === category);
 }

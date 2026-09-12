@@ -1,0 +1,1 @@
+importScripts("scoreboard.js");
