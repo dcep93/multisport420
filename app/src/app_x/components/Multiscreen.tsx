@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref } from "react";
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
-import renderLog from "../lib/renderLog";
+import StreamLog from "../lib/renderLog";
+import { useStreamLog } from "../hooks/useStreamLog";
+import ScreenTitleBar from "./ScreenTitleBar";
 import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 import FantasyScoreboard from "./FantasyScoreboard";
 
@@ -83,6 +85,8 @@ function ScreenCard<T>(props: {
   }, []);
   const indexedTitle = formatIndexedStreamTitle(props.stream.title, props.streamIndex);
   const isScoreboard = isFantasyScoreboard(props.stream);
+  const log = useStreamLog(props.stream, props.logDelayMs,
+    props.shouldRefreshLog ? props.logRefreshRequestId : 0);
   const screenBodyClassName = [
     "screen-spotlight-body",
     props.isFocused && props.displayLogs && !isScoreboard ? "" : "screen-spotlight-body-no-log",
@@ -109,6 +113,9 @@ function ScreenCard<T>(props: {
           .filter(Boolean)
           .join(" ")}
         label={indexedTitle}
+        possession={log.displayedLog?.possession}
+        redZone={log.displayedLog?.redZone}
+        bigPlay={log.bigPlay}
         onRefresh={refreshScreen ?? undefined}
         onClose={props.onRemove}
         refreshDisabled={!refreshScreen || isRefreshing}
@@ -127,11 +134,8 @@ function ScreenCard<T>(props: {
             aria-hidden={!showLogPanel}
           >
             <div className="log-entry">
-              {renderLog(
-                props.stream,
-                props.logDelayMs,
-                props.shouldRefreshLog ? props.logRefreshRequestId : 0,
-              )}
+              <StreamLog stream={props.stream} displayedLog={log.displayedLog}
+                errorMessage={log.errorMessage} refresh={log.refresh} />
             </div>
           </div>
         ) : null}
@@ -161,51 +165,6 @@ function ScreenCard<T>(props: {
         />}
       </div>
     </article>
-  );
-}
-
-function ScreenTitleBar(props: {
-  label: string;
-  className: string;
-  onRefresh?: () => Promise<void>;
-  onClose?: () => void;
-  refreshDisabled?: boolean;
-  title?: string;
-}) {
-  return (
-    <div
-      className={`screen-title-bar-shell ${props.className}`}
-      title={props.title}
-      role="button"
-      tabIndex={0}
-      aria-label={`Close screen ${props.label}`}
-      onClick={props.onClose}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          props.onClose?.();
-        }
-      }}
-    >
-      <div className="screen-title-inner">
-        <span className="screen-letter">{props.label}</span>
-        {props.onRefresh ? (
-          <button
-            type="button"
-            className="screen-title-action"
-            aria-label={`Refresh screen ${props.label}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              void props.onRefresh?.();
-            }}
-            disabled={props.refreshDisabled}
-            title="Refresh stream"
-          >
-            🔄
-          </button>
-        ) : null}
-      </div>
-    </div>
   );
 }
 

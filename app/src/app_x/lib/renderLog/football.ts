@@ -9,6 +9,8 @@ type FootballCoreDriveItem = {
 };
 
 type FootballDrivePlay = {
+  id?: string;
+  statYardage?: number;
   awayScore?: number;
   homeScore?: number;
   wallclock?: number | string;
@@ -22,6 +24,10 @@ type FootballDrivePlay = {
   };
   start?: {
     downDistanceText?: string;
+  };
+  end?: {
+    yardsToEndzone?: number;
+    team?: { id?: string; $ref?: string };
   };
 };
 
@@ -37,6 +43,7 @@ type FootballDriveResponse = {
 };
 
 type FootballTeamResponse = {
+  id?: string;
   shortDisplayName?: string;
 };
 
@@ -122,6 +129,9 @@ export async function getFootballLog(
       plays: plays
         .filter((play) => play.participants)
         .map((play) => ({
+          id: play.id,
+          distance: play.statYardage,
+          timestamp: parseWallclock(play.wallclock),
           down: play.start?.downDistanceText ?? "",
           text: play.text ?? "",
           clock: `Q${play.period?.number ?? ""} ${play.clock?.displayValue ?? ""}`.trim(),
@@ -142,5 +152,36 @@ export async function getFootballLog(
     winProbability: buildWinProbability(summaryObj),
     playByPlay,
     boxScore: buildDefaultBoxScore(summaryWithDrives.boxscore?.players ?? [], config.boxScoreKeys),
+    ...getFootballIndicators(summaryObj, drives[0]),
+  };
+}
+
+function parseWallclock(value: number | string | undefined) {
+  const timestamp = typeof value === "string" ? Date.parse(value) : value;
+  return typeof timestamp === "number" && Number.isFinite(timestamp) ? timestamp : undefined;
+}
+
+function getFootballIndicators(summary: any, drive?: FootballResolvedDrive): Pick<LogType, "possession" | "redZone" | "gameFinished"> {
+  const competition = summary.header?.competitions?.[0];
+  const status = competition?.status;
+  const latest = drive?.plays.at(-1);
+  const gameFinished = status?.type?.completed === true || status?.type?.state === "post";
+  const atBreak = /halftime|end of half|end of game/i.test(`${status?.type?.name ?? ""} ${status?.type?.description ?? ""} ${latest?.text ?? ""}`)
+    || (latest?.clock?.displayValue === "0:00" && [2, 4].includes(latest.period?.number ?? 0));
+  if (gameFinished || atBreak || !drive || drive.displayResult) return { redZone: false, gameFinished };
+
+  // Core API returns a team $ref; the summary API returns an id.
+  const endTeam = latest?.end?.team;
+  const teamId = endTeam?.id || endTeam?.$ref?.match(/\/teams\/([^/?]+)/)?.[1] || drive.team?.id;
+  const competitor = competition?.competitors?.find((entry: any) => teamId && String(entry.team?.id) === String(teamId));
+  if (!competitor || !["home", "away"].includes(competitor.homeAway)) return { redZone: false, gameFinished };
+  const yards = latest?.end?.yardsToEndzone;
+  return {
+    possession: {
+      team: competitor.team.shortDisplayName || competitor.team.displayName || competitor.team.name,
+      isHomeTeam: competitor.homeAway === "home",
+    },
+    redZone: typeof yards === "number" && Number.isFinite(yards) && yards > 0 && yards <= 20,
+    gameFinished,
   };
 }

@@ -1,121 +1,18 @@
-/* eslint-disable react-refresh/only-export-components */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useMemo } from "react";
 import type { Stream } from "../config/types";
 import Autoscroller from "./Autoscroller";
-import { fetchLeagueLog, leagueConfigs } from "./renderLog/leagues";
+import { leagueConfigs } from "./renderLog/leagues";
 import type { LogType, WinProbabilityType } from "./renderLog/types";
 
-const POLL_INTERVAL_MS = 10 * 1000;
-
-export default function renderLog(
-  stream: Stream,
-  logDelayMs: number,
-  refreshRequestId = 0,
-): ReactNode {
-  return (
-    <StreamLog
-      stream={stream}
-      logDelayMs={logDelayMs}
-      refreshRequestId={refreshRequestId}
-    />
-  );
-}
-
-function StreamLog(props: { stream: Stream; logDelayMs: number; refreshRequestId: number }) {
+export default function StreamLog(props: {
+  stream: Stream;
+  displayedLog: LogType | null;
+  errorMessage: string;
+  refresh: () => Promise<void>;
+}) {
   const config = leagueConfigs[props.stream.category];
-  const [displayedLog, setDisplayedLog] = useState<LogType | null>(null);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { displayedLog, errorMessage } = props;
   const espnGameUrl = getEspnGameUrl(props.stream, config);
-  const pendingTimeoutIdsRef = useRef<number[]>([]);
-  const isMountedRef = useRef(false);
-
-  const clearPendingLogTimeouts = useCallback(() => {
-    for (const timeoutId of pendingTimeoutIdsRef.current) {
-      window.clearTimeout(timeoutId);
-    }
-
-    pendingTimeoutIdsRef.current = [];
-  }, []);
-
-  const queueDelayedLogUpdate = useCallback((nextLog: LogType) => {
-    const timeoutId = window.setTimeout(() => {
-      pendingTimeoutIdsRef.current = pendingTimeoutIdsRef.current.filter(
-        (pendingTimeoutId) => pendingTimeoutId !== timeoutId,
-      );
-
-      if (!isMountedRef.current) {
-        return;
-      }
-
-      setDisplayedLog(nextLog);
-    }, Math.max(0, props.logDelayMs));
-
-    pendingTimeoutIdsRef.current.push(timeoutId);
-  }, [props.logDelayMs]);
-
-  const fetchAndHandleLog = useCallback((shouldRenderImmediately = false) => {
-    if (!config || !hasEspnGame(props.stream)) {
-      return Promise.resolve();
-    }
-
-    return fetchLeagueLog(props.stream, config)
-      .then((nextLog) => {
-        if (!isMountedRef.current || !nextLog) {
-          return;
-        }
-
-        if (shouldRenderImmediately) {
-          clearPendingLogTimeouts();
-          setDisplayedLog(nextLog);
-        } else {
-          queueDelayedLogUpdate(nextLog);
-        }
-
-        setErrorMessage("");
-      })
-      .catch((error: unknown) => {
-        console.error("multisport:fetchLog", error);
-
-        if (!isMountedRef.current) {
-          return;
-        }
-
-        setErrorMessage("Unable to load play-by-play.");
-      });
-  }, [clearPendingLogTimeouts, config, props.stream, queueDelayedLogUpdate]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-
-    return () => {
-      isMountedRef.current = false;
-      clearPendingLogTimeouts();
-    };
-  }, [clearPendingLogTimeouts]);
-
-  useEffect(() => {
-    if (!config || !hasEspnGame(props.stream)) {
-      return;
-    }
-
-    void fetchAndHandleLog();
-    const interval = window.setInterval(() => {
-      void fetchAndHandleLog();
-    }, POLL_INTERVAL_MS);
-
-    return () => {
-      window.clearInterval(interval);
-    };
-  }, [config, fetchAndHandleLog, props.logDelayMs, props.stream]);
-
-  useEffect(() => {
-    if (props.refreshRequestId === 0) {
-      return;
-    }
-
-    void fetchAndHandleLog(true);
-  }, [fetchAndHandleLog, props.refreshRequestId]);
-
   if (!props.stream.espn_id || props.stream.espn_id < 0) {
     return <div className="multisport-log-empty">No ESPN game linked.</div>;
   }
@@ -131,7 +28,7 @@ function StreamLog(props: { stream: Stream; logDelayMs: number; refreshRequestId
         role="button"
         tabIndex={0}
         onClick={() => {
-          void fetchAndHandleLog(true);
+          void props.refresh();
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -152,7 +49,7 @@ function StreamLog(props: { stream: Stream; logDelayMs: number; refreshRequestId
       espnGameUrl={espnGameUrl}
       leagueCategory={props.stream.category}
       onClick={() => {
-        void fetchAndHandleLog(true);
+        void props.refresh();
       }}
     />
   );
@@ -176,7 +73,7 @@ function LogView(props: {
     return drives;
   }, [props.log.playByPlay]);
   const scoringRuns = useMemo(
-    () => getScoringRunLabels(playByPlay, props.leagueCategory),
+    () => props.leagueCategory === "NFL" ? [] : getScoringRunLabels(playByPlay, props.leagueCategory),
     [playByPlay, props.leagueCategory],
   );
 
@@ -199,7 +96,7 @@ function LogView(props: {
           <LogWinProbability winProbability={props.log.winProbability} />
           <LogActions espnGameUrl={props.espnGameUrl} />
         </div>
-        <div className="multisport-log-team-summary-row">
+        <div className={`multisport-log-team-summary-row${props.leagueCategory === "NFL" ? " multisport-log-team-summary-nfl" : ""}`}>
           {props.log.teams.map((team) => (
             <div
               key={team.name}
@@ -208,7 +105,11 @@ function LogView(props: {
             >
               <div className="multisport-log-team-summary-name">{team.name}</div>
               <div className="multisport-log-team-summary-stats">
-                {renderTeamStatistics(team.statistics)}
+                {props.leagueCategory === "NFL" ? (
+                  <span aria-label={`Possession time ${team.statistics.possessionTime ?? "unknown"}; total yards ${team.statistics.totalYards ?? "unknown"}; offensive plays ${team.statistics.totalOffensivePlays ?? "unknown"}`}>
+                    {team.statistics.possessionTime ?? "—"} = {team.statistics.totalYards ?? "—"} / {team.statistics.totalOffensivePlays ?? "—"}
+                  </span>
+                ) : renderTeamStatistics(team.statistics)}
               </div>
             </div>
           ))}

@@ -68,3 +68,27 @@ describe("ESPN football references", () => {
       plays: [{ text: "Seattle punts to New England.", clock: "Q1 11:42" }] });
   });
 });
+
+it.each([
+  { yards: 20, team: "1", red: true, home: false },
+  { yards: 21, team: "1", red: false, home: false },
+  { yards: 0, team: "1", red: false, home: false },
+  { yards: undefined, team: "1", red: false, home: false },
+  { yards: 5, team: "2", red: true, home: true },
+  { yards: 5, team: "unknown", red: false, home: undefined },
+  { yards: 5, team: "1", result: "Touchdown", red: false, home: undefined },
+  { yards: 5, team: "1", status: "STATUS_HALFTIME", red: false, home: undefined },
+  { yards: 5, team: "1", status: "STATUS_FINAL", red: false, home: undefined },
+])("normalizes possession and red-zone boundaries: %j", async ({ yards, team, result, status, red, home }) => {
+  const play = { id: "p1", statYardage: 30, text: "Pass for 30 yards", participants: [], wallclock: "2026-09-13T17:00:00Z",
+    period: { number: 1 }, clock: { displayValue: "12:00" }, end: { team: { $ref: `http://sports.core.api.espn.com/teams/${team}?lang=en` }, yardsToEndzone: yards } };
+  const drive = { id: "d1", team: { id: "1", shortDisplayName: "Away" }, plays: [play], displayResult: result };
+  const summary = { drives: { current: drive }, header: { competitions: [{ status: { type: { name: status ?? "STATUS_IN_PROGRESS", state: status === "STATUS_FINAL" ? "post" : "in" } },
+    competitors: [{ homeAway: "away", team: { id: "1", shortDisplayName: "Away" } }, { homeAway: "home", team: { id: "2", shortDisplayName: "Home" } }] }] } };
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, json: async () => url.includes("/summary?") ? summary : { items: [] } })));
+  const log = await getFootballLog({ category: "NFL", espn_id: 1, title: "Away @ Home", raw_url: "", slug: "game" }, { sport: "football", espnLeague: "nfl", playType: "football", boxScoreKeys: [] });
+  expect(log?.redZone).toBe(red);
+  expect(log?.possession?.isHomeTeam).toBe(home);
+  expect(log?.gameFinished).toBe(status === "STATUS_FINAL");
+  expect(log?.playByPlay[0].plays?.[0]).toMatchObject({ id: "p1", distance: 30, timestamp: Date.parse("2026-09-13T17:00:00Z") });
+});

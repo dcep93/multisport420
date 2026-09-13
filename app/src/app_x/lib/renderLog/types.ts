@@ -1,4 +1,7 @@
 export type PlayType = {
+  id?: string;
+  distance?: number;
+  timestamp?: number;
   down: string;
   text: string;
   clock: string;
@@ -31,6 +34,9 @@ export type LogType = {
   winProbability?: WinProbabilityType | null;
   playByPlay: DriveType[];
   boxScore: BoxScoreType[];
+  possession?: { team: string; isHomeTeam: boolean };
+  redZone?: boolean;
+  gameFinished?: boolean;
 };
 
 export type LeagueConfig = {
