@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="How the multisport420 website and Chrome extension handle fantasy league data, browser storage, and optional remote rooms." />
+    <title>Privacy policy | multisport420</title>
+    <style>
+      * { box-sizing: border-box; }
+      html { background: #0c0907; color: #f5eee7; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #1a1411, #0c0907);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        font-size: 1rem;
+        line-height: 1.75;
+      }
+      main { width: min(100%, 808px); margin: 0 auto; padding: 36px 24px 64px; }
+      a { color: #e4c196; text-underline-offset: 0.2em; overflow-wrap: anywhere; }
+      a:hover { color: #fff; }
+      a:focus-visible { outline: 3px solid #ff7bc3; outline-offset: 5px; border-radius: 2px; }
+      header { margin: 36px 0 32px; padding-bottom: 28px; border-bottom: 1px solid #5d4735; }
+      .brand { margin: 0 0 8px; color: #d8b38a; font-size: 0.9rem; letter-spacing: 0.08em; }
+      h1 { margin: 0 0 12px; color: #fff; font-size: clamp(2rem, 6vw, 3rem); line-height: 1.15; letter-spacing: -0.04em; }
+      h2 { margin: 32px 0 12px; color: #fff; font-size: 1.25rem; line-height: 1.4; }
+      p { margin: 0 0 16px; }
+      .updated { margin: 0; color: #c8bcb2; font-size: 0.9rem; }
+      ul { margin: 0 0 16px; padding-left: 24px; }
+      li + li { margin-top: 10px; }
+      footer { margin-top: 36px; padding-top: 24px; border-top: 1px solid #5d4735; }
+      footer p:last-child { margin-bottom: 0; }
+      @media (max-width: 480px) { main { padding: 24px 20px 48px; } }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Back to website"><a href="/">&larr; Back to multisport420</a></nav>
+      <header>
+        <p class="brand">multisport420</p>
+        <h1>Privacy policy</h1>
+        <p class="updated">Last updated <time datetime="2026-09-13">September 13, 2026</time></p>
+      </header>
+
+      <p>This policy covers the multisport420 website and its companion Chrome extension. It explains the data used for stream viewing, ESPN fantasy scoreboards, and optional phone remote rooms. This privacy page works without signing in and contains no scripts, tracking, or remote assets.</p>
+
+      <section aria-labelledby="fantasy">
+        <h2 id="fantasy">ESPN fantasy scoreboards</h2>
+        <p>When you load or refresh a fantasy scoreboard, the extension finds an open ESPN Fantasy football tab. It reads matching tab URLs, including league and season identifiers, and uses active-tab status and recency to choose a tab.</p>
+        <p>The extension requests a full league response from ESPN using your existing ESPN session. That response can include league, team, and member information; rosters; matchups; scores; settings; and projections. Your browser includes ESPN session cookies in the request. The extension does not read or copy cookie values, collect your ESPN password, or change your ESPN lineup.</p>
+        <p>The response passes through the extension to the requesting multisport420 page. The current extension accepts requests from multisport420.web.app and localhost pages. Scoreboard calculations run in your browser. The fantasy response is not sent to developer servers, the stream proxy, or Firebase remote rooms, and is not saved to browser storage by the scoreboard. Local diagnostic messages can include projected rosters and league, team, and week identifiers in the browser developer console.</p>
+      </section>
+
+      <section aria-labelledby="extension">
+        <h2 id="extension">Extension permissions and media controls</h2>
+        <p>The extension uses access to supported pages to provide fantasy scoreboards, playback and mute controls, and hiding of known popup overlays. Media controls inspect and modify page elements; they do not record video or audio. The extension does not add analytics or use accessed information for advertising.</p>
+        <p>multisport420 complies with the <a href="https://developer.chrome.com/docs/webstore/program-policies/user-data-faq" rel="noreferrer">Chrome Web Store User Data Policy</a>, including its Limited Use requirements. Data accessed through extension permissions is used only to provide the features described here. It is not sold or used for personalized advertising.</p>
+      </section>
+
+      <section aria-labelledby="website">
+        <h2 id="website">Website storage and outside services</h2>
+        <p>The website saves an unlock flag in localStorage and caches retrieved stream-page HTML in IndexedDB. Stream selections can appear in the page URL, so sharing that URL or keeping browser history can retain those selections.</p>
+        <p>To retrieve stream information, the website sends requested URLs and request options to proxy420.appspot.com. It also requests public sports data from ESPN and loads media from stream providers. These services, and Firebase hosting, receive ordinary connection and request information, such as your IP address. Third-party services may use their own cookies and handle data under their own policies; this policy does not describe or control their retention practices.</p>
+      </section>
+
+      <section aria-labelledby="rooms">
+        <h2 id="rooms">Optional phone remote rooms</h2>
+        <p>When you use a remote room, Firebase stores selected stream descriptors, including titles, URLs, sport categories, and event identifiers; the spotlight selection; the setting for displaying sports logs; and the latest remote command. It also records viewer presence with a join timestamp. The fantasy league response is not included in room data.</p>
+        <p>Participants using the same room can see its selections and control playback. Treat room identifiers and links as shared access information. Leaving disconnects your session and removes that viewer presence, but does not delete persisted room state. The current application has no automatic expiry for room state.</p>
+      </section>
+
+      <section aria-labelledby="controls">
+        <h2 id="controls">Retention and your controls</h2>
+        <p>Scoreboard data is processed in memory while pages are open and is normally released on reload or close. Developer tools may retain console output according to your browser settings. Local caches and the unlock flag remain until overwritten or cleared.</p>
+        <ul>
+          <li>Disable or remove the extension to stop its access. Close all ESPN Fantasy football tabs or remove the scoreboard to stop that view fetching fantasy data. Signing out of ESPN stops access to authenticated league data, but does not stop request attempts.</li>
+          <li>Use the website’s cache control to remove the stream-page cache. Clear browser site data to remove both that cache and the unlock flag. Clear browser history or console logs separately if needed.</li>
+          <li>Clear a connected room to remove its selected streams and latest command; leave it to disconnect. Clearing does not delete every room field, and clearing browser data does not delete server records.</li>
+        </ul>
+      </section>
+
+      <footer>
+        <h2 id="contact">Questions and updates</h2>
+        <p>For general privacy questions, use the <a href="https://github.com/dcep93/multisport420/issues" rel="noreferrer">public project issue tracker</a>. Do not post passwords, cookies, private league data, or room identifiers there. Changes to this policy will appear on this page with an updated date.</p>
+      </footer>
+    </main>
+  </body>
+</html>

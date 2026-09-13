@@ -10,6 +10,14 @@ chances, and Guillotine elimination risk. Fantasy420 is not required.
 
 ## Privacy Practices
 
+### Privacy policy URL
+
+https://multisport420.web.app/privacy/
+
+Use this public URL in the Chrome Web Store Developer Dashboard's privacy-policy
+field. The page covers the website and extension, including ESPN data handling
+and the Limited Use statement.
+
 ### Single purpose
 
 Support multisport420.web.app's sports viewing experience with embedded playback
@@ -17,7 +25,7 @@ controls and its native fantasy scoreboard.
 
 ### Host-access justification
 
-The extension runs on `embedsports.top` and `pooembed.eu` player frames used by
+The extension runs on `embedsports.top`, `embed.st`, and `pooembed.eu` player frames used by
 Multisport420. Access is required to control playback and mute state, forward
 player commands, and block intrusive popup elements.
 

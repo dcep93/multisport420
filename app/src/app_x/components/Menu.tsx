@@ -73,6 +73,9 @@ export default function Menu(props: {
         onLogDelayMsChange={props.onLogDelayMsChange}
         onClearCache={props.onClearCache}
       />
+      <a href="/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ww-text-soft)" }}>
+        Privacy policy
+      </a>
     </aside>
   );
 }

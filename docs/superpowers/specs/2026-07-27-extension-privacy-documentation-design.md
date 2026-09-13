@@ -1,5 +1,11 @@
 # Extension Privacy Practices Design
 
+> Superseded September 13, 2026: after adding the ESPN fantasy scoreboard, the
+> user requested a public policy. See
+> [Public privacy policy](2026-09-13-public-privacy-policy-design.md) and
+> https://multisport420.web.app/privacy/. The original decision below is retained
+> as historical context and does not describe the current extension.
+
 ## Goal
 
 Prepare consistent Chrome Web Store Privacy Practices declarations for the

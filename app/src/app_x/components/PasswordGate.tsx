@@ -57,6 +57,9 @@ export default function PasswordGate(props: { onUnlock: () => void }) {
           </button>
         </div>
         {error ? <p className="error-text">{error}</p> : null}
+        <a href="/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ww-text-soft)" }}>
+          Privacy policy
+        </a>
       </form>
     </main>
   );

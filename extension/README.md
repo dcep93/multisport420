@@ -5,6 +5,9 @@ audio and mute commands on supported embeds, plus native ESPN fantasy scoreboard
 The viewing site is
 https://multisport420.web.app (localhost is also supported for development).
 
+[Privacy policy](https://multisport420.web.app/privacy/) covers the website and
+extension, including ESPN data access, sharing, retention, and user controls.
+
 ## Load in Chrome
 
 1. Open `chrome://extensions`
