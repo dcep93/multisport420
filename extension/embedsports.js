@@ -3,18 +3,6 @@
   const SET_MUTED = "multisport420:set-muted";
   const TOGGLE_MUTE = "multisport420:toggle-mute";
   let lastSetMutedMessage = null;
-  const hideDontfoid = () => {
-    const dontfoid = document.querySelector("#dontfoid");
-
-    if (dontfoid instanceof HTMLElement) {
-      dontfoid.style.display = "none";
-      return;
-    }
-
-    window.requestAnimationFrame(hideDontfoid);
-  };
-
-  hideDontfoid();
 
   const forwardToChildIframes = (message) => {
     document.querySelectorAll("iframe").forEach((iframe) => {

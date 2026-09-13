@@ -1,0 +1,5 @@
+/* The player recreates and restyles this click overlay when its frame resizes. */
+#dontfoid {
+  display: none !important;
+  pointer-events: none !important;
+}

@@ -16,6 +16,15 @@ After updating an existing unpacked installation, click **Reload** on the
 extension card and refresh the viewing page. Deploying the website does not
 update your locally installed extension. The phone remote needs no extension.
 
+## Embed.st players (0.3.1 or later)
+
+The extension runs its existing media controller and popup-overlay helper on
+`https://embed.st/embed/*`, including nested players in Multisport420. This
+restores spotlight audio and hides the known `#dontfoid` click overlay, including
+when the player recreates or restyles it during resizing. It is
+not a general-purpose popup blocker. Reload the extension and viewing page
+after upgrading.
+
 ## Fantasy scoreboard (0.3.0 or later)
 
 Keep a signed-in ESPN Fantasy football league open in another Chrome tab. Select

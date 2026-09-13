@@ -41,3 +41,26 @@ before declaring completion. Commit and push task changes to main.
 The scope covers both reported failures, preserves existing providers, and
 requires real-browser evidence for the newly supported provider. No new
 background APIs, broad host wildcards, or website deployment are required.
+
+## Live-verification adjustment
+
+Registering the existing scripts restored the correct mute states. Live testing
+also showed that the player overwrites the overlay's inline style, undoing the
+one-time `display: none` assignment. Replace that polling/inline-style helper
+with `embedsports.css`, registered alongside `embedsports.js`, using persistent
+`#dontfoid { display: none !important; pointer-events: none !important; }`.
+Verify the overlay remains hidden across spotlight changes and player clicks.
+
+## Verification result
+
+Extension 0.3.1 was reloaded in the user's Chrome. All four players reached
+`readyState: 4` and were playing; the three secondary players were muted and
+the restored Vikings spotlight was unmuted. Changing spotlight transferred
+the requested mute state. Directly clicking the spotlight video paused it,
+clicking Play resumed it, and neither click created a new tab. The final
+player DOM contained no `#dontfoid` element. The ESPN tab was refreshed after
+extension reload and the native fantasy scoreboard resumed updating.
+
+All eight existing extension tests passed. Manifest resource paths and
+`git diff --check` passed. Popup verification covers this live player and
+its known overlay, not arbitrary future ad mechanisms.
