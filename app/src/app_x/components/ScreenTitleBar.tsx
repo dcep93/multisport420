@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from "react";
 
 export default function ScreenTitleBar(props: {
   label: string;
+  screenNumber?: number;
   className: string;
   onRefresh?: () => Promise<void>;
   onClose?: () => void;
@@ -15,6 +16,7 @@ export default function ScreenTitleBar(props: {
   const viewportRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const possessionId = useId();
+  const indexedLabel = props.screenNumber === undefined ? props.label : `(${props.screenNumber}) ${props.label}`;
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -92,7 +94,7 @@ export default function ScreenTitleBar(props: {
       window.removeEventListener("resize", measure);
       reducedMotion?.removeEventListener("change", motionChange);
     };
-  }, [props.label, props.possession?.team, props.possession?.isHomeTeam]);
+  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam]);
 
   const possession = props.possession ? (
     <span id={possessionId} className="screen-title-possession" role="img" aria-label={`${props.possession.team} in possession`}>
@@ -108,7 +110,7 @@ export default function ScreenTitleBar(props: {
       title={props.title}
       role="button"
       tabIndex={0}
-      aria-label={`Close screen ${props.label}`}
+      aria-label={`Close screen ${indexedLabel}`}
       aria-describedby={props.possession ? possessionId : undefined}
       onClick={props.onClose}
       onKeyDown={(event) => {
@@ -125,7 +127,7 @@ export default function ScreenTitleBar(props: {
           className="screen-title-viewport"
           tabIndex={0}
           role="group"
-          aria-label={props.label}
+          aria-label={indexedLabel}
           onKeyDown={(event) => {
             const viewport = event.currentTarget;
             if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
@@ -138,6 +140,7 @@ export default function ScreenTitleBar(props: {
           }}
         >
           <span ref={textRef} className="screen-letter">
+            {props.screenNumber !== undefined ? <span>({props.screenNumber})</span> : null}
             {props.possession && !props.possession.isHomeTeam ? possession : null}
             <span>{props.label}</span>
             {props.possession?.isHomeTeam ? possession : null}
@@ -147,7 +150,7 @@ export default function ScreenTitleBar(props: {
           <button
             type="button"
             className="screen-title-action"
-            aria-label={`Refresh screen ${props.label}`}
+            aria-label={`Refresh screen ${indexedLabel}`}
             onClick={(event) => {
               event.stopPropagation();
               void props.onRefresh?.();

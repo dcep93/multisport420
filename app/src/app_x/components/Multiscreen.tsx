@@ -112,7 +112,8 @@ function ScreenCard<T>(props: {
         ]
           .filter(Boolean)
           .join(" ")}
-        label={indexedTitle}
+        label={props.stream.title}
+        screenNumber={props.streamIndex + 1}
         possession={log.displayedLog?.possession}
         redZone={log.displayedLog?.redZone}
         bigPlay={log.bigPlay}
