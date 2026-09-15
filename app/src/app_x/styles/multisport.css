@@ -632,7 +632,7 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   height: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  gap: 4px;
   color: var(--ww-text);
   background: transparent;
   border-radius: 0;
@@ -640,9 +640,11 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 }
 
 .multisport-log-content {
+  min-height: 0;
+  min-width: 0;
   overflow: auto;
   border: 1px solid var(--ww-border-soft);
-  padding: 10px;
+  padding: 6px;
   font-size: 0.9rem;
 }
 
@@ -652,11 +654,11 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 }
 
 .multisport-log-top {
-  height: 64%;
+  flex: 64 1 0;
 }
 
 .multisport-log-bottom {
-  height: 34%;
+  flex: 34 1 0;
   font-size: 0.85em;
 }
 
@@ -702,14 +704,15 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 .multisport-log-team-summary-row {
   display: flex;
   gap: 0.6em;
-  margin-top: 0.7em;
+  margin-top: 0.4em;
+  margin-bottom: 0.3em;
   min-width: 0;
 }
 
 .multisport-log-team-summary-card {
   flex: 1;
   min-width: 0;
-  padding: 0.5em 0.6em;
+  padding: 0.35em 0.45em;
   background: rgba(232, 206, 171, 0.06);
   border: 1px solid var(--ww-border-soft);
   border-radius: 8px;
@@ -771,12 +774,8 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   display: block;
 }
 
-.multisport-log-spacer {
-  height: 1em;
-}
-
 .multisport-log-event-row {
-  padding: 0.55em 0;
+  padding: 0.35em 0;
   border-top: 1px solid var(--ww-border-soft);
 }
 
@@ -809,7 +808,11 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 }
 
 .multisport-log-box-score {
-  padding-bottom: 20px;
+  padding-bottom: 10px;
+}
+
+.multisport-log-box-score table {
+  border-spacing: 0;
 }
 
 .multisport-log-box-score-row-home {
@@ -818,14 +821,16 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 
 .multisport-log-box-score td,
 .multisport-log-box-score th {
-  padding: 2px 4px;
+  padding: 2px 3px;
   text-align: left;
   white-space: nowrap;
 }
 
-.multisport-log-player-name {
-  width: auto;
-  max-width: none;
+.multisport-log-box-score .multisport-log-player-name {
+  width: calc(12ch + 6px);
+  max-width: calc(12ch + 6px);
+  white-space: normal;
+  overflow-wrap: anywhere;
   overflow: visible;
   text-overflow: clip;
 }

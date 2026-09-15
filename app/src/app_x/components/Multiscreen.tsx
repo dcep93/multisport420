@@ -117,6 +117,7 @@ function ScreenCard<T>(props: {
         possession={log.displayedLog?.possession}
         redZone={log.displayedLog?.redZone}
         bigPlay={log.bigPlay}
+        bigPlayClock={log.bigPlayClock}
         onRefresh={refreshScreen ?? undefined}
         onClose={props.onRemove}
         refreshDisabled={!refreshScreen || isRefreshing}

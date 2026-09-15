@@ -51,7 +51,7 @@ export default function MultisportApp() {
   const [logRefreshSlug, setLogRefreshSlug] = useState<StreamSlug>("");
   const [logRefreshRequestId, setLogRefreshRequestId] = useState(0);
   const [localDisplayLogs, setDisplayLogs] = useState(true);
-  const [logDelayMs, setLogDelayMs] = useState(120_000);
+  const [logDelayMs, setLogDelayMs] = useState(30_000);
   const streams = filterStreamsByCategory(allStreams, category, multisport420Installed);
   const room = useRoom((command) => {
     if (command.type === "mute") {

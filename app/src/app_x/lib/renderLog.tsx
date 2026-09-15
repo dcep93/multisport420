@@ -123,7 +123,6 @@ function LogView(props: {
             ))}
           </div>
         ) : null}
-        <div className="multisport-log-spacer" />
         {playByPlay.slice().reverse().map((drive, index) => (
           <div key={`${drive.team}-${drive.description}-${index}`} className="multisport-log-event-row">
             <div className="multisport-log-header">

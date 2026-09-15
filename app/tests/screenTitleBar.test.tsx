@@ -47,10 +47,22 @@ describe("Screen title bar", () => {
     expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("red-zone");
     const icon = screen.getByRole("img", { name: "Away in possession" });
     expect(icon.parentElement?.firstElementChild).toBe(icon);
-    rerender(<ScreenTitleBar className="" label="Away @ Home" bigPlay possession={{ team: "Home", isHomeTeam: true }} />);
-    expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
+    rerender(<ScreenTitleBar className="" label="Away @ Home" possession={{ team: "Home", isHomeTeam: true }} />);
+    expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("none");
     const homeIcon = screen.getByRole("img", { name: "Home in possession" });
     expect(homeIcon.parentElement?.lastElementChild).toBe(homeIcon);
+  });
+
+  it("places the play clock and football after the screen number only during a blue alert", () => {
+    const label = "Denver Broncos @ Kansas City Chiefs";
+    const { container, rerender } = render(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" />);
+    const title = () => [...container.querySelector(".screen-letter")!.children].map(child => child.textContent).join(" ");
+    expect(title()).toBe("(1) Q3 12:22 🏈 Denver Broncos @ Kansas City Chiefs");
+    expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
+    rerender(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" redZone />);
+    expect(title()).toBe(`(1) ${label}`);
+    rerender(<ScreenTitleBar className="" label={label} screenNumber={1} />);
+    expect(title()).toBe(`(1) ${label}`);
   });
 
   it("never closes the screen when using the nested refresh button with the keyboard", () => {

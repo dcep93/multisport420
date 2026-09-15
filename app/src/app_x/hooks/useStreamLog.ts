@@ -5,7 +5,7 @@ import { BIG_PLAY_DURATION_MS, BIG_PLAY_WARNING_MS, getBigPlay, getPlayKey } fro
 import type { LogType } from "../lib/renderLog/types";
 
 const POLL_INTERVAL_MS = 10_000;
-type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean };
+type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean; bigPlayClock?: string };
 
 export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId = 0) {
   const { slug, category, espn_id } = stream;
@@ -28,10 +28,9 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     let epoch = 0;
     let initialized = false;
     let refreshing = false;
-    let activeAlerts = 0;
     const seen = new Set<string>();
     const timers = new Set<ReturnType<typeof setTimeout>>();
-    const alerts = new Map<string, { timer: ReturnType<typeof setTimeout>; active: boolean }>();
+    const alerts = new Map<string, { timer: ReturnType<typeof setTimeout>; active: boolean; clock: string }>();
 
     const update = (changes: Partial<LogState>) => {
       if (!active) return;
@@ -48,17 +47,21 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       timers.add(timer);
       return timer;
     };
+    const publishAlert = () => {
+      const latest = [...alerts.values()].filter(alert => alert.active).at(-1);
+      update({ bigPlay: Boolean(latest), bigPlayClock: latest?.clock });
+    };
     const clearTimers = () => {
       for (const timer of timers) clearTimeout(timer);
       timers.clear();
       alerts.clear();
-      activeAlerts = 0;
     };
     const publish = (log: LogType) => {
       if (!active) return;
       setState(previous => {
         if (previous.key === key && previous.log && previous.log.timestamp > log.timestamp) return previous;
-        return { key, log, error: "", bigPlay: previous.key === key && previous.bigPlay };
+        return { key, log, error: "", bigPlay: previous.key === key && previous.bigPlay,
+          bigPlayClock: previous.key === key ? previous.bigPlayClock : undefined };
       });
     };
 
@@ -80,9 +83,8 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
           if (alert && (!getBigPlay(play) || log.gameFinished)) {
             clearTimeout(alert.timer);
             timers.delete(alert.timer);
-            if (alert.active) activeAlerts -= 1;
             alerts.delete(playKey);
-            update({ bigPlay: activeAlerts > 0 });
+            publishAlert();
           }
         }
         if (!initialized) {
@@ -94,14 +96,12 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
             const playKey = getPlayKey(play, team);
             if (seen.has(playKey) || !getBigPlay(play)) continue;
             seen.add(playKey);
-            const alert = { active: false, timer: schedule(() => {
+            const alert = { active: false, clock: play.clock, timer: schedule(() => {
               alert.active = true;
-              activeAlerts += 1;
-              update({ bigPlay: true });
+              publishAlert();
               alert.timer = schedule(() => {
-                activeAlerts -= 1;
                 alerts.delete(playKey);
-                update({ bigPlay: activeAlerts > 0 });
+                publishAlert();
               }, BIG_PLAY_DURATION_MS);
             }, Math.max(0, delay - BIG_PLAY_WARNING_MS)) };
             alerts.set(playKey, alert);
@@ -122,7 +122,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       const refreshEpoch = epoch;
       refreshing = true;
       clearTimers();
-      update({ bigPlay: false });
+      update({ bigPlay: false, bigPlayClock: undefined });
       try { await fetchLog(true); }
       finally { if (epoch === refreshEpoch) refreshing = false; }
     };
@@ -143,6 +143,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     if (refreshRequestId !== 0) void refresh();
   }, [refresh, refreshRequestId]);
 
-  const current = state.key === key ? state : { log: null, error: "", bigPlay: false };
-  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay, refresh };
+  const current = state.key === key ? state : { log: null, error: "", bigPlay: false, bigPlayClock: undefined };
+  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay,
+    bigPlayClock: current.bigPlayClock, refresh };
 }

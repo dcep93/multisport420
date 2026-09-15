@@ -14,6 +14,21 @@ function log(id = "1", timestamp = 1, text = "Pass for 30 yards"): LogType {
 async function advance(ms: number) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 beforeEach(() => { vi.useFakeTimers(); fetchLog.mockReset(); fetchLog.mockResolvedValue(log()); });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
+it("shows the triggering play clock immediately with a 30-second log delay and clears it on expiry", async () => {
+  const snapshot = log();
+  snapshot.playByPlay[0].plays![0].clock = "Q3 12:22";
+  fetchLog.mockResolvedValue(snapshot);
+  const { result } = renderHook(() => useStreamLog(stream, 30_000));
+  await advance(1);
+  expect(result.current.bigPlay).toBe(true);
+  expect(result.current.bigPlayClock).toBe("Q3 12:22");
+  expect(result.current.displayedLog).toBeNull();
+  await advance(5000);
+  expect(result.current.bigPlay).toBe(false);
+  expect(result.current.bigPlayClock).toBeUndefined();
+  await advance(25_000);
+  expect(result.current.displayedLog).toEqual(snapshot);
+});
 it.each([60_000, 120_000])("warns 40 seconds before a %ims snapshot for five seconds without repeating", async delay => {
   const { result } = renderHook(() => useStreamLog(stream, delay));
   await advance(delay - 40_001); expect(result.current.bigPlay).toBe(false); expect(result.current.displayedLog).toBeNull();

@@ -11,18 +11,21 @@ export default function ScreenTitleBar(props: {
   possession?: { team: string; isHomeTeam: boolean };
   redZone?: boolean;
   bigPlay?: boolean;
+  bigPlayClock?: string;
 }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const possessionId = useId();
   const indexedLabel = props.screenNumber === undefined ? props.label : `(${props.screenNumber}) ${props.label}`;
+  const showBigPlay = Boolean(props.bigPlay && !props.redZone);
 
   useEffect(() => {
     const shell = shellRef.current;
     const viewport = viewportRef.current;
     const text = textRef.current;
     if (!shell || !viewport || !text) return;
+    if (showBigPlay) viewport.scrollLeft = 0;
 
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let frame: number | undefined;
@@ -94,7 +97,7 @@ export default function ScreenTitleBar(props: {
       window.removeEventListener("resize", measure);
       reducedMotion?.removeEventListener("change", motionChange);
     };
-  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam]);
+  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam, showBigPlay, props.bigPlayClock]);
 
   const possession = props.possession ? (
     <span id={possessionId} className="screen-title-possession" role="img" aria-label={`${props.possession.team} in possession`}>
@@ -111,7 +114,7 @@ export default function ScreenTitleBar(props: {
       role="button"
       tabIndex={0}
       aria-label={`Close screen ${indexedLabel}`}
-      aria-describedby={props.possession ? possessionId : undefined}
+      aria-describedby={!showBigPlay && props.possession ? possessionId : undefined}
       onClick={props.onClose}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -141,9 +144,12 @@ export default function ScreenTitleBar(props: {
         >
           <span ref={textRef} className="screen-letter">
             {props.screenNumber !== undefined ? <span>({props.screenNumber})</span> : null}
-            {props.possession && !props.possession.isHomeTeam ? possession : null}
+            {showBigPlay ? <>
+              {props.bigPlayClock ? <span>{props.bigPlayClock}</span> : null}
+              <span className="screen-title-possession" role="img" aria-label="Big play">🏈</span>
+            </> : props.possession && !props.possession.isHomeTeam ? possession : null}
             <span>{props.label}</span>
-            {props.possession?.isHomeTeam ? possession : null}
+            {!showBigPlay && props.possession?.isHomeTeam ? possession : null}
           </span>
         </div>
         {props.onRefresh ? (
