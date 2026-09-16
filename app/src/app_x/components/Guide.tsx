@@ -9,6 +9,17 @@ export default function Guide() {
         <li>Click a screen title in the multiscreen to remove it.</li>
         <li>This app has popups, often NSFW. I am trying to fix it.</li>
         <li>
+          Install the{" "}
+          <a
+            href="https://chromewebstore.google.com/detail/multisport420/pliaafmjkfpficapmcoadpkbfijhjbfg?authuser=1&hl=en"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Multisport420 Chrome extension
+          </a>{" "}
+          to remove popups and automatically mute streams that are not in the spotlight.
+        </li>
+        <li>
           You can only use this tool if you legally have access to the content.
         </li>
       </ol>
