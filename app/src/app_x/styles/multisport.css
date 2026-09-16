@@ -846,6 +846,12 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   margin-top: 0.45rem;
 }
 
+.guide-list a {
+  color: var(--ww-text);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
 .option-row {
   display: flex;
   align-items: center;
