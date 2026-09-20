@@ -10,7 +10,8 @@ type FootballCoreDriveItem = {
 
 type FootballDrivePlay = {
   id?: string;
-  type?: { id?: string };
+  shortText?: string;
+  review?: { upheld?: boolean };
   statYardage?: number;
   awayScore?: number;
   homeScore?: number;
@@ -132,7 +133,8 @@ export async function getFootballLog(
         .filter((play) => play.participants)
         .map((play) => ({
           id: play.id,
-          typeId: play.type?.id,
+          shortText: play.shortText,
+          reviewReversed: play.review?.upheld === false,
           distance: play.statYardage,
           startYardsToEndzone: play.start?.yardsToEndzone,
           timestamp: parseWallclock(play.wallclock),

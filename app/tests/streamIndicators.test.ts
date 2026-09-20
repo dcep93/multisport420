@@ -21,8 +21,40 @@ describe("football big plays", () => {
     expect(getBigPlay({ text: "Pass complete", clock: "Q1 1:00", down: "" })).toBeNull();
   });
   it("uses the final incomplete-pass ruling when the description retains an overturned interception", () => {
-    expect(getBigPlay({ typeId: "3", startYardsToEndzone: 23, distance: 0, clock: "Q2 1:14", down: "3rd & 4 at CAR 23",
+    expect(getBigPlay({ reviewReversed: true, startYardsToEndzone: 23, distance: 0, clock: "Q2 1:14", down: "3rd & 4 at CAR 23",
       text: "C.Rush pass INTERCEPTED at CAR 19. The Replay Official reviewed the interception ruling, and the play was REVERSED. C.Rush pass incomplete to O.Zaccheaus." })).toBeNull();
+  });
+  it.each([
+    ["TOUCHDOWN", "Runner out of bounds for 8 yards.", 8, null],
+    ["FUMBLES, RECOVERED by defense", "Runner down by contact for 2 yards.", 2, null],
+    ["Pass incomplete", "Pass complete for 32 yards.", 32, "distance"],
+    ["Runner out of bounds", "Runner scores a TOUCHDOWN.", 8, "super_big_play"],
+    ["Pass INTERCEPTED", "Pass complete for 30 yards.", 30, "distance"],
+    ["TOUCHDOWN", "Penalty, No Play.", 35, null],
+    ["No Play", "Pass complete for 30 yards.", 30, "distance"],
+  ])("classifies the corrected outcome instead of the original %s", (original, final, distance, expected) => {
+    expect(getBigPlay({ text: `${original}. The Replay Official reviewed the ruling, and the play was REVERSED.\n${final}`,
+      reviewReversed: true, distance, startYardsToEndzone: 40, clock: "Q2 1:14", down: "" })).toBe(expected);
+  });
+  it("uses the last reversal and supports descriptions without review metadata", () => {
+    expect(getBigPlay({ text: "TOUCHDOWN. Ruling REVERSED. FUMBLE. After further review, ruling OVERTURNED. Runner down for 2 yards.",
+      distance: 2, clock: "Q2 1:14", down: "" })).toBeNull();
+  });
+  it.each([
+    ["Pass incomplete", null],
+    ["Rushing TOUCHDOWN", "super_big_play"],
+    [undefined, null],
+  ])("uses the current short description when a reversed play has no appended outcome (%s)", (shortText, expected) => {
+    expect(getBigPlay({ text: "FUMBLE recovered by defense", reviewReversed: true,
+      shortText, distance: 8, clock: "Q2 1:14", down: "" })).toBe(expected);
+  });
+  it("does not retain stale yardage while waiting for a corrected outcome", () => {
+    expect(getBigPlay({ text: "Pass complete for 50 yards. Replay ruling REVERSED.", reviewReversed: true,
+      distance: 50, clock: "Q2 1:14", down: "" })).toBeNull();
+  });
+  it("keeps a big play when a review upholds the original ruling", () => {
+    expect(getBigPlay({ text: "Pass INTERCEPTED. The Replay Official reviewed the interception ruling, and the play was Upheld.",
+      reviewReversed: false, distance: 0, clock: "Q2 1:14", down: "" })).toBe("super_big_play");
   });
   it.each([
     ["TOUCHDOWN", 5],

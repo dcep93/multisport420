@@ -1,6 +1,7 @@
 export type PlayType = {
   id?: string;
-  typeId?: string;
+  shortText?: string;
+  reviewReversed?: boolean;
   distance?: number;
   startYardsToEndzone?: number;
   timestamp?: number;
