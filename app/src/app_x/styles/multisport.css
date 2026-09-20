@@ -382,6 +382,11 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   min-width: 0;
 }
 
+.screen-title-hotkey {
+  flex: none;
+  white-space: nowrap;
+}
+
 .screen-title-viewport {
   min-width: 0;
   flex: 1;

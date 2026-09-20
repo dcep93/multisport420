@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "multisport420",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Companion for multisport420.web.app: video playback, mute controls, popup blocking, and live ESPN fantasy scoreboards.",
   "icons": {
     "16": "icons/icon-16.png",

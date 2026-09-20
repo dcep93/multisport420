@@ -7,25 +7,12 @@
   const isDescendantOfMultisportHost = ancestorOrigins.some((origin) =>
     HOST_HOSTNAMES.has(new URL(origin).hostname),
   );
-  let hasUserInteracted = false;
   let currentVideo = null;
   let requestedMutedState = true;
-  let lastKnownMutedState = null;
-  let didAppMuteCurrentVideo = false;
-  let detachVideoListener = null;
 
   if (!isDescendantOfMultisportHost) {
     return;
   }
-
-  const markUserInteraction = () => {
-    hasUserInteracted = true;
-  };
-
-  window.addEventListener("pointerdown", markUserInteraction, { capture: true });
-  window.addEventListener("keydown", markUserInteraction, { capture: true });
-  window.addEventListener("touchstart", markUserInteraction, { capture: true });
-  window.addEventListener("click", markUserInteraction, { capture: true });
 
   window.addEventListener("message", (event) => {
     if (event.data?.source !== APP_MESSAGE_SOURCE) {
@@ -42,14 +29,12 @@
       return;
     }
 
-    if (!hasUserInteracted || !(currentVideo instanceof HTMLVideoElement)) {
+    if (!(currentVideo instanceof HTMLVideoElement)) {
       return;
     }
 
-    currentVideo.muted = !currentVideo.muted;
-    requestedMutedState = currentVideo.muted;
-    lastKnownMutedState = currentVideo.muted;
-    didAppMuteCurrentVideo = false;
+    requestedMutedState = !currentVideo.muted;
+    applyRequestedMutedState();
   });
 
   waitForVideoElement();
@@ -77,28 +62,7 @@
   }
 
   function init(video) {
-    detachVideoListener?.();
     currentVideo = video;
-    lastKnownMutedState = video.muted;
-    didAppMuteCurrentVideo = false;
-    const handleVolumeChange = () => {
-      if (!(currentVideo instanceof HTMLVideoElement)) {
-        return;
-      }
-
-      if (currentVideo.muted === lastKnownMutedState) {
-        return;
-      }
-
-      lastKnownMutedState = currentVideo.muted;
-      didAppMuteCurrentVideo = false;
-    };
-
-    video.addEventListener("volumechange", handleVolumeChange);
-    detachVideoListener = () => {
-      video.removeEventListener("volumechange", handleVolumeChange);
-      detachVideoListener = null;
-    };
     video.autoplay = true;
     video.playsInline = true;
     applyRequestedMutedState();
@@ -118,21 +82,6 @@
       return;
     }
 
-    if (requestedMutedState) {
-      if (!currentVideo.muted) {
-        currentVideo.muted = true;
-        lastKnownMutedState = true;
-        didAppMuteCurrentVideo = true;
-      }
-      return;
-    }
-
-    if (didAppMuteCurrentVideo && currentVideo.muted) {
-      currentVideo.muted = false;
-      lastKnownMutedState = false;
-    }
-
-    didAppMuteCurrentVideo = false;
+    currentVideo.muted = requestedMutedState;
   }
-
 })();

@@ -19,6 +19,14 @@ After updating an existing unpacked installation, click **Reload** on the
 extension card and refresh the viewing page. Deploying the website does not
 update your locally installed extension. The phone remote needs no extension.
 
+## Mute and spotlight controls (0.3.2 or later)
+
+Mute controls work on every supported screen without first clicking inside its
+embedded player. Each toggle inverts that player's current mute state. Entering
+spotlight unmutes the stream, including streams muted manually in the player.
+Reload the extension and refresh the viewing page after upgrading to apply these
+audio fixes to already-open players.
+
 ## Embed.st players (0.3.1 or later)
 
 The extension runs its existing media controller and popup-overlay helper on

@@ -17,23 +17,6 @@ function removeStreamSlug(slugs: StreamSlug[], streamSlug: StreamSlug) {
   return slugs.filter((slug) => slug !== streamSlug);
 }
 
-function focusReplacementStream(
-  remainingSlugs: StreamSlug[],
-  setFocusedSlug: (value: StreamSlug) => void,
-  setMuteToggleSlug: (value: StreamSlug) => void,
-  setMuteToggleRequestId: (updater: (current: number) => number) => void,
-) {
-  const nextFocusedSlug = remainingSlugs[0] ?? "";
-  setFocusedSlug(nextFocusedSlug);
-
-  if (!nextFocusedSlug) {
-    return;
-  }
-
-  setMuteToggleSlug(nextFocusedSlug);
-  setMuteToggleRequestId((current) => current + 1);
-}
-
 export default function MultisportApp() {
   const hostCategories = HOST.getLeagueCategories();
   const defaultCategory = getDefaultCategory(hostCategories);
@@ -184,12 +167,7 @@ export default function MultisportApp() {
       const remainingSlugs = removeStreamSlug(selectedSlugs, streamSlug);
       setSelectedSlugs(remainingSlugs);
       if (resolvedFocusedSlug === streamSlug) {
-        focusReplacementStream(
-          remainingSlugs,
-          setFocusedSlug,
-          setMuteToggleSlug,
-          setMuteToggleRequestId,
-        );
+        setFocusedSlug(remainingSlugs[0] ?? "");
       }
       return;
     }
@@ -208,12 +186,7 @@ export default function MultisportApp() {
     const remainingSlugs = removeStreamSlug(selectedSlugs, streamSlug);
     setSelectedSlugs(remainingSlugs);
     if (resolvedFocusedSlug === streamSlug) {
-      focusReplacementStream(
-        remainingSlugs,
-        setFocusedSlug,
-        setMuteToggleSlug,
-        setMuteToggleRequestId,
-      );
+      setFocusedSlug(remainingSlugs[0] ?? "");
     }
   }
 

@@ -56,7 +56,7 @@ describe("Screen title bar", () => {
   it("places the play clock and football after the screen number only during a blue alert", () => {
     const label = "Denver Broncos @ Kansas City Chiefs";
     const { container, rerender } = render(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" />);
-    const title = () => [...container.querySelector(".screen-letter")!.children].map(child => child.textContent).join(" ");
+    const title = () => [container.querySelector(".screen-title-hotkey")?.textContent, ...[...container.querySelector(".screen-letter")!.children].map(child => child.textContent)].join(" ");
     expect(title()).toBe("(1) Q3 12:22 🏈 Denver Broncos @ Kansas City Chiefs");
     expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
     rerender(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" redZone />);
@@ -126,4 +126,37 @@ it("stays paused when possession changes while the title is hovered", () => {
   vi.spyOn(shell, "matches").mockImplementation(selector => selector === ":hover");
   rerender(<ScreenTitleBar className="" label="A long game title" possession={{ team: "Away", isHomeTeam: false }} />);
   expect(frames.size).toBe(0);
+});
+
+
+it("keeps the screen hotkey outside both automatic and manual title scrolling", () => {
+  const label = "Denver Broncos @ Kansas City Chiefs with a very long title";
+  const { container } = render(<ScreenTitleBar className="" label={label} screenNumber={2} />);
+  const viewport = overflow(container);
+  const hotkey = screen.getByText("(2)");
+  expect(viewport.contains(hotkey)).toBe(false);
+  expect(hotkey.parentElement).toBe(viewport.parentElement);
+  expect(screen.getByRole("button", { name: `Close screen (2) ${label}` })).toBeTruthy();
+  tick(0);
+  for (let time = 1800; time <= 4000; time += 50) tick(time);
+  expect(viewport.scrollLeft).toBeGreaterThan(0);
+  fireEvent.keyDown(viewport, { key: "End" });
+  expect(viewport.scrollLeft).toBe(viewport.scrollWidth);
+  expect(viewport.contains(hotkey)).toBe(false);
+  fireEvent.keyDown(viewport, { key: "Home" });
+  expect(viewport.scrollLeft).toBe(0);
+});
+
+
+it("accumulates subpixel movement when the browser rounds scroll positions", () => {
+  const { container } = render(<ScreenTitleBar className="" label="A long game title" />);
+  const viewport = overflow(container);
+  let position = 0;
+  Object.defineProperty(viewport, "scrollLeft", {
+    get: () => position,
+    set: (value: number) => { position = Math.round(value); },
+  });
+  tick(0);
+  for (let time = 1800; time <= 2800; time += 8) tick(time);
+  expect(viewport.scrollLeft).toBeGreaterThan(15);
 });

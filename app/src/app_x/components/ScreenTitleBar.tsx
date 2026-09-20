@@ -31,6 +31,7 @@ export default function ScreenTitleBar(props: {
     let frame: number | undefined;
     let maximum = 0;
     let direction = 1;
+    let remainder = 0;
     let previousTime: number | undefined;
     let holdUntil: number | undefined;
     let hovered = shell.matches(":hover");
@@ -41,15 +42,19 @@ export default function ScreenTitleBar(props: {
       frame = undefined;
       previousTime = undefined;
       holdUntil = undefined;
+      remainder = 0;
     };
     const tick = (time: number) => {
       if (holdUntil === undefined) holdUntil = time + 1800;
       if (previousTime !== undefined && time >= holdUntil) {
         // Use the DOM scroll position so manual scrolling remains the source of truth.
         const distance = Math.min(time - previousTime, 50) * 0.018;
-        const next = Math.max(0, Math.min(maximum, viewport.scrollLeft + direction * distance));
+        const next = Math.max(0, Math.min(maximum, viewport.scrollLeft + direction * distance + remainder));
         viewport.scrollLeft = next;
+        // Some browsers round scrollLeft; retain subpixel movement between frames.
+        remainder = next - viewport.scrollLeft;
         if (next >= maximum || next <= 0) {
+          remainder = 0;
           direction *= -1;
           holdUntil = time + 1800;
         }
@@ -125,6 +130,7 @@ export default function ScreenTitleBar(props: {
       }}
     >
       <div className="screen-title-inner">
+        {props.screenNumber !== undefined ? <span className="screen-title-hotkey">({props.screenNumber})</span> : null}
         <div
           ref={viewportRef}
           className="screen-title-viewport"
@@ -143,7 +149,6 @@ export default function ScreenTitleBar(props: {
           }}
         >
           <span ref={textRef} className="screen-letter">
-            {props.screenNumber !== undefined ? <span>({props.screenNumber})</span> : null}
             {showBigPlay ? <>
               {props.bigPlayClock ? <span>{props.bigPlayClock}</span> : null}
               <span className="screen-title-possession" role="img" aria-label="Big play">🏈</span>
