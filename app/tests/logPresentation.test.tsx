@@ -27,15 +27,11 @@ it.each(["NFL", "CFB", "CFL"])("keeps the latest big play below the teams as ord
   const { container, rerender } = render(renderSummary(summaryLog(), category));
   const summary = () => container.querySelector(".multisport-log-latest-big-play")!;
   expect(container.querySelector(".multisport-log-team-summary-row")?.nextElementSibling).toBe(summary());
-  expect(summary().textContent).toContain("Latest big play");
-  expect(summary().textContent).toContain("Away");
-  expect(summary().textContent).toContain("Q3 12:22");
-  expect(summary().textContent).toContain(bigPlay.text);
-  expect(summary().textContent).not.toContain(ordinaryPlay.text);
+  expect(summary().textContent).toBe("Q3 12:22");
   rerender(renderSummary(summaryLog([bigPlay, ordinaryPlay, { ...ordinaryPlay, id: "later", clock: "Q3 11:20" }]), category));
-  expect(summary().textContent).toContain(bigPlay.text);
+  expect(summary().textContent).toBe(bigPlay.clock);
   rerender(renderSummary({ ...summaryLog(), gameFinished: true }, category));
-  expect(summary().textContent).toContain(bigPlay.text);
+  expect(summary().textContent).toBe(bigPlay.clock);
 });
 it("replaces the summary with a newer big play and retracts nullified plays", () => {
   const newer = { ...bigPlay, id: "new", text: "Home TOUCHDOWN", clock: "Q3 10:00" };
@@ -44,12 +40,10 @@ it("replaces the summary with a newer big play and retracts nullified plays", ()
   const { container, rerender } = render(renderSummary(summaryLog()));
   const summary = () => container.querySelector(".multisport-log-latest-big-play");
   rerender(renderSummary(next));
-  expect(summary()?.textContent).toContain("Home");
-  expect(summary()?.textContent).toContain(newer.text);
-  expect(summary()?.textContent).not.toContain(bigPlay.text);
+  expect(summary()?.textContent).toBe(newer.clock);
   rerender(renderSummary({ ...next, playByPlay: [...summaryLog().playByPlay,
     { ...next.playByPlay[1], plays: [{ ...newer, text: "TOUCHDOWN NULLIFIED. No Play." }] }] }));
-  expect(summary()?.textContent).toContain(bigPlay.text);
+  expect(summary()?.textContent).toBe(bigPlay.clock);
   rerender(renderSummary(summaryLog([ordinaryPlay])));
   expect(summary()).toBeNull();
 });

@@ -5,7 +5,7 @@ rendering the latest big play below the sidebar's teams.
 
 Derive the newest qualifying football play from the displayed log's chronological
 plays using the existing getBigPlay rules. Render a compact Latest big play block
-immediately after the team summaries, including team, game clock and description.
+immediately after the team summaries, containing only its game clock (for example, Q1 4:22), with no label, team or description.
 Use the displayed snapshot so the block follows log delay and refresh behavior.
 It persists beyond the five-second warning, loads historical big plays on initial
 view, updates to newer qualifying plays, and drops nullified/corrected plays.
@@ -32,3 +32,10 @@ changed-file lint pass. Browser verification uses the existing indicators fixtur
 and confirms the block's position below teams, no horizontal overflow, no clock
 in the blue banner, and persistence after the actual alert expires. The sidebar
 screenshot was visually inspected at 320px width.
+
+
+## User clarification
+
+Only the latest big play's game clock should appear below the teams. Removed the
+label, team name and play description. Exact-text assertions cover this content
+restriction while retaining the existing persistence and placement checks.
