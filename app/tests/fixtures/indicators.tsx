@@ -6,6 +6,7 @@ import ScreenTitleBar from "../../src/app_x/components/ScreenTitleBar";
 import "../../src/index.css";
 import "../../src/app_x/styles/multisport.css";
 const streams = ["New England Patriots @ Seattle Seahawks", "Minnesota Vikings @ Green Bay Packers", "Las Vegas Raiders @ Miami Dolphins", "Philadelphia Eagles @ New York Giants"].map((title, index) => ({ title, category: "NFL", espn_id: index + 1, slug: String(index), raw_url: "fixture" }));
+const handoff = new URLSearchParams(location.search).get("handoff");
 window.fetch = async (input) => {
   const url = String(input), id = Number(new URL(url).searchParams.get("event"));
   const summary = { header: { competitions: [{ status: { type: { state: "in" } }, competitors: [{ homeAway: "away", team: { id: "1", shortDisplayName: "Away" } }, { homeAway: "home", team: { id: "2", shortDisplayName: "Home" } }] }] },
@@ -14,7 +15,7 @@ window.fetch = async (input) => {
         { athlete: { displayName: "Travis Kelce" }, stats: ["7", "104", "14.9", "1", "32", "10"] },
         { athlete: { displayName: "Courtland Sutton" }, stats: ["5", "82", "16.4", "1", "35", "8"] },
       ] }] }] },
-    drives: { current: { id: "d1", team: { id: "1", shortDisplayName: "Away" }, description: "Fixture drive", plays: [{ id: "p1", text: "Pass for 30 yards", statYardage: 30, participants: [], wallclock: "2026-09-13T17:00:00Z", period: { number: 1 }, clock: { displayValue: `${12 - id}:00` }, end: { team: { id: id % 2 ? "1" : "2" }, yardsToEndzone: id % 2 ? 15 : 50 } }] } } };
+    drives: { current: { id: "d1", team: { id: "1", shortDisplayName: "Away" }, description: "Fixture drive", displayResult: handoff || undefined, plays: [{ id: "p1", text: handoff ? "Run stopped on fourth down" : "Pass for 30 yards", statYardage: handoff ? 0 : 30, participants: [], wallclock: "2026-09-13T17:00:00Z", period: { number: 1 }, clock: { displayValue: `${12 - id}:00` }, end: { team: { id: handoff ? "2" : id % 2 ? "1" : "2" }, yardsToEndzone: handoff ? 80 : id % 2 ? 15 : 50 } }] } } };
   return new Response(JSON.stringify(url.includes("/summary?") ? summary : { items: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
 };
 const host = { getLeagueCategories: () => ["NFL"], getStreams: async () => streams, getIframeParams: async () => ({}), getIframeDocStrElement: () => <html><body style={{ background: "#18212a", color: "white", fontFamily: "sans-serif" }}>Fixture video</body></html> };

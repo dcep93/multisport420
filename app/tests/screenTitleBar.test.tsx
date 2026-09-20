@@ -41,6 +41,21 @@ function tick(time: number) {
   pending.forEach((callback) => callback(time));
 }
 
+it.each([" @ ", " vs ", " at "])("highlights only the owning team in a %s matchup", separator => {
+  const label = `Carolina Panthers${separator}Atlanta Falcons`;
+  const { container, rerender } = render(<ScreenTitleBar className="" label={label} possession={{ team: "Panthers", isHomeTeam: false }} />);
+  expect(container.querySelector(".screen-title-team-owning")?.textContent).toBe("Carolina Panthers");
+  expect(container.querySelectorAll(".screen-title-team-owning")).toHaveLength(1);
+  rerender(<ScreenTitleBar className="" label={label} possession={{ team: "Falcons", isHomeTeam: true }} bigPlay />);
+  expect(container.querySelector(".screen-title-team-owning")?.textContent).toBe("Atlanta Falcons");
+  expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
+  rerender(<ScreenTitleBar className="" label={label} possession={{ team: "Falcons", isHomeTeam: true }} redZone />);
+  expect(container.querySelector(".screen-title-team-owning")?.textContent).toBe("Atlanta Falcons");
+  expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("red-zone");
+  rerender(<ScreenTitleBar className="" label={label} />);
+  expect(container.querySelector(".screen-title-team-owning")).toBeNull();
+});
+
 describe("Screen title bar", () => {
   it("gives red zone precedence and places the named possession icon on the correct side", () => {
     const { container, rerender } = render(<ScreenTitleBar className="" label="Away @ Home" redZone bigPlay possession={{ team: "Away", isHomeTeam: false }} />);

@@ -19,6 +19,7 @@ export default function ScreenTitleBar(props: {
   const possessionId = useId();
   const indexedLabel = props.screenNumber === undefined ? props.label : `(${props.screenNumber}) ${props.label}`;
   const showBigPlay = Boolean(props.bigPlay && !props.redZone);
+  const matchup = props.label.match(/^(.*?)(\s+(?:@|vs\.?|at)\s+)(.+)$/i);
 
   useEffect(() => {
     const shell = shellRef.current;
@@ -153,7 +154,11 @@ export default function ScreenTitleBar(props: {
             {showBigPlay ? <>
               <span className="screen-title-possession" role="img" aria-label="Big play">🏈</span>
             </> : props.possession && !props.possession.isHomeTeam ? possession : null}
-            <span>{props.label}</span>
+            <span>{matchup ? <>
+              <span className={props.possession && !props.possession.isHomeTeam ? "screen-title-team screen-title-team-owning" : "screen-title-team"}>{matchup[1]}</span>
+              {matchup[2]}
+              <span className={props.possession?.isHomeTeam ? "screen-title-team screen-title-team-owning" : "screen-title-team"}>{matchup[3]}</span>
+            </> : props.label}</span>
             {!showBigPlay && props.possession?.isHomeTeam ? possession : null}
           </span>
         </div>

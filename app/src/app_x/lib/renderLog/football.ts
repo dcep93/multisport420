@@ -8,10 +8,13 @@ type FootballCoreDriveItem = {
   id: string;
 };
 
+type FootballDriveStart = { period?: { number?: number }; clock?: { displayValue?: string } };
+
 type FootballDrivePlay = {
   id?: string;
   shortText?: string;
   review?: { upheld?: boolean };
+  isTurnover?: boolean;
   statYardage?: number;
   awayScore?: number;
   homeScore?: number;
@@ -27,6 +30,7 @@ type FootballDrivePlay = {
   start?: {
     downDistanceText?: string;
     yardsToEndzone?: number;
+    team?: { id?: string; $ref?: string };
   };
   end?: {
     yardsToEndzone?: number;
@@ -35,6 +39,7 @@ type FootballDrivePlay = {
 };
 
 type FootballDriveResponse = {
+  start?: FootballDriveStart;
   description?: string;
   displayResult?: string;
   team?: {
@@ -56,6 +61,7 @@ type FootballResolvedDrive = {
   displayResult?: string;
   team: FootballTeamResponse | null;
   plays: FootballDrivePlay[];
+  start?: FootballDriveStart;
 };
 
 export async function getFootballLog(
@@ -81,6 +87,7 @@ export async function getFootballLog(
       return {
         id: coreItem.id,
         description: driveObj.description ?? "",
+        start: driveObj.start,
         displayResult: driveObj.displayResult,
         team: teamObj,
         plays: driveObj.plays?.items ?? [],
@@ -100,6 +107,16 @@ export async function getFootballLog(
       players?: any[];
     };
   };
+
+  // A new drive already identifies the receiving offense before its first play.
+  // Keep it for possession even while the log displays the last completed drive.
+  const coreDrive = driveObjs[0];
+  const summaryDrive = summaryWithDrives.drives?.current;
+  const coreOrder = getDriveOrder(coreDrive);
+  const summaryIsNewer = Number.isFinite(coreOrder) && getDriveOrder(summaryDrive) > coreOrder;
+  const possessionDrive = !coreDrive || summaryIsNewer
+    ? summaryDrive ?? coreDrive
+    : coreDrive;
 
   if (filteredDriveObjs.length > 0) {
     summaryWithDrives.drives = {
@@ -158,7 +175,7 @@ export async function getFootballLog(
     winProbability: buildWinProbability(summaryObj),
     playByPlay,
     boxScore: buildDefaultBoxScore(summaryWithDrives.boxscore?.players ?? [], config.boxScoreKeys),
-    ...getFootballIndicators(summaryObj, drives[0]),
+    ...getFootballIndicators(summaryObj, possessionDrive),
   };
 }
 
@@ -174,14 +191,28 @@ function getFootballIndicators(summary: any, drive?: FootballResolvedDrive): Pic
   const gameFinished = status?.type?.completed === true || status?.type?.state === "post";
   const atBreak = /halftime|end of half|end of game/i.test(`${status?.type?.name ?? ""} ${status?.type?.description ?? ""} ${latest?.text ?? ""}`)
     || (latest?.clock?.displayValue === "0:00" && [2, 4].includes(latest.period?.number ?? 0));
-  if (gameFinished || atBreak || !drive || drive.displayResult) return { redZone: false, gameFinished };
+  const scoringBreak = /touchdown|safety|^field goal$/i.test(drive?.displayResult ?? "");
+  if (gameFinished || atBreak || scoringBreak || !drive) return { redZone: false, gameFinished };
 
-  // Core API returns a team $ref; the summary API returns an id.
+  // A drive's team is the offense that STARTED it. The final play's end.team
+  // identifies who owns the ball after punts, downs, fumbles, and interceptions.
   const endTeam = latest?.end?.team;
-  const teamId = endTeam?.id || endTeam?.$ref?.match(/\/teams\/([^/?]+)/)?.[1] || drive.team?.id;
-  const competitor = competition?.competitors?.find((entry: any) => teamId && String(entry.team?.id) === String(teamId));
+  const endTeamId = getTeamId(endTeam);
+  const driveTeamId = drive.team?.id;
+  const changedPossession = latest?.isTurnover === true
+    || /^(?:punt|downs|turnover on downs|interception|fumble|missed field goal|field goal missed)$/i.test(drive.displayResult ?? "");
+  const competitors = competition?.competitors ?? [];
+  const startingTeamId = getTeamId(latest?.start?.team) || driveTeamId;
+  const opponent = competitors.some((entry: any) => String(entry.team?.id) === startingTeamId)
+    ? competitors.find((entry: any) => String(entry.team?.id) !== startingTeamId)
+    : undefined;
+  // Only infer a handoff when the feed omits the final owner. A same-team recovery
+  // (muffed punt, onside kick, own fumble) must retain the explicit end.team.
+  const teamId = endTeamId || (changedPossession ? opponent?.team?.id : driveTeamId);
+  const competitor = competitors.find((entry: any) => teamId && String(entry.team?.id) === String(teamId));
   if (!competitor || !["home", "away"].includes(competitor.homeAway)) return { redZone: false, gameFinished };
-  const yards = latest?.end?.yardsToEndzone;
+  // Field position is meaningful only for the team associated with that end state.
+  const yards = endTeamId === String(teamId) ? latest?.end?.yardsToEndzone : undefined;
   return {
     possession: {
       team: competitor.team.shortDisplayName || competitor.team.displayName || competitor.team.name,
@@ -190,4 +221,15 @@ function getFootballIndicators(summary: any, drive?: FootballResolvedDrive): Pic
     redZone: typeof yards === "number" && Number.isFinite(yards) && yards > 0 && yards <= 20,
     gameFinished,
   };
+}
+
+function getTeamId(team?: { id?: string; $ref?: string }) {
+  return team?.id || team?.$ref?.match(/\/teams\/([^/?]+)/)?.[1];
+}
+
+function getDriveOrder(drive?: FootballResolvedDrive) {
+  const period = drive?.start?.period?.number;
+  const clock = drive?.start?.clock?.displayValue?.match(/^(\d+):(\d{2})$/);
+  if (!period || !clock) return -Infinity;
+  return period * 3600 - Number(clock[1]) * 60 - Number(clock[2]);
 }

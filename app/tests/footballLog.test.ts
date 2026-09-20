@@ -4,6 +4,65 @@ import { getBigPlay } from "../src/app_x/lib/renderLog/indicators";
 
 afterEach(() => vi.unstubAllGlobals());
 
+it.each([
+  { result: "Punt", endTeam: "2", yards: 80, home: true },
+  { result: "Downs", endTeam: "2", yards: 98, home: true },
+  { result: "Interception", endTeam: "2", yards: 15, home: true, red: true },
+  { result: "Fumble", endTeam: "2", yards: 60, home: true },
+  { result: "Missed Field Goal", endTeam: "2", yards: 65, home: true },
+  { result: "Punt", endTeam: "1", yards: 30, home: false },
+  { result: undefined, endTeam: "1", yards: 40, home: false },
+  { result: "Punt", endTeam: undefined, yards: 5, home: true },
+  { result: "Downs", endTeam: undefined, yards: 5, home: true },
+  { result: "Fumble", endTeam: undefined, yards: 5, home: true },
+  { result: undefined, endTeam: undefined, turnover: true, yards: 5, home: true },
+  { result: "Interception Touchdown", endTeam: "2", yards: 0, home: undefined },
+  { result: "Safety", endTeam: "2", yards: 0, home: undefined },
+  { result: "Punt", endTeam: "unknown", yards: 5, home: undefined },
+])("keeps possession through drive endings and honors the final owner: %j", async ({ result, endTeam, turnover, yards, home, red }) => {
+  const latest = { id: "last", text: "Final play", participants: [], isTurnover: turnover,
+    period: { number: 3 }, clock: { displayValue: "4:00" },
+    start: { team: { id: "1" } }, end: { team: endTeam ? { id: endTeam } : undefined, yardsToEndzone: yards } };
+  const summary = { drives: { current: { id: "drive", team: { id: "1" }, displayResult: result, plays: [latest] } },
+    header: { competitions: [{ status: { type: { state: "in" } }, competitors: [
+      { homeAway: "away", team: { id: "1", shortDisplayName: "Away" } },
+      { homeAway: "home", team: { id: "2", shortDisplayName: "Home" } },
+    ] }] } };
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => ({ ok: true, json: async () => url.includes("/summary?") ? summary : { items: [] } })));
+  const log = await getFootballLog({ category: "NFL", espn_id: 1, title: "Away @ Home", raw_url: "", slug: "game" },
+    { sport: "football", espnLeague: "nfl", playType: "football", boxScoreKeys: [] });
+  expect(log?.possession?.isHomeTeam).toBe(home);
+  expect(log?.redZone).toBe(red ?? false);
+});
+
+it.each(["core-empty", "summary-ahead", "summary-stale"])("uses the newest drive's owner before its first snap (%s)", async mode => {
+  const newDrive = { id: "new", team: { id: "2" }, start: { period: { number: 3 }, clock: { displayValue: "10:00" } }, plays: [] };
+  const oldDrive = { id: "old", team: { id: "1" }, start: { period: { number: 3 }, clock: { displayValue: "12:00" } },
+    displayResult: "Touchdown", plays: [{ text: "TOUCHDOWN", participants: [], period: { number: 3 }, clock: { displayValue: "10:00" }, end: { team: { id: "1" }, yardsToEndzone: 0 } }] };
+  const summary = { drives: { current: mode === "summary-stale" ? oldDrive : newDrive }, header: { competitions: [{
+    status: { type: { state: "in" } }, competitors: [
+      { homeAway: "away", team: { id: "1", shortDisplayName: "Away" } },
+      { homeAway: "home", team: { id: "2", shortDisplayName: "Home" } },
+    ],
+  }] } };
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    let data: unknown;
+    if (url.includes("/summary?")) data = summary;
+    else if (url.endsWith("/drives?limit=1000")) data = { items: (mode === "summary-ahead" ? [oldDrive] : [oldDrive, newDrive]).map(d => ({ id: d.id, $ref: `https://example.test/${d.id}` })) };
+    else if (url.includes("/team/")) data = { id: url.split("/").at(-1), shortDisplayName: "Team" };
+    else {
+      const drive = url.endsWith("/old") ? oldDrive : newDrive;
+      data = { ...drive, team: { $ref: `https://example.test/team/${drive.team.id}` }, plays: { items: drive.plays } };
+    }
+    return { ok: true, json: async () => data };
+  }));
+  const log = await getFootballLog({ category: "NFL", espn_id: 1, title: "Away @ Home", raw_url: "", slug: "game" },
+    { sport: "football", espnLeague: "nfl", playType: "football", boxScoreKeys: [] });
+  expect(log?.possession).toEqual({ team: "Home", isHomeTeam: true });
+  expect(log?.redZone).toBe(false);
+  expect(log?.playByPlay[0].plays?.[0].text).toBe("TOUCHDOWN");
+});
+
 describe("ESPN football references", () => {
   it.each([false, true])("keeps drives and plays chronological for newest-first rendering (summary fallback: %s)", async (fallback) => {
     const makePlay = (text: string, clock: string, score: number, wallclock: string) => ({
