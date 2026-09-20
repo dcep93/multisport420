@@ -22,3 +22,17 @@ player-native manual mute in some cases; this change governs app/remote controls
 Run app tests, production build, changed-file lint, browser compatibility tests,
 and applicable remote checks. Commit/push main and verify website deployment.
 Self-review: no extension update, new permissions, or player-click prerequisite.
+
+## Verification
+
+Before the fix, the browser test with the unchanged 0.3.1 script failed when
+pressing the active stream number: the video remained unmuted. After the fix,
+both old and current controller cases pass across eight screens, repeated
+mute/unmute, 4/4/3/4 and refreshing while muted. The refresh test waits for the
+original iframe to detach before checking the replacement video.
+
+162 app unit tests, production build and changed-file lint pass. Phone-remote
+tests now assert explicit per-player state and no replay on reconnect; their
+lint and test discovery pass, but integration execution is unavailable because
+this machine lacks the Firebase emulator and Java runtime. Extension files and
+manifest are unchanged. Existing root test-results output is left unstaged.

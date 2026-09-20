@@ -1,9 +1,32 @@
-import { expect, test, type BrowserContext, type WebSocket } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type WebSocket } from "@playwright/test";
 import { roomKey } from "../../src/app_x/lib/roomState";
 
 const database = "http://127.0.0.1:9000";
 const namespace = "demo-multisport420-default-rtdb";
 const stateUrl = (id: string) => `${database}/remoteRooms/${roomKey(id)}/state.json?ns=${namespace}`;
+
+type MuteCommand = { player: string; type: string; muted?: boolean };
+type PlayerWindow = typeof window & { muteCommands: MuteCommand[] };
+
+async function muteCommands(page: Page) {
+  return page.evaluate(() => (window as PlayerWindow).muteCommands);
+}
+
+async function expectMuteState(page: Page, expected: Record<string, boolean>) {
+  await expect.poll(async () => Object.fromEntries((await muteCommands(page))
+    .filter(command => command.type === "multisport420:set-muted")
+    .map(command => [command.player, command.muted]))).toEqual(expected);
+  expect((await muteCommands(page)).every(command => command.type === "multisport420:set-muted")).toBe(true);
+}
+
+async function expectMuteGesture(page: Page, player: string, muted: boolean, gesture: () => Promise<unknown>) {
+  const before = await muteCommands(page);
+  await gesture();
+  // A live gesture sends exactly one explicit state, with no toggle command.
+  await expect.poll(async () => (await muteCommands(page)).slice(before.length)).toEqual([
+    { player, type: "multisport420:set-muted", muted },
+  ]);
+}
 
 async function mockStreams(context: BrowserContext) {
   await context.route(/https:\/\/[^/]*espn\.com\//, (route) => route.fulfill({ json: { events: [] } }));
@@ -12,7 +35,7 @@ async function mockStreams(context: BrowserContext) {
     if (target.includes("espn.com")) {
       await route.fulfill({ json: { events: [] } });
     } else if (target.includes("/watch/")) {
-      await route.fulfill({ contentType: "text/html", body: '<iframe id="main-player" src="https://player.example.test/video"></iframe>' });
+      await route.fulfill({ contentType: "text/html", body: `<iframe id="main-player" src="https://player.example.test/video/${new URL(target).pathname.split("/").pop()}"></iframe>` });
     } else {
       await route.fulfill({ contentType: "text/html", body: `<div class="events-list">
         ${["Red Sox vs Yankees", "Cubs vs Dodgers", "Mets vs Phillies"].map((title, index) =>
@@ -23,15 +46,15 @@ async function mockStreams(context: BrowserContext) {
   await context.route("https://player.example.test/**", (route) => route.fulfill({
     contentType: "text/html",
     body: `<script>window.addEventListener('message', e => {
-      if (e.data?.source === 'multisport420-app') top.postMessage({source:'test-player', command:e.data}, '*');
+      if (e.data?.source === 'multisport420-app') top.postMessage({source:'test-player', player:location.pathname, command:e.data}, '*');
     });</script>Mock player`,
   }));
   await context.addInitScript(() => {
-    const target = window as typeof window & { muteCommands: unknown[] };
+    const target = window as PlayerWindow;
     target.muteCommands = [];
     window.addEventListener("message", (event) => {
-      if (event.data?.source === "test-player" && event.data.command?.type === "multisport420:toggle-mute") {
-        target.muteCommands.push(event.data.command);
+      if (event.data?.source === "test-player" && event.data.command?.source === "multisport420-app") {
+        target.muteCommands.push({ player: event.data.player, type: event.data.command.type, muted: event.data.command.muted });
       }
     });
   });
@@ -58,6 +81,7 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
   await page.getByLabel("categories", { exact: true }).selectOption("MLB");
   await page.locator(".stream-toggle").nth(0).click();
   await page.locator(".stream-toggle").nth(1).click();
+  await expectMuteState(page, { "/video/0": false, "/video/1": true });
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Open remote" })).toHaveAttribute("href", "/remote");
@@ -77,19 +101,22 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
   await phone.locator(".remote-bubble").nth(1).click();
   await expect(page.locator(".screen-card-spotlight .screen-letter")).toContainText("Dodgers");
   await expect(phone.locator(".remote-bubble").nth(1)).toHaveAttribute("aria-pressed", "true");
-  await phone.locator(".remote-bubble").nth(1).click();
-  await expect.poll(() => page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(1);
+  await expectMuteState(page, { "/video/0": true, "/video/1": false });
+  await expectMuteGesture(page, "/video/1", true, () => phone.locator(".remote-bubble").nth(1).click());
+  await expectMuteState(page, { "/video/0": true, "/video/1": true });
   await phone.getByRole("button", { name: "Refresh spotlight log" }).click();
   await expect.poll(async () => (await (await request.get(stateUrl(""))).json()).command.type).toBe("refresh-log");
 
   await page.locator(".menu-title").click();
   await page.keyboard.press("Digit1");
   await expect(phone.locator(".remote-bubble").nth(0)).toHaveAttribute("aria-pressed", "true");
-  await page.keyboard.press("Digit1");
-  await expect.poll(() => page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(2);
+  await expectMuteState(page, { "/video/0": false, "/video/1": true });
+  await expectMuteGesture(page, "/video/0", true, () => page.keyboard.press("Digit1"));
+  await expectMuteState(page, { "/video/0": true, "/video/1": true });
+  const beforeReconnect = await muteCommands(page);
   await phone.reload();
   await expect(phone.getByText("Viewer connected", { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(2);
+  expect(await muteCommands(page)).toEqual(beforeReconnect);
   await phone.screenshot({ path: "test-results/remote-phone.png", fullPage: true });
   expect(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
@@ -101,7 +128,7 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
   await expect(page.locator(".screen-card")).toHaveCount(2);
   await page.getByRole("button", { name: "Join", exact: true }).click();
   await expect(phone.getByText("Viewer connected", { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(2);
+  expect(await muteCommands(page)).toEqual(beforeReconnect);
 
   // Disconnect just the viewer's Firebase connection, keeping the page mounted.
   await page.evaluate(async () => {
@@ -121,9 +148,10 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
     goOnline(await getRoomDatabase());
   });
   await expect(phone.getByText("Viewer connected", { exact: true })).toBeVisible();
-  expect(await page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(2);
-  await phone.locator(".remote-bubble").nth(0).click();
-  await expect.poll(() => page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(3);
+  expect(await muteCommands(page)).toEqual(beforeReconnect);
+  await expectMuteState(page, { "/video/0": true, "/video/1": true });
+  await expectMuteGesture(page, "/video/0", false, () => phone.locator(".remote-bubble").nth(0).click());
+  const beforeUnchangedReconnect = await muteCommands(page);
   // Reconnecting without a state change must still arm the next live gesture.
   await page.evaluate(async () => {
     const appModule = "/src/app_x/lib/firebase.ts";
@@ -134,8 +162,10 @@ test("default room: publish, spotlight, mute, keyboard sync, logs, leave and rec
     goOnline(db);
   });
   await expect(page.getByText("Live", { exact: true })).toBeVisible();
-  await phone.locator(".remote-bubble").nth(0).click();
-  await expect.poll(() => page.evaluate(() => (window as typeof window & { muteCommands: unknown[] }).muteCommands.length)).toBe(4);
+  expect(await muteCommands(page)).toEqual(beforeUnchangedReconnect);
+  await expectMuteState(page, { "/video/0": false, "/video/1": true });
+  await expectMuteGesture(page, "/video/0", true, () => phone.locator(".remote-bubble").nth(0).click());
+  await expectMuteState(page, { "/video/0": true, "/video/1": true });
 });
 
 test("joining an existing named room replaces its lineup; other rooms stay independent", async ({ context, page, request }) => {

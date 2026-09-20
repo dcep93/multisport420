@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 
-const controller = readFileSync(new URL("../../../extension/pooembed.js", import.meta.url), "utf8");
+// Verbatim 0.3.1 controller from commit 63e2daa:extension/pooembed.js.
+const controllers = {
+  "0.3.1": readFileSync(new URL("../fixtures/pooembed-0.3.1.js", import.meta.url), "utf8"),
+  current: readFileSync(new URL("../../../extension/pooembed.js", import.meta.url), "utf8"),
+};
 
-test("fixed hotkeys and audio follow every numbered spotlight", async ({ context, page }) => {
+for (const [version, controller] of Object.entries(controllers)) {
+test(`fixed hotkeys and audio follow every numbered spotlight with ${version}`, async ({ context, page }) => {
   await context.route(/https:\/\/[^/]*espn\.com\//, route => route.fulfill({ json: { events: [] } }));
   await context.route("https://proxy420.appspot.com/**", async route => {
     const target = (route.request().postDataJSON() as { url: string }).url;
@@ -15,7 +20,7 @@ test("fixed hotkeys and audio follow every numbered spotlight", async ({ context
   });
   await context.route("https://player.example.test/**", route => route.fulfill({
     contentType: "text/html",
-    body: `<video muted></video><script>HTMLMediaElement.prototype.play = () => Promise.resolve();</script><script>${controller}</script>`,
+    body: `<video></video><script>HTMLMediaElement.prototype.play = () => Promise.resolve();</script><script>${controller}</script>`,
   }));
   // localhost is one of the extension's supported ancestor hostnames.
   await page.goto("http://localhost:4173/");
@@ -52,19 +57,30 @@ test("fixed hotkeys and audio follow every numbered spotlight", async ({ context
     await page.keyboard.press(`Digit${index + 1}`);
     await expect.poll(() => muted(index)).toBe(false);
   }
-  // Manual mute must not survive leaving and re-entering spotlight.
-  await video(2).evaluate((element: HTMLVideoElement) => { element.muted = true; });
-  await page.keyboard.press("Digit2");
-  await expect.poll(() => muted(2)).toBe(true);
-  await page.keyboard.press("Digit3");
-  await expect.poll(() => muted(2)).toBe(false);
-  await expect.poll(() => muted(1)).toBe(true);
+  // Current extensions also override native player mute on spotlight entry.
+  if (version === "current") {
+    await page.keyboard.press("Digit3");
+    await expect.poll(() => muted(2)).toBe(false);
+    await video(2).evaluate((element: HTMLVideoElement) => { element.muted = true; });
+    await page.keyboard.press("Digit2");
+    await expect.poll(() => muted(2)).toBe(true);
+    await page.keyboard.press("Digit3");
+    await expect.poll(() => muted(2)).toBe(false);
+  }
   // Regression: 4 mutes the current spotlight, then 3 -> 4 must unmute it.
   await page.keyboard.press("Digit4");
   await expect.poll(() => muted(3)).toBe(false);
   for (let cycle = 0; cycle < 3; cycle++) {
     await page.keyboard.press("Digit4");
     await expect.poll(() => muted(3)).toBe(true);
+    if (cycle === 0) {
+      const previousFrame = await cards.nth(3).locator(".screen-iframe").elementHandle();
+      await cards.nth(3).getByRole("button", { name: /^Refresh screen/ }).click();
+      await expect.poll(() => previousFrame!.evaluate(frame => frame.isConnected)).toBe(false);
+      await expect(video(3)).toHaveCount(1);
+      await expect.poll(() => muted(3)).toBe(true);
+      await page.locator(".menu-title").click();
+    }
     await page.keyboard.press("Digit3");
     await expect.poll(() => muted(2)).toBe(false);
     await expect.poll(() => muted(3)).toBe(true);
@@ -79,3 +95,4 @@ test("fixed hotkeys and audio follow every numbered spotlight", async ({ context
   await expect.poll(() => muted(1)).toBe(true);
   await page.screenshot({ path: "test-results/player-controls.png", fullPage: true });
 });
+}

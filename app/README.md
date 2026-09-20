@@ -71,3 +71,11 @@ export default defineConfig([
   },
 ])
 ```
+
+## Stream audio controls
+
+Press a stream's number to spotlight it. Press the same number again to mute or
+unmute it. Moving to another spotlight mutes the previous stream and requests
+unmute for the new one. These website controls work with extension 0.3.1 without
+clicking inside each player or updating the extension: the app sends explicit
+mute states. Refreshing a player preserves the app's chosen mute state.

@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type Ref } from "react";
+import { useCallback, useEffect, useState, type CSSProperties, type Ref } from "react";
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
 import StreamLog from "../lib/renderLog";
 import { useStreamLog } from "../hooks/useStreamLog";
+import { useScreenMuted } from "../hooks/useScreenMuted";
 import ScreenTitleBar from "./ScreenTitleBar";
 import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 import FantasyScoreboard from "./FantasyScoreboard";
@@ -200,7 +201,7 @@ function ScreenContent<T>(props: {
   const [srcDoc, setSrcDoc] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null);
-  const lastMuteRequest = useRef(muteToggleRequestId);
+  const isMuted = useScreenMuted(isFocused, shouldToggleMute, muteToggleRequestId);
   const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [refreshOverride, setRefreshOverride] = useState<{
     sourceStreamKey: string;
@@ -278,22 +279,6 @@ function ScreenContent<T>(props: {
   ]);
 
   useEffect(() => {
-    if (lastMuteRequest.current === muteToggleRequestId) return;
-    lastMuteRequest.current = muteToggleRequestId;
-    if (!iframeElement || !shouldToggleMute || muteToggleRequestId === 0) {
-      return;
-    }
-
-    iframeElement.contentWindow?.postMessage(
-      {
-        source: "multisport420-app",
-        type: "multisport420:toggle-mute",
-      },
-      "*",
-    );
-  }, [iframeElement, muteToggleRequestId, shouldToggleMute]);
-
-  useEffect(() => {
     if (!iframeElement) {
       return;
     }
@@ -302,11 +287,11 @@ function ScreenContent<T>(props: {
       {
         source: "multisport420-app",
         type: "multisport420:set-muted",
-        muted: !isFocused,
+        muted: isMuted,
       },
       "*",
     );
-  }, [iframeElement, isFocused]);
+  }, [iframeElement, isMuted]);
 
   return (
     <div className={className}>
@@ -334,7 +319,7 @@ function ScreenContent<T>(props: {
           onLoad={(event) => event.currentTarget.contentWindow?.postMessage({
             source: "multisport420-app",
             type: "multisport420:set-muted",
-            muted: !isFocused,
+            muted: isMuted,
           }, "*")}
         />
       )}
