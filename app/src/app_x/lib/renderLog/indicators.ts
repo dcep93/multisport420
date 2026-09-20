@@ -5,6 +5,9 @@ export const BIG_PLAY_DURATION_MS = 5_000;
 
 // NFLStream's ordered rules, applied to normalized ESPN statYardage.
 export function getBigPlay(play: PlayType): string | null {
+  // Use the starting field position, including on touchdowns and turnovers.
+  const startYards = play.startYardsToEndzone;
+  if (typeof startYards === "number" && startYards > 0 && startYards <= 20) return null;
   const text = play.text.toLowerCase();
   if (/touchback|no play|\bnullified\b/.test(text)) return null;
   if (text.includes("block")) return "block";

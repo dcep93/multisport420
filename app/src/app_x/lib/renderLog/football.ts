@@ -24,6 +24,7 @@ type FootballDrivePlay = {
   };
   start?: {
     downDistanceText?: string;
+    yardsToEndzone?: number;
   };
   end?: {
     yardsToEndzone?: number;
@@ -131,6 +132,7 @@ export async function getFootballLog(
         .map((play) => ({
           id: play.id,
           distance: play.statYardage,
+          startYardsToEndzone: play.start?.yardsToEndzone,
           timestamp: parseWallclock(play.wallclock),
           down: play.start?.downDistanceText ?? "",
           text: play.text ?? "",

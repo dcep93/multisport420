@@ -1,6 +1,7 @@
 export type PlayType = {
   id?: string;
   distance?: number;
+  startYardsToEndzone?: number;
   timestamp?: number;
   down: string;
   text: string;

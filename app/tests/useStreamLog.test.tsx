@@ -173,3 +173,29 @@ it("keeps football clock detection out of nonfootball logs", async () => {
   await advance(1);
   expect(result.current.latestBigPlayClock).toBeUndefined();
 });
+
+it.each([0, 60_000])("excludes a red-zone touchdown from the latest clock and warning with %ims delay", async delay => {
+  const snapshot = log();
+  snapshot.playByPlay[0].plays!.push({ id: "red-zone", text: "TOUCHDOWN", distance: 10,
+    startYardsToEndzone: 10, clock: "Q1 9:00", down: "" });
+  fetchLog.mockResolvedValue(snapshot);
+  const { result } = renderHook(() => useStreamLog(stream, delay));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  expect(result.current.bigPlay).toBe(false);
+  await advance(20_000);
+  expect(result.current.bigPlay).toBe(false);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+});
+
+it("retracts a queued warning and clock when ESPN corrects the starting position to the red zone", async () => {
+  const { result } = renderHook(() => useStreamLog(stream, 60_000));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  const corrected = log();
+  corrected.playByPlay[0].plays![0].startYardsToEndzone = 20;
+  fetchLog.mockResolvedValue(corrected);
+  await advance(20_000);
+  expect(result.current.latestBigPlayClock).toBeUndefined();
+  expect(result.current.bigPlay).toBe(false);
+});

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getFootballLog } from "../src/app_x/lib/renderLog/football";
+import { getBigPlay } from "../src/app_x/lib/renderLog/indicators";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -14,8 +15,8 @@ describe("ESPN football references", () => {
       makePlay("Opening drive punt", "11:42", 0, "2026-09-10T00:25:00Z"),
     ] };
     const newDrive = { id: "new", description: "Latest drive", team: { shortDisplayName: "Patriots" }, plays: [
-      makePlay("Latest drive run", "11:30", 0, "2026-09-10T00:26:00Z"),
-      makePlay("Touchdown", "10:00", 6, "2026-09-10T00:30:00Z"),
+      { ...makePlay("Latest drive run", "11:30", 0, "2026-09-10T00:26:00Z"), statYardage: 30, start: { yardsToEndzone: 40 }, end: { yardsToEndzone: 10 } },
+      { ...makePlay("Touchdown", "10:00", 6, "2026-09-10T00:30:00Z"), start: { yardsToEndzone: 10 }, end: { yardsToEndzone: 0 } },
     ] };
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       let data: unknown;
@@ -37,6 +38,10 @@ describe("ESPN football references", () => {
     ]);
     expect(log?.playByPlay[1].score).toBe("6 - 0");
     expect(log?.timestamp).toBe(Date.parse("2026-09-10T00:30:00Z"));
+    const latestPlays = log!.playByPlay[1].plays!;
+    expect(latestPlays.map(play => play.startYardsToEndzone)).toEqual([40, 10]);
+    expect(getBigPlay(latestPlays[0])).toBe("distance");
+    expect(getBigPlay(latestPlays[1])).toBeNull();
   });
 
   it.each(["nfl", "college-football", "cfl"])("loads %s plays when ESPN returns HTTP drive and team refs", async (espnLeague) => {

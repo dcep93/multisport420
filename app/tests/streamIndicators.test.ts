@@ -20,6 +20,20 @@ describe("football big plays", () => {
   it("does not invent yardage when absent", () => {
     expect(getBigPlay({ text: "Pass complete", clock: "Q1 1:00", down: "" })).toBeNull();
   });
+  it.each([
+    ["TOUCHDOWN", 5],
+    ["INTERCEPTED and returned for 95 yards", 95],
+    ["FUMBLES, RECOVERED by defense", 0],
+    ["field goal is BLOCKED", 30],
+    ["Sack for -15 yards", -15],
+  ])("disqualifies red-zone plays before applying the %s rule", (text, distance) => {
+    for (const startYardsToEndzone of [1, 5, 19, 20]) {
+      expect(getBigPlay({ text, distance, startYardsToEndzone, clock: "Q1 1:00", down: "" })).toBeNull();
+    }
+  });
+  it.each([21, 95, undefined, NaN])("preserves qualifying plays outside the red zone or with unknown position (%s)", startYardsToEndzone => {
+    expect(getBigPlay({ text: "TOUCHDOWN", distance: 21, startYardsToEndzone, clock: "Q1 1:00", down: "" })).toBe("super_big_play");
+  });
   it("uses stable ESPN IDs across corrected descriptions", () => {
     const play = { id: "123", text: "Pass", clock: "Q1 1:00", down: "" };
     expect(getPlayKey(play, "Team")).toBe(getPlayKey({ ...play, text: "Corrected pass" }, "Team"));
