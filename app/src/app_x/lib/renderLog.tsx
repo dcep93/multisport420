@@ -165,7 +165,7 @@ function LogView(props: {
                   <thead>
                     <tr>
                       <th></th>
-                      {boxScore.labels.map((label) => (
+                      {boxScore.labels.filter((label) => boxScore.key !== "passing" || label !== "AVG").map((label) => (
                         <th key={label}>{label}</th>
                       ))}
                     </tr>
@@ -177,7 +177,7 @@ function LogView(props: {
                         className={player.isHomeTeam ? "multisport-log-box-score-row multisport-log-box-score-row-home" : "multisport-log-box-score-row"}
                       >
                         <td className="multisport-log-player-name">{player.name}</td>
-                        {player.stats.map((stat, index) => (
+                        {player.stats.map((stat, index) => boxScore.key === "passing" && boxScore.labels[index] === "AVG" ? null : (
                           <td key={`${player.name}-${index}`}>{stat}</td>
                         ))}
                       </tr>
