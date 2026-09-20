@@ -23,7 +23,7 @@ function Fixture() {
   return <div className="multisport-shell" style={{ height: "100vh", boxSizing: "border-box", display: "flex", flexDirection: "column", gap: 12 }}>
     <div><button onClick={() => setLogs(value => !value)}>Toggle logs</button><span> Deterministic fixture: maroon takes priority</span></div>
     <div style={{ width: 300 }}><ScreenTitleBar className="" label="Long title verification: New England Patriots @ Seattle Seahawks — every word remains reachable" redZone bigPlay possession={{ team: "Away", isHomeTeam: false }} onRefresh={async () => {}} /></div>
-    <div style={{ width: 600 }}><ScreenTitleBar className="" label="Denver Broncos @ Kansas City Chiefs" screenNumber={1} bigPlay bigPlayClock="Q3 12:22" /></div>
+    <div style={{ width: 600 }}><ScreenTitleBar className="" label="Denver Broncos @ Kansas City Chiefs" screenNumber={1} bigPlay /></div>
     <Multiscreen host={host} streams={streams} displayLogs={logs} logDelayMs={0} focusedSlug={focus} logRefreshRequestId={0} muteToggleRequestId={0} onRefreshStream={async () => null} onRemove={() => {}} onFocus={setFocus} />
   </div>;
 }

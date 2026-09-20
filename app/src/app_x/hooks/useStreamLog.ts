@@ -5,7 +5,7 @@ import { BIG_PLAY_DURATION_MS, BIG_PLAY_WARNING_MS, getBigPlay, getPlayKey } fro
 import type { LogType } from "../lib/renderLog/types";
 
 const POLL_INTERVAL_MS = 10_000;
-type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean; bigPlayClock?: string };
+type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean };
 
 export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId = 0) {
   const { slug, category, espn_id } = stream;
@@ -30,7 +30,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     let refreshing = false;
     const seen = new Set<string>();
     const timers = new Set<ReturnType<typeof setTimeout>>();
-    const alerts = new Map<string, { timer: ReturnType<typeof setTimeout>; active: boolean; clock: string }>();
+    const alerts = new Map<string, { timer: ReturnType<typeof setTimeout>; active: boolean }>();
 
     const update = (changes: Partial<LogState>) => {
       if (!active) return;
@@ -48,8 +48,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       return timer;
     };
     const publishAlert = () => {
-      const latest = [...alerts.values()].filter(alert => alert.active).at(-1);
-      update({ bigPlay: Boolean(latest), bigPlayClock: latest?.clock });
+      update({ bigPlay: [...alerts.values()].some(alert => alert.active) });
     };
     const clearTimers = () => {
       for (const timer of timers) clearTimeout(timer);
@@ -60,8 +59,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       if (!active) return;
       setState(previous => {
         if (previous.key === key && previous.log && previous.log.timestamp > log.timestamp) return previous;
-        return { key, log, error: "", bigPlay: previous.key === key && previous.bigPlay,
-          bigPlayClock: previous.key === key ? previous.bigPlayClock : undefined };
+        return { key, log, error: "", bigPlay: previous.key === key && previous.bigPlay };
       });
     };
 
@@ -96,7 +94,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
             const playKey = getPlayKey(play, team);
             if (seen.has(playKey) || !getBigPlay(play)) continue;
             seen.add(playKey);
-            const alert = { active: false, clock: play.clock, timer: schedule(() => {
+            const alert = { active: false, timer: schedule(() => {
               alert.active = true;
               publishAlert();
               alert.timer = schedule(() => {
@@ -122,7 +120,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       const refreshEpoch = epoch;
       refreshing = true;
       clearTimers();
-      update({ bigPlay: false, bigPlayClock: undefined });
+      update({ bigPlay: false });
       try { await fetchLog(true); }
       finally { if (epoch === refreshEpoch) refreshing = false; }
     };
@@ -143,7 +141,6 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     if (refreshRequestId !== 0) void refresh();
   }, [refresh, refreshRequestId]);
 
-  const current = state.key === key ? state : { log: null, error: "", bigPlay: false, bigPlayClock: undefined };
-  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay,
-    bigPlayClock: current.bigPlayClock, refresh };
+  const current = state.key === key ? state : { log: null, error: "", bigPlay: false };
+  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay, refresh };
 }

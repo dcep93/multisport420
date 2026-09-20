@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { Stream } from "../config/types";
 import Autoscroller from "./Autoscroller";
 import { leagueConfigs } from "./renderLog/leagues";
+import { getBigPlay } from "./renderLog/indicators";
 import type { LogType, WinProbabilityType } from "./renderLog/types";
 
 export default function StreamLog(props: {
@@ -59,6 +60,17 @@ function hasEspnGame(stream: Stream) {
   return Boolean(stream.espn_id && stream.espn_id > 0);
 }
 
+function getLatestBigPlay(drives: LogType["playByPlay"]) {
+  for (let driveIndex = drives.length - 1; driveIndex >= 0; driveIndex--) {
+    const drive = drives[driveIndex];
+    const plays = drive.plays ?? [];
+    for (let playIndex = plays.length - 1; playIndex >= 0; playIndex--) {
+      if (getBigPlay(plays[playIndex])) return { team: drive.team, play: plays[playIndex] };
+    }
+  }
+  return null;
+}
+
 function LogView(props: {
   log: LogType;
   espnGameUrl: string | null;
@@ -72,6 +84,11 @@ function LogView(props: {
     }
     return drives;
   }, [props.log.playByPlay]);
+  const latestBigPlay = useMemo(
+    () => leagueConfigs[props.leagueCategory]?.playType === "football"
+      ? getLatestBigPlay(props.log.playByPlay) : null,
+    [props.log.playByPlay, props.leagueCategory],
+  );
   const scoringRuns = useMemo(
     () => props.leagueCategory === "NFL" ? [] : getScoringRunLabels(playByPlay, props.leagueCategory),
     [playByPlay, props.leagueCategory],
@@ -114,6 +131,16 @@ function LogView(props: {
             </div>
           ))}
         </div>
+        {latestBigPlay ? (
+          <div className="multisport-log-latest-big-play">
+            <div className="multisport-log-event-meta">
+              <strong>Latest big play</strong>
+              {latestBigPlay.team ? <span>{latestBigPlay.team}</span> : null}
+              {latestBigPlay.play.clock ? <span>{latestBigPlay.play.clock}</span> : null}
+            </div>
+            <div className="multisport-log-event-description">{latestBigPlay.play.text}</div>
+          </div>
+        ) : null}
         {scoringRuns.length > 0 ? (
           <div className="multisport-log-scoring-run">
             {scoringRuns.map((scoringRun) => (

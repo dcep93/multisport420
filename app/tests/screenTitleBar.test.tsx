@@ -53,13 +53,13 @@ describe("Screen title bar", () => {
     expect(homeIcon.parentElement?.lastElementChild).toBe(homeIcon);
   });
 
-  it("places the play clock and football after the screen number only during a blue alert", () => {
+  it("keeps the blue alert football without a timestamp after the fixed screen number", () => {
     const label = "Denver Broncos @ Kansas City Chiefs";
-    const { container, rerender } = render(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" />);
+    const { container, rerender } = render(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay />);
     const title = () => [container.querySelector(".screen-title-hotkey")?.textContent, ...[...container.querySelector(".screen-letter")!.children].map(child => child.textContent)].join(" ");
-    expect(title()).toBe("(1) Q3 12:22 🏈 Denver Broncos @ Kansas City Chiefs");
+    expect(title()).toBe("(1) 🏈 Denver Broncos @ Kansas City Chiefs");
     expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
-    rerender(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay bigPlayClock="Q3 12:22" redZone />);
+    rerender(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay redZone />);
     expect(title()).toBe(`(1) ${label}`);
     rerender(<ScreenTitleBar className="" label={label} screenNumber={1} />);
     expect(title()).toBe(`(1) ${label}`);

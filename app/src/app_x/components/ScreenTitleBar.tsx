@@ -11,7 +11,6 @@ export default function ScreenTitleBar(props: {
   possession?: { team: string; isHomeTeam: boolean };
   redZone?: boolean;
   bigPlay?: boolean;
-  bigPlayClock?: string;
 }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -102,7 +101,7 @@ export default function ScreenTitleBar(props: {
       window.removeEventListener("resize", measure);
       reducedMotion?.removeEventListener("change", motionChange);
     };
-  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam, showBigPlay, props.bigPlayClock]);
+  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam, showBigPlay]);
 
   const possession = props.possession ? (
     <span id={possessionId} className="screen-title-possession" role="img" aria-label={`${props.possession.team} in possession`}>
@@ -150,7 +149,6 @@ export default function ScreenTitleBar(props: {
         >
           <span ref={textRef} className="screen-letter">
             {showBigPlay ? <>
-              {props.bigPlayClock ? <span>{props.bigPlayClock}</span> : null}
               <span className="screen-title-possession" role="img" aria-label="Big play">🏈</span>
             </> : props.possession && !props.possession.isHomeTeam ? possession : null}
             <span>{props.label}</span>

@@ -765,6 +765,15 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   font-weight: 700;
 }
 
+.multisport-log-latest-big-play {
+  margin: 0.4em 0;
+  padding: 0.4em 0.5em;
+  border-left: 3px solid steelblue;
+  border-radius: 4px;
+  background: rgba(70, 130, 180, 0.15);
+  overflow-wrap: anywhere;
+}
+
 .multisport-log-scoring-run {
   display: flex;
   flex-direction: column;

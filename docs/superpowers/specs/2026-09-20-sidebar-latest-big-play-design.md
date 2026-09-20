@@ -23,3 +23,12 @@ outside this change.
 
 Self-review: the brief alert and persistent log summary are independent. No new
 API calls or polling changes are required, and refresh/delay behavior is retained.
+
+## Verification
+
+159 app tests pass, including persistent history, newer play replacement,
+nullification, completed games and nonfootball/empty logs. Production build and
+changed-file lint pass. Browser verification uses the existing indicators fixture
+and confirms the block's position below teams, no horizontal overflow, no clock
+in the blue banner, and persistence after the actual alert expires. The sidebar
+screenshot was visually inspected at 320px width.
