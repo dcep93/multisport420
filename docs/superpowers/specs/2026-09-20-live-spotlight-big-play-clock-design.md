@@ -24,3 +24,15 @@ build, changed-file lint and the browser fixture; commit/push main and deploy.
 
 Self-review: live timestamp and delayed log are independent state. No extension
 update, polling increase or changes to blue/red banner precedence are required.
+
+## Verification
+
+162 app unit tests pass, including immediate clock publication, delayed-log
+non-overwrite, latest historical play selection, timestamp corrections,
+nullification fallback, stale response rejection and game/category isolation.
+Production build and changed-file lint pass. Browser tests pass with zero and
+60-second log delays: the clock is visible while the delayed log still says
+Loading, only the spotlight has a clock, switching spotlight changes it to that
+game's clock, and hiding logs or expiring the blue warning leaves it visible.
+The timestamp's position remains fixed during title scrolling. Banner screenshot
+was inspected. Extension and audio-control code remain unchanged.

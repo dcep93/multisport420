@@ -5,7 +5,7 @@ import { BIG_PLAY_DURATION_MS, BIG_PLAY_WARNING_MS, getBigPlay, getPlayKey } fro
 import type { LogType } from "../lib/renderLog/types";
 
 const POLL_INTERVAL_MS = 10_000;
-type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean };
+type LogState = { key: string; log: LogType | null; error: string; bigPlay: boolean; latestBigPlayClock?: string };
 
 export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId = 0) {
   const { slug, category, espn_id } = stream;
@@ -59,7 +59,10 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       if (!active) return;
       setState(previous => {
         if (previous.key === key && previous.log && previous.log.timestamp > log.timestamp) return previous;
-        return { key, log, error: "", bigPlay: previous.key === key && previous.bigPlay };
+        return {
+          ...(previous.key === key ? previous : { bigPlay: false }),
+          key, log, error: "",
+        };
       });
     };
 
@@ -71,9 +74,14 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
         if (!active || requestEpoch !== epoch || sequence < acceptedSequence || !log || log.timestamp < latestTimestamp) return;
         acceptedSequence = sequence;
         latestTimestamp = log.timestamp;
-        update({ error: "" });
-
         const plays = log.playByPlay.flatMap(drive => (drive.plays ?? []).map(play => ({ play, team: drive.team })));
+        // The spotlight clock follows the latest accepted data, not delayed log/alert timers.
+        update({
+          error: "",
+          latestBigPlayClock: config.playType === "football"
+            ? plays.findLast(({ play }) => getBigPlay(play))?.play.clock || undefined
+            : undefined,
+        });
         // ESPN can revise a play after publishing it. Retract obsolete warnings.
         for (const { play, team } of plays) {
           const playKey = getPlayKey(play, team);
@@ -141,6 +149,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     if (refreshRequestId !== 0) void refresh();
   }, [refresh, refreshRequestId]);
 
-  const current = state.key === key ? state : { log: null, error: "", bigPlay: false };
-  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay, refresh };
+  const current = state.key === key ? state : { log: null, error: "", bigPlay: false, latestBigPlayClock: undefined };
+  return { displayedLog: current.log, errorMessage: current.error, bigPlay: current.bigPlay,
+    latestBigPlayClock: current.latestBigPlayClock, refresh };
 }

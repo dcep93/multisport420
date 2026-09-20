@@ -11,6 +11,7 @@ export default function ScreenTitleBar(props: {
   possession?: { team: string; isHomeTeam: boolean };
   redZone?: boolean;
   bigPlay?: boolean;
+  latestBigPlayClock?: string;
 }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -130,6 +131,7 @@ export default function ScreenTitleBar(props: {
     >
       <div className="screen-title-inner">
         {props.screenNumber !== undefined ? <span className="screen-title-hotkey">({props.screenNumber})</span> : null}
+        {props.latestBigPlayClock ? <span className="screen-title-clock">{props.latestBigPlayClock}</span> : null}
         <div
           ref={viewportRef}
           className="screen-title-viewport"

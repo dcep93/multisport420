@@ -92,3 +92,84 @@ it("alerts when a new play first becomes qualifying after an ESPN correction", a
   const { result } = renderHook(() => useStreamLog(stream, 0)); await advance(1); expect(result.current.bigPlay).toBe(false);
   fetchLog.mockResolvedValue(log()); await advance(10_000); expect(result.current.bigPlay).toBe(true);
 });
+
+it("publishes the live big-play clock before delayed logs or warnings and retains it after expiry", async () => {
+  const { result } = renderHook(() => useStreamLog(stream, 60_000));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  expect(result.current.displayedLog).toBeNull();
+  expect(result.current.bigPlay).toBe(false);
+  await advance(25_000);
+  expect(result.current.bigPlay).toBe(false);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  expect(result.current.displayedLog).toBeNull();
+});
+
+it("does not let an older delayed log overwrite the newest live timestamp", async () => {
+  const { result } = renderHook(() => useStreamLog(stream, 60_000));
+  await advance(1);
+  const newer = log("2", 2);
+  newer.playByPlay[0].plays![0].clock = "Q1 10:22";
+  fetchLog.mockResolvedValue(newer);
+  await advance(10_000);
+  expect(result.current.latestBigPlayClock).toBe("Q1 10:22");
+  await advance(50_000);
+  expect(result.current.displayedLog?.timestamp).toBe(1);
+  expect(result.current.latestBigPlayClock).toBe("Q1 10:22");
+});
+
+it("finds historical big plays, ignores ordinary later plays, and updates corrected clocks immediately", async () => {
+  const first = log();
+  first.playByPlay[0].plays!.push({ id: "normal", text: "Run for 2 yards", distance: 2, clock: "Q1 11:00", down: "" });
+  fetchLog.mockResolvedValue(first);
+  const { result } = renderHook(() => useStreamLog(stream, 120_000));
+  await advance(1);
+  expect(result.current.bigPlay).toBe(false);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  const corrected = log();
+  corrected.playByPlay[0].plays![0].clock = "Q1 12:05";
+  fetchLog.mockResolvedValue(corrected);
+  await advance(10_000);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:05");
+  fetchLog.mockResolvedValue(log("1", 1, "Pass NULLIFIED. No Play."));
+  await advance(10_000);
+  expect(result.current.latestBigPlayClock).toBeUndefined();
+  expect(result.current.displayedLog).toBeNull();
+});
+
+it("falls back to the prior big play after nullification and preserves final-game history", async () => {
+  const snapshot = log();
+  snapshot.playByPlay[0].plays!.push({ id: "2", text: "TOUCHDOWN", distance: 5, clock: "Q1 9:00", down: "" });
+  fetchLog.mockResolvedValue(snapshot);
+  const { result } = renderHook(() => useStreamLog(stream, 60_000));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBe("Q1 9:00");
+  fetchLog.mockResolvedValue({ ...snapshot, gameFinished: true, playByPlay: [{ ...snapshot.playByPlay[0], plays: [
+    snapshot.playByPlay[0].plays![0], { ...snapshot.playByPlay[0].plays![1], text: "TOUCHDOWN NULLIFIED" },
+  ] }] });
+  await advance(10_000);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+});
+
+it("protects the live clock from stale responses and clears it when switching games", async () => {
+  let resolveOld!: (value: LogType) => void;
+  fetchLog.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }));
+  const newer = log("2", 2);
+  newer.playByPlay[0].plays![0].clock = "Q1 10:00";
+  fetchLog.mockResolvedValue(newer);
+  const { result, rerender } = renderHook(({ game }) => useStreamLog({ ...stream, espn_id: game }, 60_000), { initialProps: { game: 123 } });
+  await advance(10_001);
+  await act(async () => { resolveOld(log()); });
+  expect(result.current.latestBigPlayClock).toBe("Q1 10:00");
+  fetchLog.mockResolvedValue({ ...log(), playByPlay: [] });
+  rerender({ game: 456 });
+  expect(result.current.latestBigPlayClock).toBeUndefined();
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBeUndefined();
+});
+
+it("keeps football clock detection out of nonfootball logs", async () => {
+  const { result } = renderHook(() => useStreamLog({ ...stream, category: "NBA" }, 60_000));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBeUndefined();
+});

@@ -14,7 +14,7 @@ window.fetch = async (input) => {
         { athlete: { displayName: "Travis Kelce" }, stats: ["7", "104", "14.9", "1", "32", "10"] },
         { athlete: { displayName: "Courtland Sutton" }, stats: ["5", "82", "16.4", "1", "35", "8"] },
       ] }] }] },
-    drives: { current: { id: "d1", team: { id: "1", shortDisplayName: "Away" }, description: "Fixture drive", plays: [{ id: "p1", text: "Pass for 30 yards", statYardage: 30, participants: [], wallclock: "2026-09-13T17:00:00Z", period: { number: 1 }, clock: { displayValue: "12:00" }, end: { team: { id: id % 2 ? "1" : "2" }, yardsToEndzone: id % 2 ? 15 : 50 } }] } } };
+    drives: { current: { id: "d1", team: { id: "1", shortDisplayName: "Away" }, description: "Fixture drive", plays: [{ id: "p1", text: "Pass for 30 yards", statYardage: 30, participants: [], wallclock: "2026-09-13T17:00:00Z", period: { number: 1 }, clock: { displayValue: `${12 - id}:00` }, end: { team: { id: id % 2 ? "1" : "2" }, yardsToEndzone: id % 2 ? 15 : 50 } }] } } };
   return new Response(JSON.stringify(url.includes("/summary?") ? summary : { items: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
 };
 const host = { getLeagueCategories: () => ["NFL"], getStreams: async () => streams, getIframeParams: async () => ({}), getIframeDocStrElement: () => <html><body style={{ background: "#18212a", color: "white", fontFamily: "sans-serif" }}>Fixture video</body></html> };
@@ -24,7 +24,7 @@ function Fixture() {
     <div><button onClick={() => setLogs(value => !value)}>Toggle logs</button><span> Deterministic fixture: maroon takes priority</span></div>
     <div style={{ width: 300 }}><ScreenTitleBar className="" label="Long title verification: New England Patriots @ Seattle Seahawks — every word remains reachable" redZone bigPlay possession={{ team: "Away", isHomeTeam: false }} onRefresh={async () => {}} /></div>
     <div style={{ width: 600 }}><ScreenTitleBar className="" label="Denver Broncos @ Kansas City Chiefs" screenNumber={1} bigPlay /></div>
-    <Multiscreen host={host} streams={streams} displayLogs={logs} logDelayMs={0} focusedSlug={focus} logRefreshRequestId={0} muteToggleRequestId={0} onRefreshStream={async () => null} onRemove={() => {}} onFocus={setFocus} />
+    <Multiscreen host={host} streams={streams} displayLogs={logs} logDelayMs={Number(new URLSearchParams(location.search).get("delay")) || 0} focusedSlug={focus} logRefreshRequestId={0} muteToggleRequestId={0} onRefreshStream={async () => null} onRemove={() => {}} onFocus={setFocus} />
   </div>;
 }
 createRoot(document.getElementById("root")!).render(<Fixture />);

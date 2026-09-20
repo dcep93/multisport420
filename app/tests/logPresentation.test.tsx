@@ -23,35 +23,9 @@ function summaryLog(plays = [bigPlay, ordinaryPlay]): LogType {
 function renderSummary(log: LogType, category = "NFL") {
   return <StreamLog stream={{ category, espn_id: 1, slug: "game", title: "Away @ Home", raw_url: "" }} displayedLog={log} errorMessage="" refresh={async () => {}} />;
 }
-it.each(["NFL", "CFB", "CFL"])("keeps the latest big play below the teams as ordinary plays arrive in %s", category => {
-  const { container, rerender } = render(renderSummary(summaryLog(), category));
-  const summary = () => container.querySelector(".multisport-log-latest-big-play")!;
-  expect(container.querySelector(".multisport-log-team-summary-row")?.nextElementSibling).toBe(summary());
-  expect(summary().textContent).toBe("Q3 12:22");
-  rerender(renderSummary(summaryLog([bigPlay, ordinaryPlay, { ...ordinaryPlay, id: "later", clock: "Q3 11:20" }]), category));
-  expect(summary().textContent).toBe(bigPlay.clock);
-  rerender(renderSummary({ ...summaryLog(), gameFinished: true }, category));
-  expect(summary().textContent).toBe(bigPlay.clock);
-});
-it("replaces the summary with a newer big play and retracts nullified plays", () => {
-  const newer = { ...bigPlay, id: "new", text: "Home TOUCHDOWN", clock: "Q3 10:00" };
-  const next = { ...summaryLog(), playByPlay: [...summaryLog().playByPlay,
-    { team: "Home", description: "New drive", score: "7 - 7", plays: [newer] }] };
-  const { container, rerender } = render(renderSummary(summaryLog()));
-  const summary = () => container.querySelector(".multisport-log-latest-big-play");
-  rerender(renderSummary(next));
-  expect(summary()?.textContent).toBe(newer.clock);
-  rerender(renderSummary({ ...next, playByPlay: [...summaryLog().playByPlay,
-    { ...next.playByPlay[1], plays: [{ ...newer, text: "TOUCHDOWN NULLIFIED. No Play." }] }] }));
-  expect(summary()?.textContent).toBe(bigPlay.clock);
-  rerender(renderSummary(summaryLog([ordinaryPlay])));
-  expect(summary()).toBeNull();
-});
-it.each(["NBA", "NHL", "MLB"])("does not apply football big-play rules to %s logs", category => {
-  const { container } = render(renderSummary(summaryLog(), category));
+it("leaves big plays in ordinary play-by-play without a separate timestamp block", () => {
+  const { container } = render(renderSummary(summaryLog()));
   expect(container.querySelector(".multisport-log-latest-big-play")).toBeNull();
-});
-it("renders an empty play history without a big-play summary", () => {
-  const { container } = render(renderSummary(summaryLog([])));
-  expect(container.querySelector(".multisport-log-latest-big-play")).toBeNull();
+  expect(container.querySelector(".multisport-log-team-summary-row")?.nextElementSibling?.className).toBe("multisport-log-event-row");
+  expect(container.querySelector(".multisport-log-event-row")?.textContent).toContain(bigPlay.text);
 });

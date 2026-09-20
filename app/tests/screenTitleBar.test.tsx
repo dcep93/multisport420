@@ -160,3 +160,17 @@ it("accumulates subpixel movement when the browser rounds scroll positions", () 
   for (let time = 1800; time <= 2800; time += 8) tick(time);
   expect(viewport.scrollLeft).toBeGreaterThan(15);
 });
+
+
+it("keeps the latest big-play clock fixed and independent of warning color", () => {
+  const { container, rerender } = render(<ScreenTitleBar className="" label="Game" screenNumber={4} latestBigPlayClock="Q1 4:22" bigPlay />);
+  const clock = container.querySelector(".screen-title-clock")!;
+  expect(clock.textContent).toBe("Q1 4:22");
+  expect(container.querySelector(".screen-title-viewport")?.contains(clock)).toBe(false);
+  rerender(<ScreenTitleBar className="" label="Game" screenNumber={4} latestBigPlayClock="Q1 4:22" redZone />);
+  expect(container.querySelector(".screen-title-clock")?.textContent).toBe("Q1 4:22");
+  rerender(<ScreenTitleBar className="" label="Game" screenNumber={4} latestBigPlayClock="Q1 3:05" />);
+  expect(container.querySelector(".screen-title-clock")?.textContent).toBe("Q1 3:05");
+  rerender(<ScreenTitleBar className="" label="Game" screenNumber={4} />);
+  expect(container.querySelector(".screen-title-clock")).toBeNull();
+});
