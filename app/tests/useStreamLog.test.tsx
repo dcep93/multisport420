@@ -199,3 +199,23 @@ it("retracts a queued warning and clock when ESPN corrects the starting position
   expect(result.current.latestBigPlayClock).toBeUndefined();
   expect(result.current.bigPlay).toBe(false);
 });
+
+it.each([0, 60_000])("retracts an overturned interception and restores the previous big-play clock with %ims delay", async delay => {
+  const snapshot = log();
+  const interception = { id: "reversed", typeId: "26", text: "Pass INTERCEPTED", distance: 0,
+    startYardsToEndzone: 23, clock: "Q2 1:14", down: "3rd & 4 at CAR 23" };
+  snapshot.playByPlay[0].plays!.push(interception);
+  fetchLog.mockResolvedValue(snapshot);
+  const { result } = renderHook(() => useStreamLog(stream, delay));
+  await advance(1);
+  expect(result.current.latestBigPlayClock).toBe("Q2 1:14");
+  expect(result.current.bigPlay).toBe(delay === 0);
+  fetchLog.mockResolvedValue({ ...snapshot, playByPlay: [{ ...snapshot.playByPlay[0], plays: [
+    snapshot.playByPlay[0].plays![0], { ...interception, typeId: "3", text: "Pass INTERCEPTED. Ruling REVERSED. Pass incomplete." },
+  ] }] });
+  await advance(10_000);
+  expect(result.current.latestBigPlayClock).toBe("Q1 12:00");
+  expect(result.current.bigPlay).toBe(false);
+  await advance(20_000);
+  expect(result.current.bigPlay).toBe(false);
+});

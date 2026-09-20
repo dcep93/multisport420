@@ -20,6 +20,10 @@ describe("football big plays", () => {
   it("does not invent yardage when absent", () => {
     expect(getBigPlay({ text: "Pass complete", clock: "Q1 1:00", down: "" })).toBeNull();
   });
+  it("uses the final incomplete-pass ruling when the description retains an overturned interception", () => {
+    expect(getBigPlay({ typeId: "3", startYardsToEndzone: 23, distance: 0, clock: "Q2 1:14", down: "3rd & 4 at CAR 23",
+      text: "C.Rush pass INTERCEPTED at CAR 19. The Replay Official reviewed the interception ruling, and the play was REVERSED. C.Rush pass incomplete to O.Zaccheaus." })).toBeNull();
+  });
   it.each([
     ["TOUCHDOWN", 5],
     ["INTERCEPTED and returned for 95 yards", 95],

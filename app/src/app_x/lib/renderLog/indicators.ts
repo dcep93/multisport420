@@ -5,6 +5,9 @@ export const BIG_PLAY_DURATION_MS = 5_000;
 
 // NFLStream's ordered rules, applied to normalized ESPN statYardage.
 export function getBigPlay(play: PlayType): string | null {
+  // ESPN retains the original interception wording after some replay reversals.
+  // Type 3 is the final Pass Incompletion ruling and cannot qualify as a big play.
+  if (play.typeId === "3") return null;
   // Use the starting field position, including on touchdowns and turnovers.
   const startYards = play.startYardsToEndzone;
   if (typeof startYards === "number" && startYards > 0 && startYards <= 20) return null;

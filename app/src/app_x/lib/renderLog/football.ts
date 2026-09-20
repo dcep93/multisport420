@@ -10,6 +10,7 @@ type FootballCoreDriveItem = {
 
 type FootballDrivePlay = {
   id?: string;
+  type?: { id?: string };
   statYardage?: number;
   awayScore?: number;
   homeScore?: number;
@@ -131,6 +132,7 @@ export async function getFootballLog(
         .filter((play) => play.participants)
         .map((play) => ({
           id: play.id,
+          typeId: play.type?.id,
           distance: play.statYardage,
           startYardsToEndzone: play.start?.yardsToEndzone,
           timestamp: parseWallclock(play.wallclock),

@@ -16,7 +16,7 @@ describe("ESPN football references", () => {
     ] };
     const newDrive = { id: "new", description: "Latest drive", team: { shortDisplayName: "Patriots" }, plays: [
       { ...makePlay("Latest drive run", "11:30", 0, "2026-09-10T00:26:00Z"), statYardage: 30, start: { yardsToEndzone: 40 }, end: { yardsToEndzone: 10 } },
-      { ...makePlay("Touchdown", "10:00", 6, "2026-09-10T00:30:00Z"), start: { yardsToEndzone: 10 }, end: { yardsToEndzone: 0 } },
+      { ...makePlay("Touchdown", "10:00", 6, "2026-09-10T00:30:00Z"), type: { id: "67" }, start: { yardsToEndzone: 10 }, end: { yardsToEndzone: 0 } },
     ] };
     vi.stubGlobal("fetch", vi.fn(async (url: string) => {
       let data: unknown;
@@ -40,6 +40,7 @@ describe("ESPN football references", () => {
     expect(log?.timestamp).toBe(Date.parse("2026-09-10T00:30:00Z"));
     const latestPlays = log!.playByPlay[1].plays!;
     expect(latestPlays.map(play => play.startYardsToEndzone)).toEqual([40, 10]);
+    expect(latestPlays[1].typeId).toBe("67");
     expect(getBigPlay(latestPlays[0])).toBe("distance");
     expect(getBigPlay(latestPlays[1])).toBeNull();
   });
