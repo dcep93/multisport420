@@ -12,6 +12,8 @@ export default function Menu(props: {
   categories: readonly StreamCategory[];
   streams: Stream[];
   isLoadingStreams: boolean;
+  streamError?: string | null;
+  onRetryStreams?: () => void;
   selectedSlugs: StreamSlug[];
   onToggle: (streamSlug: StreamSlug) => void;
   onCategoryChange: (value: Category) => void;
@@ -44,6 +46,8 @@ export default function Menu(props: {
       </div>
 
       <div className="stream-list">
+        {props.streamError ? <div role="alert"><p>{props.streamError}</p><button type="button" onClick={props.onRetryStreams}>Retry streams</button></div> : null}
+        {!props.isLoadingStreams && !props.streamError && props.streams.length === 0 ? <p role="status">No live or upcoming streams in this category.</p> : null}
         {props.isLoadingStreams ? (
           <div className="stream-list-loading" aria-live="polite" aria-busy="true">
             <span className="stream-list-loading-spinner" aria-hidden="true" />

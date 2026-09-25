@@ -11,10 +11,14 @@ export function parseStreamsFromHtml(
   const document = new DOMParser().parseFromString(streamListHtml, "text/html");
   const seenRawUrls = new Set<string>();
 
-  return Array.from(document.querySelectorAll(".events-list .event-card"))
+  const cards = Array.from(document.querySelectorAll(".stream-grid .stream-card, .events-list .event-card"));
+  if (!cards.length && !document.querySelector(".stream-grid, .events-list")) {
+    throw new Error("The stream source returned an unrecognized page. Please retry shortly.");
+  }
+  return cards
     .map((eventCard) => {
-      const leagueElement = eventCard.querySelector(".event-league");
-      const titleElement = eventCard.querySelector(".event-title");
+      const leagueElement = eventCard.querySelector(".card-cat, .event-league");
+      const titleElement = eventCard.querySelector(".card-title, .event-title");
 
       if (!leagueElement || !titleElement) {
         return null;
@@ -51,19 +55,37 @@ export function parseStreamsFromHtml(
     .filter((stream): stream is Stream => stream !== null);
 }
 
-export function parseStreamWatchPage(streamWatchPageHtml: string) {
+export function parseStreamWatchPage(streamWatchPageHtml: string, pageUrl = ISTREAMEAST_URL) {
   const document = new DOMParser().parseFromString(streamWatchPageHtml, "text/html");
   const embedPageUrlCandidate = [
     document.querySelector("#main-player")?.getAttribute("src"),
     document.querySelector(".server-btn.active")?.getAttribute("data-src"),
     document.querySelector(".server-btn")?.getAttribute("data-src"),
+    document.querySelector("#player-container iframe")?.getAttribute("src"),
+    decodePlayerUrl(document.querySelector("#player-container")?.getAttribute("data-e") ?? ""),
   ]
     .map((candidateUrl) => candidateUrl?.trim() ?? "")
     .find(Boolean);
 
   return {
-    embedPageUrl: resolveUrl(embedPageUrlCandidate ?? "", ISTREAMEAST_URL),
+    embedPageUrl: resolveUrl(embedPageUrlCandidate ?? "", pageUrl),
+    // The new listing links to a match-info page; its Watch link leads to the player page.
+    watchPageUrl: resolveUrl(Array.from(document.querySelectorAll("a[href]"))
+      .find((link) => link.textContent?.trim().toLowerCase() === "watch")?.getAttribute("href") ?? "", pageUrl),
   };
+}
+
+function decodePlayerUrl(encoded: string) {
+  if (!encoded) return "";
+  try {
+    // Source's stream.js encodes player data with base64 and XOR 0x4f.
+    // Decode only data; never execute scripts or insert remote HTML into our document.
+    const decoded = Array.from(atob(encoded), (char) => String.fromCharCode(char.charCodeAt(0) ^ 0x4f)).join("").trim();
+    if (/^(https?:)?\/\//i.test(decoded)) return decoded;
+    return new DOMParser().parseFromString(decoded, "text/html").querySelector("iframe[src]")?.getAttribute("src") ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function resolveCategory(
@@ -80,31 +102,33 @@ function resolveCategory(
 }
 
 function hasLeagueMatch(leagueLabel: string, category: StreamCategory) {
-  const leaguePattern = new RegExp(`\\b${escapeForRegex(category)}\\b`);
+  const leaguePattern = new RegExp(`\\b${escapeForRegex(category)}\\b`, "i");
   return leaguePattern.test(leagueLabel);
 }
 
 function getRawUrl(eventCard: Element) {
   const onclick = eventCard.getAttribute("onclick") ?? "";
   const match = onclick.match(/window\.location\.href='([^']+)'/);
-  return resolveUrl(match?.[1]?.trim() ?? "", ISTREAMEAST_URL);
+  return resolveUrl(eventCard.querySelector("a.card-link[href]")?.getAttribute("href") ?? match?.[1]?.trim() ?? "", ISTREAMEAST_URL);
 }
 
 function hasRelevantStatus(eventCard: Element) {
-  const startTs = parseInt(eventCard.getAttribute("data-start-ts") ?? "", 10);
-  if (!Number.isFinite(startTs)) {
+  if (eventCard.getAttribute("data-live") === "1") return true;
+  const startTs = getEventStartTimeMs(eventCard);
+  if (startTs === null) {
     return false;
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const secondsUntilStart = startTs - nowSeconds;
-  const liveElapsedSeconds = nowSeconds - startTs;
+  const secondsUntilStart = startTs / 1000 - nowSeconds;
+  const liveElapsedSeconds = nowSeconds - startTs / 1000;
+  const endTs = Number(eventCard.getAttribute("data-ends"));
 
   if (secondsUntilStart > 0 && secondsUntilStart <= UPCOMING_WINDOW_SECONDS) {
     return true;
   }
 
-  if (liveElapsedSeconds >= 0 && liveElapsedSeconds < LIVE_WINDOW_SECONDS) {
+  if (liveElapsedSeconds >= 0 && (endTs > startTs / 1000 ? nowSeconds < endTs : liveElapsedSeconds < LIVE_WINDOW_SECONDS)) {
     return true;
   }
 
@@ -112,7 +136,7 @@ function hasRelevantStatus(eventCard: Element) {
 }
 
 function getEventStartTimeMs(eventCard: Element) {
-  const startTs = parseInt(eventCard.getAttribute("data-start-ts") ?? "", 10);
+  const startTs = parseInt(eventCard.getAttribute("data-starts") ?? eventCard.getAttribute("data-start-ts") ?? "", 10);
   if (!Number.isFinite(startTs)) {
     return null;
   }

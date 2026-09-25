@@ -28,6 +28,7 @@ export default function MultisportApp() {
   const allStreams = useMemo(() => withFantasyScoreboard(hostStreams), [hostStreams]);
   const multisport420Installed = useSyncExternalStore(subscribeMultisport420Extension, hasMultisport420Extension, () => false);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
+  const [streamError, setStreamError] = useState<string | null>(null);
   const [focusedSlug, setFocusedSlug] = useState<StreamSlug>("");
   const [muteToggleSlug, setMuteToggleSlug] = useState<StreamSlug>("");
   const [muteToggleRequestId, setMuteToggleRequestId] = useState(0);
@@ -69,11 +70,13 @@ export default function MultisportApp() {
       .then((fetchedStreams) => {
         if (!isActive) return;
         setAllStreams(fetchedStreams);
+        setStreamError(null);
       })
       .catch((error) => {
         console.error(error);
         if (!isActive) return;
         setAllStreams([]);
+        setStreamError(error instanceof Error ? error.message : "Unable to load streams. Please retry.");
       });
 
     return () => {
@@ -255,6 +258,8 @@ export default function MultisportApp() {
         categories={hostCategories}
         displayLogs={displayLogs}
         isLoadingStreams={allStreams === null}
+        streamError={streamError}
+        onRetryStreams={() => { setStreamError(null); setAllStreams(null); setStreamReloadKey((key) => key + 1); }}
         logDelayMs={logDelayMs}
         streams={streams ?? []}
         selectedSlugs={selectedSlugs}

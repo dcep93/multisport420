@@ -29,6 +29,21 @@ audio fixes to already-open players.
 
 ## Embed.st players (0.3.1 or later)
 
+### Popup protection (0.3.3)
+
+On supported embed hosts, a MAIN-world script starts at `document_start`, before
+player scripts can save `window.open`. When the player is inside Multisport420
+(or localhost), it blocks scripted new windows and links targeting new windows,
+the top window, or parent windows. Standalone embed pages are unaffected. The
+existing CSS still hides the known `#dontfoid` overlay. No additional host
+permissions are requested.
+
+This is best effort: new ad techniques, unsupported nested hosts, and same-frame
+redirects can still escape these measures. The current provider rejects sandboxed
+iframes, so a webapp sandbox was tested and intentionally not shipped. Reload the
+extension and viewing page after upgrading; website deployment alone does not
+install this protection.
+
 The extension runs its existing media controller and popup-overlay helper on
 `https://embed.st/embed/*`, including nested players in Multisport420. This
 restores spotlight audio and hides the known `#dontfoid` click overlay, including

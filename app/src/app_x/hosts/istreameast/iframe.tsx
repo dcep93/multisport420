@@ -96,6 +96,8 @@ export function renderIstreameastPlayerDocument(iframeParams: IframeParams): Rea
         <iframe
           id="multisport-player-frame"
           src={iframeParams._2_embedPageUrl}
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          referrerPolicy="no-referrer"
           frameBorder="0"
           style={{
             overflow: "hidden",

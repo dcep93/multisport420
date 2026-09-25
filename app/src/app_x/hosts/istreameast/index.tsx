@@ -44,7 +44,11 @@ export const istreameastHost: Host<IframeParams> = {
       options?.maxAgeMs,
       options?.maxAgeMs,
     );
-    const watchPage = parseStreamWatchPage(watchPageHtml);
+    let watchPage = parseStreamWatchPage(watchPageHtml, watchPageUrl);
+    if (!watchPage.embedPageUrl && watchPage.watchPageUrl && watchPage.watchPageUrl !== watchPageUrl) {
+      const playerPageHtml = await fetchIstreameastPageText(watchPage.watchPageUrl, options?.maxAgeMs, options?.maxAgeMs);
+      watchPage = parseStreamWatchPage(playerPageHtml, watchPage.watchPageUrl);
+    }
 
     const iframeParams = {
       _0_fetchedAtMs: Date.now(),
