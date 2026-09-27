@@ -18,9 +18,9 @@ function appendFetchTimeMs(rawUrl: string, fetchTimeMs: number) {
 
 export const istreameastHost: Host<IframeParams> = {
   getLeagueCategories: getSupportedIstreameastCategories,
-  async getStreams() {
+  async getStreams(options) {
     const fetchTimeMs = Date.now();
-    const streamListHtml = await fetchIstreameastHtml();
+    const streamListHtml = await fetchIstreameastHtml(options?.maxAgeMs, options?.maxAgeMs);
     const supportedCategories = getSupportedIstreameastCategories();
     const espnEvents = await fetchEspnScheduleEventsForCategories("ALL", supportedCategories).catch(
       (error: unknown) => {

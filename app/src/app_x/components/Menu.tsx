@@ -22,6 +22,7 @@ export default function Menu(props: {
   onDisplayLogsChange: (value: boolean) => void;
   onLogDelayMsChange: (value: number) => void;
   onClearCache: () => void;
+  onRefreshStreams: () => Promise<void>;
 }) {
   const shaTooltip = formatShaTooltip();
   const isMobile = useIsMobileMenu();
@@ -76,6 +77,8 @@ export default function Menu(props: {
         onDisplayLogsChange={props.onDisplayLogsChange}
         onLogDelayMsChange={props.onLogDelayMsChange}
         onClearCache={props.onClearCache}
+        onRefreshStreams={props.onRefreshStreams}
+        isLoadingStreams={props.isLoadingStreams}
       />
       <a href="/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: "var(--ww-text-soft)" }}>
         Privacy policy

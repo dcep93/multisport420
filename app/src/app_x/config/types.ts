@@ -19,7 +19,7 @@ export type GetIframeParamsOptions = {
 
 export type Host<T> = {
   getLeagueCategories: () => readonly string[];
-  getStreams: () => Promise<Stream[]>;
+  getStreams: (options?: { maxAgeMs?: number }) => Promise<Stream[]>;
   getIframeParams: (stream: Stream, options?: GetIframeParamsOptions) => Promise<T>;
   getIframeDocStrElement: (params: T) => ReactElement;
 };

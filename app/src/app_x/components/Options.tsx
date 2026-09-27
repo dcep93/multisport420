@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import type { Category, StreamCategory } from "../config/types";
 import {
   clearProxyCache,
@@ -44,23 +44,54 @@ export default function Options(props: {
   onDisplayLogsChange: (value: boolean) => void;
   onLogDelayMsChange: (value: number) => void;
   onClearCache: () => void;
+  onRefreshStreams: () => Promise<void>;
+  isLoadingStreams: boolean;
 }) {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState("");
+
+  async function refreshStreams() {
+    setIsRefreshing(true);
+    setRefreshError("");
+    try {
+      await props.onRefreshStreams();
+    } catch (error) {
+      console.error(error);
+      setRefreshError("Could not refresh streams. Please try again.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
+
   return (
     <section className="menu-card">
       <div className="menu-card-header">
         <h2>Options</h2>
-        <button
-          className="secondary-button secondary-button-inline"
-          type="button"
-          onClick={async () => {
-            const didClearCache = await clearAppCache();
-            if (!didClearCache) return;
-            props.onClearCache();
-          }}
-        >
-          clear cache
-        </button>
+        <div className="menu-card-actions">
+          <button
+            className="secondary-button secondary-button-inline"
+            type="button"
+            disabled={isRefreshing || props.isLoadingStreams}
+            aria-busy={isRefreshing}
+            onClick={() => void refreshStreams()}
+          >
+            {isRefreshing ? "refreshing…" : "refresh streams"}
+          </button>
+          <button
+            className="secondary-button secondary-button-inline"
+            type="button"
+            disabled={isRefreshing}
+            onClick={async () => {
+              const didClearCache = await clearAppCache();
+              if (!didClearCache) return;
+              props.onClearCache();
+            }}
+          >
+            clear cache
+          </button>
+        </div>
       </div>
+      {refreshError && <p className="error-text" role="alert">{refreshError}</p>}
       <div className="option-row">
         <select
           aria-label="categories"

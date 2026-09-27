@@ -193,6 +193,11 @@ export default function MultisportApp() {
     }
   }
 
+  async function handleRefreshStreams() {
+    const fetchedStreams = await HOST.getStreams({ maxAgeMs: 0 });
+    setAllStreams(fetchedStreams);
+  }
+
   async function handleRefreshStream(streamSlug: StreamSlug) {
     const fetchedStreams = await HOST.getStreams();
     const refreshedStream = fetchedStreams.find((stream) => stream.slug === streamSlug) ?? null;
@@ -271,6 +276,7 @@ export default function MultisportApp() {
         }}
         onLogDelayMsChange={setLogDelayMs}
         onClearCache={handleClearCache}
+        onRefreshStreams={handleRefreshStreams}
       />
       {selectedStreams.length > 0 ? (
         <Multiscreen
