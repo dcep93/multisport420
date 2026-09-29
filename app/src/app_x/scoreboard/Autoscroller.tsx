@@ -2,6 +2,7 @@ import { type ReactNode, useLayoutEffect, useRef } from "react";
 
 const START_HOLD_MS = 5000;
 const HOLD_MS = 2500;
+const END_HOLD_MS = 1000;
 const TICK_MS = 20;
 
 export default function Autoscroller({ children, paused, resetKey }: {
@@ -93,7 +94,7 @@ export default function Autoscroller({ children, paused, resetKey }: {
         const unusedTime = Math.max(0, (next - maximum) / speed);
         writePosition(maximum);
         atEnd = true;
-        hold = HOLD_MS - unusedTime;
+        hold = END_HOLD_MS - unusedTime;
       } else {
         writePosition(next);
       }

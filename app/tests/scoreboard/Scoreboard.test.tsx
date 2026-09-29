@@ -14,7 +14,41 @@ const response = () => ({ fetched: 1, year: 2026, fetchedAt: Date.now(), data: {
   schedule: [{ matchupPeriodId: 1, home: { teamId: 1, totalPointsLive: 80, totalProjectedPointsLive: 120 }, away: { teamId: 2, totalPointsLive: 75, totalProjectedPointsLive: 110 } }],
 } });
 beforeEach(() => { send.mockReset(); send.mockResolvedValue(response()); window.history.replaceState({}, "", "/scoreboard"); });
-afterEach(() => { cleanup(); Object.defineProperty(window, "parent", { configurable: true, value: originalParent }); });
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+  Object.defineProperty(window, "parent", { configurable: true, value: originalParent });
+});
+
+it.each([
+  { phase: "initial hold", elapsed: 4000, position: 0, remaining: 2000, next: 100 },
+  { phase: "scrolling", elapsed: 10000, position: 500, remaining: 1000, next: 600 },
+  { phase: "end hold", elapsed: 15400, position: 1000, remaining: 600, next: 0 },
+  { phase: "loop start hold", elapsed: 17000, position: 0, remaining: 5000, next: 100 },
+  { phase: "automatic refresh", elapsed: 30000, position: 900, remaining: 1000, next: 1000 },
+])("preserves position and remaining time through a data refresh during $phase", async ({ elapsed, position, remaining, next }) => {
+  vi.useFakeTimers();
+  vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(1200);
+  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
+  send.mockImplementation(async () => response());
+  const ready = vi.fn();
+  render(<Scoreboard onRefreshReady={ready} />);
+  await act(async () => {});
+  const strip = screen.getByRole("region", { name: "Scoreboard matchups" });
+  await act(async () => { await vi.advanceTimersByTimeAsync(elapsed); });
+  expect(strip.scrollLeft).toBeCloseTo(position);
+
+  const refreshed = response();
+  refreshed.data.schedule[0].home.totalPointsLive = 82;
+  send.mockResolvedValueOnce(refreshed);
+  await act(async () => { await ready.mock.lastCall![0](); });
+  expect(screen.getByText("82.00")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Scoreboard matchups" })).toBe(strip);
+  expect(strip.scrollLeft).toBeCloseTo(position);
+  await act(async () => { await vi.advanceTimersByTimeAsync(remaining); });
+  expect(strip.scrollLeft).toBeCloseTo(next);
+});
 
 it("fetches once in StrictMode and switches modes without fetching", async () => {
   render(<StrictMode><Scoreboard /></StrictMode>);

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 const PERIOD_MS = 10;
 const EDGE_SLEEP_MS = 2500;
+const END_SLEEP_MS = 1000;
 
 export default function Autoscroller(props: {
   speed: number;
@@ -12,63 +13,56 @@ export default function Autoscroller(props: {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const fakeState = {
-      offset: 0,
-      sleeping: false,
-      edgeTimeoutId: 0 as number | undefined,
-      tickTimeoutId: 0 as number | undefined,
+    let offset = 0;
+    let lastWritten = 0;
+    let hold = 0;
+    let atEnd = false;
+
+    const writePosition = (element: HTMLDivElement, next: number) => {
+      offset = next;
+      element.scrollTo({ top: Math.ceil(next) });
+      lastWritten = element.scrollTop;
     };
 
     const helper = () => {
       const element = containerRef.current;
       if (!element) return;
 
-      const scrollableAmount = element.scrollHeight - element.clientHeight;
-      const currentlyScrolled = element.scrollTop;
+      const scrollableAmount = Math.max(0, element.scrollHeight - element.clientHeight);
+      if (offset > scrollableAmount) writePosition(element, scrollableAmount);
+      if (atEnd && offset < scrollableAmount) atEnd = false;
+      if (scrollableAmount === 0) return;
 
-      if (fakeState.sleeping) {
+      if (Math.abs(lastWritten - element.scrollTop) > 10) {
+        offset = element.scrollTop;
+        lastWritten = offset;
+        atEnd = scrollableAmount - offset < 5;
+        hold = atEnd ? END_SLEEP_MS : EDGE_SLEEP_MS;
         return;
       }
 
-      if (Math.abs(fakeState.offset - currentlyScrolled) > 10) {
-        fakeState.sleeping = true;
-        fakeState.edgeTimeoutId = window.setTimeout(() => {
-          const latestElement = containerRef.current;
-          if (!latestElement) return;
-
-          if (scrollableAmount - currentlyScrolled < 5) {
-            fakeState.offset = 0;
-            latestElement.scrollTo({ top: 0 });
-            fakeState.edgeTimeoutId = window.setTimeout(() => {
-              fakeState.sleeping = false;
-            }, EDGE_SLEEP_MS);
-            return;
-          }
-
-          fakeState.offset = currentlyScrolled;
-          fakeState.sleeping = false;
-        }, EDGE_SLEEP_MS);
+      if (hold > 0) {
+        hold = Math.max(0, hold - PERIOD_MS);
+        if (hold === 0 && atEnd) {
+          writePosition(element, 0);
+          atEnd = false;
+          hold = EDGE_SLEEP_MS;
+        }
         return;
       }
 
-      fakeState.offset += (props.speed * scrollableAmount * PERIOD_MS) / 1000;
-      element.scrollTo({ top: Math.ceil(fakeState.offset) });
+      const next = offset + (props.speed * scrollableAmount * PERIOD_MS) / 1000;
+      writePosition(element, Math.min(next, scrollableAmount));
+      if (next >= scrollableAmount) {
+        atEnd = true;
+        hold = END_SLEEP_MS;
+      }
     };
 
-    const tick = () => {
-      helper();
-      fakeState.tickTimeoutId = window.setTimeout(tick, PERIOD_MS);
-    };
-
-    tick();
+    const timer = window.setInterval(helper, PERIOD_MS);
 
     return () => {
-      if (fakeState.edgeTimeoutId) {
-        window.clearTimeout(fakeState.edgeTimeoutId);
-      }
-      if (fakeState.tickTimeoutId) {
-        window.clearTimeout(fakeState.tickTimeoutId);
-      }
+      window.clearInterval(timer);
     };
   }, [props.speed]);
 

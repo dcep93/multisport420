@@ -679,6 +679,7 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 .multisport-log-autoscroller {
   height: 100%;
   overflow: auto;
+  overflow-anchor: none;
 }
 
 .multisport-log-top {

@@ -61,7 +61,7 @@ export default function Scoreboard({ onRefreshReady, refreshRequestId = 0, shoul
 
   return <main className="scoreboard-page">
     {state.snapshot && state.extensionAvailable && <>
-      <Autoscroller paused={scrollPaused} resetKey={`${mode}:${state.snapshot.fetchedAt}`}>
+      <Autoscroller paused={scrollPaused} resetKey={mode}>
         {mode === "head-to-head" ? matchups.map(({ teams, probability, key }) =>
           <article className="scoreboard-card" key={key} aria-label={teams.map(team => team.name).join(" versus ")}>
             <div className={`scoreboard-teams${teams.length === 1 ? " scoreboard-single" : ""}`}>

@@ -39,7 +39,7 @@ function mount(paused = false) {
   return { ...result, strip: screen.getByRole("region", { name: "Scoreboard matchups" }) };
 }
 
-it("holds five seconds at the start and 2.5 seconds at the end, then jumps and repeats", () => {
+it("holds five seconds at the start and one second at the end, then jumps and repeats", () => {
   const { strip } = mount();
   expect(strip).toHaveAttribute("tabindex", "0");
   advance(4980);
@@ -50,7 +50,7 @@ it("holds five seconds at the start and 2.5 seconds at the end, then jumps and r
   expect(strip.scrollLeft).toBeCloseTo(500);
   advance(5000);
   expect(strip.scrollLeft).toBe(1000);
-  advance(2480);
+  advance(980);
   expect(strip.scrollLeft).toBe(1000);
   advance(20);
   expect(strip.scrollLeft).toBe(0);
@@ -81,6 +81,28 @@ it("does not move without overflow and detects newly overflowing content", () =>
   width = 1200;
   advance(6000);
   expect(strip.scrollLeft).toBeCloseTo(100);
+});
+
+it("keeps the remaining end hold when refreshed content extends the strip", () => {
+  const { strip, rerender } = mount();
+  advance(15400);
+  width = 2200;
+  rerender(<Autoscroller paused={false} resetKey="first"><span>Additional matchup</span></Autoscroller>);
+  advance(600);
+  expect(strip.scrollLeft).toBe(1000);
+  advance(1000);
+  expect(strip.scrollLeft).toBeCloseTo(1200);
+});
+
+it("clamps refreshed content without restarting the remaining end hold", () => {
+  const { strip, rerender } = mount();
+  advance(15400);
+  width = 800;
+  rerender(<Autoscroller paused={false} resetKey="first"><span>Fewer matchups</span></Autoscroller>);
+  advance(580);
+  expect(strip.scrollLeft).toBe(600);
+  advance(20);
+  expect(strip.scrollLeft).toBe(0);
 });
 
 it("pauses and resumes the same position and remaining hold through the prop", () => {
@@ -152,7 +174,7 @@ it("updates speed and clamps position when the available width changes", () => {
   width = 500;
   fireEvent.resize(window);
   expect(strip.scrollLeft).toBe(300);
-  advance(2520);
+  advance(1020);
   expect(strip.scrollLeft).toBe(0);
 });
 
@@ -166,7 +188,7 @@ it("keeps fractional progress when the browser rounds native scroll offsets", ()
   });
   advance(15000);
   expect(strip.scrollLeft).toBe(1);
-  advance(2500);
+  advance(1000);
   expect(strip.scrollLeft).toBe(0);
 });
 
