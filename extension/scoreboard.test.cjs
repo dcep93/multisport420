@@ -25,12 +25,18 @@ function harness(options = {}) {
   } });
   background.importScripts = filename => vm.runInContext(fs.readFileSync(`${__dirname}/${filename}`, "utf8"), background);
   vm.runInContext(fs.readFileSync(`${__dirname}/background.js`, "utf8"), background);
-  const context = vm.createContext({ URL, Date, AbortController, setTimeout, clearTimeout,
+  const context = vm.createContext({ URL, Date, AbortController,
+    setTimeout: options.setTimeout ?? setTimeout, clearTimeout,
     location: { href: options.page ?? tabs[0]?.url },
     fetch: async (url, request) => {
       calls.push({ url, request });
+      if (options.fetch) return options.fetch(url, request);
       if (options.fetchError) throw new TypeError("Failed to fetch");
-      return options.response ?? { ok: true, json: async () => ({ id: 123, teams: [], schedule: [] }) };
+      if (options.response) return options.response;
+      const view = new URL(url).searchParams.get("view");
+      return { ok: true, json: async () => view === "kona_playercard" ? { players: [] }
+        : view === "proTeamSchedules_wl" ? { settings: { proTeams: [] } }
+          : { id: 123, teams: [], schedule: [] } };
     },
     chrome: { runtime: { id: "extension", onMessage: { addListener(fn) { content = fn; } },
       sendMessage: message => new Promise(resolve => internal[0](message, { tab: { id: options.senderTab ?? calls.find(call => call.id)?.id }, frameId: options.frameId ?? 0 }, resolve)),
@@ -42,7 +48,7 @@ function harness(options = {}) {
   }) };
 }
 
-test("extension fetches the original ESPN views once, from the league tab with cookies and no cache", async () => {
+test("extension keeps the original scoreboard views and one logical refresh with optional details", async () => {
   const h = harness();
   const result = await h.send();
   assert.equal(result.fetched, 1);
@@ -56,6 +62,8 @@ test("extension fetches the original ESPN views once, from the league tab with c
   assert.equal(request.request.credentials, "include");
   assert.equal(request.request.cache, "no-store");
   assert.equal(h.calls[0].target.frameId, 0);
+  assert.equal(h.calls.filter(call => call.url).length, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.data.scoreboardDetails)), { players: [], proTeams: [] });
 });
 
 test("league/year options select the matching tab and requested season", async () => {
@@ -132,4 +140,174 @@ test("the website marker exposes only this extension ID", () => {
     document, chrome: { runtime: { id: "multisport-extension-id" } },
   });
   assert.deepEqual(document.documentElement.dataset, { multisport420ExtensionId: "multisport-extension-id" });
+});
+
+const ok = data => ({ ok: true, json: async () => data });
+const league = { id: 123, teams: [{ id: 1 }], schedule: [] };
+const proTeams = [{ id: 1, proGamesByScoringPeriod: { 4: [{ statsOfficial: true }] } }];
+const playerBatch = (offset, length) => Array.from({ length }, (_, index) => ({
+  id: offset + index + 1, onTeamId: index % 2,
+  player: { id: offset + index + 1, stats: [{ appliedTotal: index, scoringPeriodId: 4 }] },
+}));
+function detailFetch(players, schedules = () => ok({ settings: { proTeams } })) {
+  return (url, request) => {
+    const view = new URL(url).searchParams.get("view");
+    return view === "kona_playercard" ? players(JSON.parse(request.headers["x-fantasy-filter"]).players, request)
+      : view === "proTeamSchedules_wl" ? schedules(request) : ok({ ...league });
+  };
+}
+
+test("complete player pool uses authenticated league-scored pages, stats filters and raw schedule data", async () => {
+  const h = harness({ fetch: detailFetch(filter => ok({
+    players: playerBatch(filter.offset, filter.offset ? 2 : 500), totalPlayers: 502,
+  })) });
+  const result = await h.send({ scoreboard: { action: "fetch", year: 2026, url: "https://evil.example/players" } });
+  assert.equal(result.fetched, 1);
+  assert.equal(result.data.scoreboardDetails.players.length, 502);
+  assert.deepEqual(result.data.scoreboardDetails.proTeams, proTeams);
+  assert.equal(result.data.scoreboardDetails.warning, undefined);
+  const requests = h.calls.filter(call => call.url);
+  assert.equal(requests.length, 4);
+  for (const call of requests) {
+    const url = new URL(call.url);
+    assert.equal(url.origin, "https://lm-api-reads.fantasy.espn.com");
+    assert.equal(call.request.credentials, "include");
+    assert.equal(call.request.cache, "no-store");
+    assert.equal(call.request.signal, requests[0].request.signal);
+    if (url.searchParams.get("view") === "kona_playercard") {
+      assert.equal(url.pathname, "/apis/v3/games/ffl/seasons/2026/segments/0/leagues/123");
+      const filter = JSON.parse(call.request.headers["x-fantasy-filter"]).players;
+      assert.equal(filter.limit, 500);
+      assert.deepEqual(filter.filterStatsForTopScoringPeriodIds, { value: 18, additionalValue: ["002026", "102026"] });
+      assert.equal(filter.filterStatus, undefined);
+      assert.deepEqual(filter.sortPercOwned, { sortPriority: 1, sortAsc: false });
+    }
+    if (url.searchParams.get("view") === "proTeamSchedules_wl") {
+      assert.equal(url.pathname, "/apis/v3/games/ffl/seasons/2026");
+    }
+  }
+  assert.deepEqual(requests.filter(call => call.request.headers).map(call =>
+    JSON.parse(call.request.headers["x-fantasy-filter"]).players.offset), [0, 500]);
+});
+
+test("pool pagination terminates on a short page or the advertised count", async () => {
+  for (const totalPlayers of [undefined, 1000]) {
+    let pageCount = 0;
+    const h = harness({ fetch: detailFetch(filter => {
+      pageCount += 1;
+      return ok({ players: playerBatch(filter.offset, filter.offset === 1000 ? 1 : 500), totalPlayers });
+    }) });
+    const result = await h.send();
+    assert.equal(pageCount, totalPlayers ? 2 : 3);
+    assert.equal(result.data.scoreboardDetails.players.length, totalPlayers ?? 1001);
+    assert.equal(result.data.scoreboardDetails.warning, undefined);
+  }
+});
+
+test("optional endpoint failures preserve the base scoreboard and independent successful detail", async () => {
+  for (const failure of [() => ({ ok: false, status: 403 }), () => { throw new TypeError("Failed to fetch"); },
+    () => ok({ wrong: [] }), () => ({ ok: true, json: async () => { throw new SyntaxError("Bad JSON"); } })]) {
+    for (const failedEndpoint of ["pool", "schedule"]) {
+      const h = harness({ fetch: detailFetch(failedEndpoint === "pool" ? failure : () => ok({ players: playerBatch(0, 2) }),
+        failedEndpoint === "schedule" ? failure : undefined) });
+      const result = await h.send();
+      assert.equal(result.fetched, 1);
+      assert.equal(result.error, undefined);
+      assert.deepEqual(result.data.teams, league.teams);
+      const detail = result.data.scoreboardDetails;
+      assert.ok(detail.warning);
+      if (failedEndpoint === "pool") {
+        assert.equal(detail.players, undefined);
+        assert.deepEqual(detail.proTeams, proTeams);
+      } else {
+        assert.equal(detail.players.length, 2);
+        assert.equal(detail.proTeams, undefined);
+      }
+    }
+  }
+});
+
+test("truncated, overlapping and unbounded pages cannot be presented as a complete player pool", async () => {
+  for (const players of [
+    () => ok({ players: playerBatch(0, 2), totalPlayers: 502 }),
+    () => ok({ players: playerBatch(0, 500) }),
+    filter => ok({ players: playerBatch(filter.offset, 500), totalPlayers: 10001 }),
+    () => ok({ players: [{}] }),
+  ]) {
+    const h = harness({ fetch: detailFetch(players) });
+    const result = await h.send();
+    assert.equal(result.error, undefined);
+    assert.equal(result.fetched, 1);
+    assert.equal(result.data.scoreboardDetails.players, undefined);
+    assert.match(result.data.scoreboardDetails.warning, /Player pool incomplete/);
+    assert.deepEqual(result.data.scoreboardDetails.proTeams, proTeams);
+    assert.ok(h.calls.filter(call => call.request?.headers).length <= 20);
+  }
+});
+
+test("a failed later player page discards the earlier subset and preserves schedules", async () => {
+  const h = harness({ fetch: detailFetch(filter => filter.offset === 0
+    ? ok({ players: playerBatch(0, 500), totalPlayers: 700 })
+    : { ok: false, status: 503 }) });
+  const result = await h.send();
+  assert.equal(result.error, undefined);
+  assert.equal(result.fetched, 1);
+  assert.equal(result.data.scoreboardDetails.players, undefined);
+  assert.deepEqual(result.data.scoreboardDetails.proTeams, proTeams);
+  assert.match(result.data.scoreboardDetails.warning, /Player pool incomplete.*503/);
+  assert.equal(h.calls.filter(call => call.request?.headers).length, 2);
+});
+
+test("one 12-second deadline aborts optional details without dropping the scoreboard", async () => {
+  let expire;
+  const signals = [];
+  const pending = request => new Promise((_, reject) => {
+    signals.push(request.signal);
+    request.signal.addEventListener("abort", () => {
+      const error = new Error("Aborted"); error.name = "AbortError"; reject(error);
+    }, { once: true });
+    if (signals.length === 2) queueMicrotask(expire);
+  });
+  const h = harness({ setTimeout(fn, ms) { assert.equal(ms, 12000); expire = fn; return undefined; },
+    fetch: detailFetch((_, request) => pending(request), pending) });
+  const result = await h.send();
+  assert.equal(signals.length, 2);
+  assert.equal(signals[0], signals[1]);
+  assert.equal(signals[0].aborted, true);
+  assert.equal(result.error, undefined);
+  assert.equal(result.fetched, 1);
+  assert.deepEqual(result.data.teams, league.teams);
+  assert.equal(result.data.scoreboardDetails.players, undefined);
+  assert.equal(result.data.scoreboardDetails.proTeams, undefined);
+  assert.match(result.data.scoreboardDetails.warning, /Player pool incomplete.*timed out.*NFL game completion unavailable.*timed out/);
+});
+
+test("base request abort remains a failed logical refresh without requesting details", async () => {
+  let expire;
+  const h = harness({ setTimeout(fn, ms) { assert.equal(ms, 12000); expire = fn; },
+    fetch: (_, request) => new Promise((_, reject) => {
+      request.signal.addEventListener("abort", () => {
+        const error = new Error("Aborted"); error.name = "AbortError"; reject(error);
+      });
+      queueMicrotask(expire);
+    }) });
+  const result = await h.send();
+  assert.equal(result.fetched, 1);
+  assert.match(result.error, /too long/);
+  assert.equal(h.calls.filter(call => call.url).length, 1);
+});
+
+test("content script rejects forged extension senders and navigated origins before details", async () => {
+  const h = harness();
+  assert.equal(h.content({ type: "multisport420:scoreboard:fetch" }, { id: "other-extension" }, () => {
+    assert.fail("must not reply to another extension");
+  }), false);
+  assert.equal(h.calls.length, 0);
+  for (const page of ["https://evil.example/?leagueId=123", "https://fantasy.espn.com.evil.example/?leagueId=123"]) {
+    const navigated = harness({ page });
+    const result = await navigated.send();
+    assert.equal(result.fetched, 0);
+    assert.ok(result.error);
+    assert.equal(navigated.calls.filter(call => call.url).length, 0);
+  }
 });

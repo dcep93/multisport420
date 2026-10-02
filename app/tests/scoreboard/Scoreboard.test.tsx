@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { StrictMode } from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import Scoreboard from "../../src/app_x/scoreboard/Scoreboard";
 import { extensionHelper } from "../../src/app_x/scoreboard/extension";
 
@@ -140,4 +140,54 @@ it("preserves zero scores, missing projections, and byes", async () => {
   expect(screen.getAllByText("—")).toHaveLength(2);
   expect(screen.getByText("(—)")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Charlie" }).closest("article")!.querySelectorAll(".scoreboard-team")).toHaveLength(1);
+});
+
+it("uses exactly five compact matchup rows and switches to paired spotlight without refetching", async () => {
+  window.history.replaceState({}, "", "/scoreboard?mode=head-to-head");
+  const mounted = render(<Scoreboard spotlight={false} />);
+  const name = await screen.findByRole("heading", { name: "Alpha" });
+  const rows = name.parentElement!.children;
+  expect(Array.from(rows).map(row => row.textContent)).toEqual([
+    "Alpha", "Score: 80.00Projected final: (120.00)", "68.07% win",
+    "Score: 75.00Projected final: (110.00)", "Bravo",
+  ]);
+  expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+  mounted.rerender(<Scoreboard spotlight />);
+  expect(screen.getByRole("complementary", { name: "Weekly player leaders" })).toBeInTheDocument();
+  expect(name.closest("article")).toBeNull(); // compact nodes were replaced
+  expect(document.querySelectorAll(".scoreboard-teams > .scoreboard-team")).toHaveLength(2);
+  expect(send).toHaveBeenCalledTimes(1);
+});
+
+it("renders all roster rows, omits final-game projections, and labels optimized bench picks", async () => {
+  const data: any = response();
+  data.data.id = 203836968;
+  data.data.teams[0].id = 6;
+  data.data.settings = { rosterSettings: { lineupSlotCounts: { 0: 1, 20: 2 } } };
+  data.data.schedule[0].home.teamId = 6;
+  const entry = (id: number, name: string, slot: number, locked: boolean, score: number, projection: number) => ({
+    playerId: id, lineupSlotId: slot, playerPoolEntry: { appliedStatTotal: score, lineupLocked: locked,
+      player: { id, fullName: name, defaultPositionId: 1, proTeamId: id, eligibleSlots: [0, 20], stats: [
+        { seasonId: 2026, scoringPeriodId: 1, statSourceId: 1, statSplitTypeId: 1, appliedTotal: projection },
+      ] } },
+  });
+  data.data.schedule[0].home.rosterForCurrentScoringPeriod = { entries: [
+    entry(101, "Starter", 0, false, 0, 10), entry(102, "Better bench", 20, false, 0, 20),
+    entry(103, "Finished bench", 20, true, 30, 15),
+  ] };
+  data.data.scoreboardDetails = { players: [], proTeams: [
+    { id: 103, proGamesByScoringPeriod: { 1: [{ statsOfficial: true }] } },
+  ] };
+  send.mockResolvedValue(data);
+  render(<Scoreboard />);
+  const table = await screen.findByRole("table", { name: "Alpha players" });
+  expect(within(table).getAllByRole("row")).toHaveLength(4);
+  const finished = within(table).getByRole("row", { name: /Finished bench/ });
+  expect(finished).toHaveTextContent("Bench");
+  expect(finished).toHaveTextContent("30.00");
+  expect(within(finished).queryByTitle("Player projection")).not.toBeInTheDocument();
+  const selected = within(table).getByRole("row", { name: /Better bench/ });
+  expect(selected).toHaveTextContent("BenchBetter bench★");
+  expect(within(selected).getByTitle("Included in optimized projection at QB")).toBeInTheDocument();
+  expect(within(selected).getByTitle("Player projection")).toHaveTextContent("(20.00)");
 });

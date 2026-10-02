@@ -36,3 +36,57 @@
 .scoreboard-empty { align-self: center; max-width: 540px; padding: 24px; margin: 0; }
 .scoreboard-empty h2 { font-size: 20px; margin-top: 0; }
 .scoreboard-empty p { color: var(--night-muted, #aeb8c5); font-size: 14px; line-height: 1.6; }
+
+/* Compact summaries deliberately contain only five rows per paired matchup. */
+.scoreboard-compact .scoreboard-strip { gap: 16px; }
+.scoreboard-compact .scoreboard-card { padding: 3cqh 0; width: clamp(155px, 100cqh, 280px); }
+.scoreboard-compact-matchup { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 1cqh; width: 100%; min-width: 0; padding: 0 10px; font-variant-numeric: tabular-nums; }
+.scoreboard-compact .scoreboard-team-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(9px, 11cqh, 20px); line-height: 1.1; }
+.scoreboard-compact .scoreboard-points { font-size: clamp(12px, 17cqh, 32px); line-height: 1.1; white-space: nowrap; }
+.scoreboard-compact .scoreboard-probability { font-size: clamp(10px, 12cqh, 22px); line-height: 1.1; }
+.scoreboard-compact .scoreboard-teams { width: 100%; grid-template-columns: minmax(0, 1fr); }
+.scoreboard-compact .scoreboard-team { align-items: center; gap: 3cqh; padding: 0 10px; min-width: 0; }
+
+/* Spotlight gives the roster and rankings their own readable, scrollable space. */
+.scoreboard-spotlight .scoreboard-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 12px; height: 100cqh; min-height: 320px; }
+.scoreboard-spotlight .scoreboard-strip { height: 100%; min-width: 0; gap: 16px; }
+.scoreboard-spotlight .scoreboard-card { height: 100%; width: min(800px, calc(100cqw - 312px)); min-width: 360px; padding: 12px 0; }
+.scoreboard-spotlight .scoreboard-teams { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.scoreboard-spotlight .scoreboard-single { grid-template-columns: minmax(0, 1fr); }
+.scoreboard-spotlight .scoreboard-elimination { width: min(380px, calc(100cqw - 312px)); }
+.scoreboard-spotlight .scoreboard-team { display: block; min-width: 0; padding: 0 14px; overflow-y: auto; white-space: normal; scrollbar-width: thin; }
+.scoreboard-spotlight .scoreboard-team-name { font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
+.scoreboard-spotlight .scoreboard-points { font-size: clamp(24px, 3.5cqw, 40px); margin: 8px 0 5px; white-space: nowrap; }
+.scoreboard-spotlight .scoreboard-probability { font-size: 17px; margin-bottom: 16px; }
+.scoreboard-roster table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.scoreboard-roster th, .scoreboard-roster td { padding: 9px 0; border-bottom: 1px solid rgba(174, 184, 197, .12); text-align: left; }
+.scoreboard-roster thead th { color: var(--night-muted, #aeb8c5); font-size: 10px; font-weight: 500; }
+.scoreboard-roster th:first-child { width: 58%; padding-right: 5px; }
+.scoreboard-roster th:last-child, .scoreboard-roster td { text-align: right; white-space: nowrap; }
+.scoreboard-player-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.scoreboard-player-label { display: flex; align-items: center; gap: 6px; }
+.scoreboard-player-slot { width: 30px; flex-shrink: 0; font-size: 9px; font-weight: 400; color: var(--night-muted, #aeb8c5); }
+.scoreboard-player-projection, .scoreboard-ranking-points > span, .scoreboard-roster thead span { color: var(--night-muted, #aeb8c5); }
+.scoreboard-bench { background: rgba(174, 184, 197, .035); }
+.scoreboard-optimized { color: var(--night-win, #69db7c); white-space: nowrap; }
+.scoreboard-detail-note, .scoreboard-detail-empty { color: var(--night-muted, #aeb8c5); font-size: 11px; line-height: 1.5; }
+.scoreboard-detail-note { margin: 8px 0; }
+.scoreboard-detail-warning { color: #ffd5b6; font-size: 11px; line-height: 1.5; }
+.scoreboard-leaderboards { padding: 14px; overflow-y: auto; min-width: 0; background: var(--night-surface, #151b23); border-radius: 6px; scrollbar-width: thin; }
+.scoreboard-leaderboards header h2 { font-size: 16px; margin: 0 0 4px; }
+.scoreboard-leaderboards header p { font-size: 10px; color: var(--night-muted, #aeb8c5); margin: 0 0 16px; }
+.scoreboard-ranking h3 { font-size: 12px; margin: 16px 0 6px; color: var(--night-link, #79c0ff); }
+.scoreboard-ranking ol { list-style: none; margin: 0; padding: 0; }
+.scoreboard-ranking li { display: flex; justify-content: space-between; gap: 6px; padding: 6px 0; border-bottom: 1px solid rgba(174, 184, 197, .1); font-size: 11px; }
+.scoreboard-ranking-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scoreboard-ranking-name small { display: block; margin-top: 2px; color: var(--night-muted, #aeb8c5); font-size: 9px; }
+.scoreboard-ranking-points { flex-shrink: 0; font-variant-numeric: tabular-nums; align-self: center; }
+@container (max-width: 720px) {
+  .scoreboard-spotlight .scoreboard-workspace { display: flex; flex-direction: column; height: auto; }
+  .scoreboard-spotlight .scoreboard-strip { height: max(320px, 100cqh); flex: none; }
+  .scoreboard-spotlight .scoreboard-card { width: 100cqw; }
+  .scoreboard-spotlight .scoreboard-elimination { width: min(380px, 100cqw); }
+  .scoreboard-leaderboards { max-height: 100cqh; min-height: 240px; }
+  .scoreboard-spotlight .scoreboard-team { padding: 0 10px; }
+  .scoreboard-roster table { font-size: 11px; }
+}

@@ -1,9 +1,10 @@
 import { guillotineSigma, headToHeadProbability, probNormalMinAll } from "./probability";
 import { optimizeProjectedLineup, type ProjectedLineup } from "./lineup";
+import { playerDetails, type Leaders, type RosterPlayer } from "./players";
 
-export type Team = { id: number; name: string; score: number | null; projected: number | null; projectedLineup?: ProjectedLineup };
+export type Team = { id: number; name: string; score: number | null; projected: number | null; projectedLineup?: ProjectedLineup; players?: RosterPlayer[] };
 export type ScoredTeam = Team & { score: number; projected: number };
-export type Snapshot = { leagueId: string; leagueName: string; year: number; week: number; matchups: Team[][]; knockout: boolean; fetchedAt: number };
+export type Snapshot = { leagueId: string; leagueName: string; year: number; week: number; matchups: Team[][]; knockout: boolean; fetchedAt: number; leaders?: Leaders; detailsWarning?: string };
 export type Mode = "head-to-head" | "guillotine";
 const finite = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
 export const isScored = (team: Team): team is ScoredTeam => team.score !== null && team.projected !== null;
@@ -14,6 +15,7 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
     throw new Error("ESPN returned incomplete scoreboard data. Refresh your league tab and try again.");
   }
   const period = data.status?.currentMatchupPeriod ?? data.scoringPeriodId;
+  const details = playerDetails(data, year);
   const names = new Map<number, string>(data.teams.map((team: any) => [team.id,
     team.name || [team.location, team.nickname].filter(Boolean).join(" ") || `Team ${team.id}`]));
   const current = data.schedule.filter((matchup: any) => matchup.matchupPeriodId === period);
@@ -26,14 +28,16 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
         !(team.eliminationMatchupPeriod > 0 && team.eliminationMatchupPeriod < period))
       .map((team: any) => {
         const projectedLineup = optimizeProjectedLineup(data, team, year);
+        const players = details.roster(team, projectedLineup);
         return { id: team.teamId, name: names.get(team.teamId) || `Team ${team.teamId}`,
           score: finite(team.totalPointsLive),
           projected: projectedLineup ? projectedLineup.projected : finite(team.totalProjectedPointsLive),
-          ...(projectedLineup ? { projectedLineup } : {}) };
+          ...(projectedLineup ? { projectedLineup } : {}), ...(players ? { players } : {}) };
       }))
     .filter((teams: Team[]) => teams.length > 0);
   return { leagueId: String(data.id), leagueName: data.settings?.name || `League ${data.id}`,
-    year, week: data.scoringPeriodId, matchups, knockout, fetchedAt };
+    year, week: data.scoringPeriodId, matchups, knockout, fetchedAt,
+    ...(details.leaders ? { leaders: details.leaders } : {}), ...(details.warning ? { detailsWarning: details.warning } : {}) };
 }
 
 export function headToHead(snapshot: Snapshot) {

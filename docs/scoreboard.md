@@ -1,6 +1,6 @@
 # Native fantasy scoreboard
 
-Install or reload the Multisport420 Chrome extension **0.3.0 or later** from
+Install or reload the Multisport420 Chrome extension **0.3.4 or later** from
 `extension/`. Reload your signed-in ESPN Fantasy football league tab and
 Multisport420, select **NFL**, and add **Fantasy scoreboard**. The app renders
 the scoreboard directly and uses its own extension. Fantasy420 is not required.
@@ -20,17 +20,43 @@ closest to 50/50 first; Guillotine sorts highest risk first. At most three teams
 above 1% elimination risk triggers THUNDERDOME and hides teams below the threshold.
 Missing scores/projections remain unavailable rather than being replaced by zero.
 
-The strip fits the panel height, including a 110px panel. It scrolls horizontally
+When minimized, each paired matchup uses five vertical rows: the first team's
+name, score (projection), its win probability, the second team's score
+(projection), and the second team's name. Smaller text fits a 110px panel.
+Matchups continue to scroll horizontally.
+
+When spotlighted, paired teams appear side by side. Each team's full roster has
+one row per player: slot, name, score and (projection). Bench and IR rows are
+labeled. Completed NFL games omit player projections; a locked lineup alone
+does not indicate a completed game. A star marks players included in the special
+optimized projection described below, including players currently on the bench.
+Team actual scores remain ESPN's totals and do not include bench points.
+
+The spotlight sidebar shows the week's top five scorers at every position plus
+the top five unowned players across positions, with **week score (season score)**
+using the league's scoring settings. Rankings use actual weekly points, not
+projections. Unowned players must have ESPN's unowned status and be absent from
+all league rosters, including bench, IR and eliminated teams. Long rosters and
+rankings scroll vertically. At widths of 720px or less, the leaderboard moves
+below the matchups.
+
+The strip scrolls horizontally
 at 10% of the available scroll distance per second, pauses five seconds at the
 start and 2.5 seconds at the end, then returns to the start. Hover, focus, manual
 interaction and reduced-motion preferences pause automatic movement. Scroll down
 inside the panel to reach league/week, Mode, Refresh and Pause/Resume controls.
 
-There is one initial fetch, then a refresh every 30 seconds while mounted.
+There is one initial refresh, then a refresh every 30 seconds while mounted.
 The title button, toolbar button and remote refresh use the same controller;
-overlapping requests combine into one fetch. Closing the panel stops its timer.
+overlapping requests combine into one refresh. Each refresh fetches the league
+scoreboard, a paginated complete league-scored player pool, and NFL schedules.
+Closing the panel stops its timer.
 An ordinary fetch failure keeps the last snapshot and displays a warning;
 missing or outdated extension connections clear it and show reload instructions.
+Optional player-pool or NFL-schedule failures retain the core scoreboard and
+show a detail warning. An incomplete pool never supplies purported league-wide
+rankings. Older extensions can still show team scores, but need reloading after
+the update for player leaders and completion-aware projections.
 
 ## Calculations and provenance
 
@@ -63,7 +89,10 @@ nonpositive projections and withholding probabilities when required data is abse
 
 The site sends a bounded scoreboard request to its extension. The service worker
 validates the origin, league and year, then asks an ESPN top-frame content script
-to fetch the original league API with credentials and no cache. Endpoint URLs
+to fetch the league scoreboard, `kona_playercard` pages and
+`proTeamSchedules_wl` with credentials and no cache. Player pagination has a
+20-page ceiling of 500 players per page, and all requests share a 12-second
+deadline. The logical refresh counter still counts one refresh. Endpoint URLs
 are constructed inside the extension. League data stays in browser memory and
 is not sent to developer servers. Existing video-player scripts are unchanged.
 

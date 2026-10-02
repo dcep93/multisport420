@@ -143,6 +143,7 @@ function ScreenCard<T>(props: {
           </div>
         ) : null}
         {isScoreboard ? <FantasyScoreboard
+          spotlight={props.isFocused}
           indexedTitle={indexedTitle}
           className={`screen-focus ${props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary"}`}
           onClick={props.isFocused ? undefined : props.onFocus}
