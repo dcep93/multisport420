@@ -1,13 +1,19 @@
 # Native fantasy scoreboard
 
-Install or reload the Multisport420 Chrome extension **0.3.4 or later** from
+Install or reload the Multisport420 Chrome extension **0.3.5 or later** from
 `extension/`. Reload your signed-in ESPN Fantasy football league tab and
 Multisport420, select **NFL**, and add **Fantasy scoreboard**. The app renders
 the scoreboard directly and uses its own extension. Fantasy420 is not required.
 
 The extension selects an active/recent ESPN league tab. Optional Multisport URL
 parameters `?leagueId=123&year=2026&mode=head-to-head` select a league/season and
-initial mode. Keep that league open in another tab. Native ESPN Knockout leagues
+initial mode. If no matching tab is open, the extension loads the most recently
+opened real league in a hidden offscreen iframe. Open the league once after
+installing/updating to seed this preference. The last league ID, season and visit
+time persist in extension-local storage; automatic iframe loads do not replace
+them. Existing tabs take priority. The frame is reused across refreshes and
+closes after a minute without requests. An explicit league override must match
+an open or remembered league. Native ESPN Knockout leagues
 and league 367176096 default to Guillotine; the Mode selector changes the display
 without fetching again. Keep the existing `#Fantasy420Scoreboard` selection hash:
 this historical identifier is retained for saved links and rooms only.
@@ -109,12 +115,15 @@ nonpositive projections and withholding probabilities when required data is abse
 ## Extension and verification
 
 The site sends a bounded scoreboard request to its extension. The service worker
-validates the origin, league and year, then asks an ESPN top-frame content script
-to fetch the league scoreboard, `kona_playercard` pages and
+validates the origin, league and year, then asks the selected ESPN tab or hidden
+frame content script to fetch the league scoreboard, `kona_playercard` pages and
 `proTeamSchedules_wl` with credentials and no cache. Player pagination has a
 20-page ceiling of 500 players per page, and all requests share a 12-second
 deadline. The logical refresh counter still counts one refresh. Endpoint URLs
-are constructed inside the extension. League data stays in browser memory and
+are constructed inside the extension. Custom ESPN team logos are also fetched
+with the ESPN session and passed as inline images so authenticated logos work
+on Multisport420. Only the last league ID, season and visit time persist. League
+responses and image data stay in browser memory and
 is not sent to developer servers. Existing video-player scripts are unchanged.
 
 From `app`, run `npm test` and `npm run build`. From the repository root run
@@ -125,3 +134,8 @@ deterministic ESPN fixture responses, checking the full messaging path, native
 rendering, compact layout, controls, and automatic refresh. This does not verify
 the user's live ESPN login. The app's existing remote browser suite separately
 requires its Firebase emulator.
+
+The closed-tab fallback is covered by `tests/browser/scoreboard-background.spec.ts`,
+including remembered-league selection, reuse, concurrent requests, idle cleanup,
+and the narrow iframe header rule. Set `ESPN_LIVE_FRAME=1` for an optional smoke
+check against the real ESPN page (score API responses remain fixtures).

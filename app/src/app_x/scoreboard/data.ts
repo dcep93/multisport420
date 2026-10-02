@@ -19,8 +19,11 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
   const details = playerDetails(data, year);
   const names = new Map<number, string>(data.teams.map((team: any) => [team.id,
     team.name || [team.location, team.nickname].filter(Boolean).join(" ") || `Team ${team.id}`]));
-  const logos = new Map<number, string | undefined>(data.teams.map((team: any) => [team.id,
-    typeof team.logo === "string" && /^https?:\/\//i.test(team.logo) ? team.logo : undefined]));
+  const logos = new Map<number, string | undefined>(data.teams.map((team: any) => {
+    const authenticatedLogo = data.scoreboardDetails?.teamLogos?.[team.id];
+    return [team.id, typeof authenticatedLogo === "string" && /^data:image\/(png|jpeg|gif|webp|avif);base64,/.test(authenticatedLogo)
+      ? authenticatedLogo : typeof team.logo === "string" && /^https?:\/\//i.test(team.logo) ? team.logo : undefined];
+  }));
   const records = new Map<number, Team["record"]>(data.teams.map((team: any) => {
     const record = team.record?.overall;
     return [team.id, record && Number.isInteger(record.wins) && record.wins >= 0 &&

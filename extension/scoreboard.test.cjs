@@ -8,13 +8,19 @@ function harness(options = {}) {
   const external = [], internal = [];
   let content;
   const calls = [];
+  const storage = { ...(options.storage || {}) };
+  const updated = [], activated = [];
   const tabs = options.tabs ?? [{ id: 10, active: true, url: "https://fantasy.espn.com/football/team?leagueId=123&seasonId=2025" }];
   const background = vm.createContext({ URL, crypto: { randomUUID }, setTimeout, clearTimeout, console: { log() {} }, chrome: {
     runtime: {
+      onConnect: { addListener() {} },
       onMessage: { addListener(fn) { internal.push(fn); } },
       onMessageExternal: { addListener(fn) { external.push(fn); } },
     },
     tabs: {
+      onUpdated: { addListener(fn) { updated.push(fn); } },
+      onActivated: { addListener(fn) { activated.push(fn); } },
+      async get(id) { return tabs.find(tab => tab.id === id); },
       async query(query) { assert.equal(query.url, "https://fantasy.espn.com/football/*"); return tabs; },
       async sendMessage(id, message, target) {
         calls.push({ id, message, target });
@@ -22,10 +28,19 @@ function harness(options = {}) {
         return new Promise(resolve => content(message, { id: "extension" }, resolve));
       },
     },
+    storage: { local: {
+      async get(key) { return { [key]: storage[key] }; },
+      async set(values) { Object.assign(storage, values); },
+    } },
   } });
-  background.importScripts = filename => vm.runInContext(fs.readFileSync(`${__dirname}/${filename}`, "utf8"), background);
+  background.importScripts = (...filenames) => filenames.forEach(filename => vm.runInContext(fs.readFileSync(`${__dirname}/${filename}`, "utf8"), background));
   vm.runInContext(fs.readFileSync(`${__dirname}/background.js`, "utf8"), background);
   const context = vm.createContext({ URL, Date, AbortController,
+    FileReader: class {
+      readAsDataURL(blob) {
+        blob.arrayBuffer().then(bytes => { this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString("base64")}`; this.onload(); });
+      }
+    },
     setTimeout: options.setTimeout ?? setTimeout, clearTimeout,
     location: { href: options.page ?? tabs[0]?.url },
     fetch: async (url, request) => {
@@ -39,11 +54,12 @@ function harness(options = {}) {
           : { id: 123, teams: [], schedule: [] } };
     },
     chrome: { runtime: { id: "extension", onMessage: { addListener(fn) { content = fn; } },
-      sendMessage: message => new Promise(resolve => internal[0](message, { tab: { id: options.senderTab ?? calls.find(call => call.id)?.id }, frameId: options.frameId ?? 0 }, resolve)),
+      sendMessage: message => new Promise(resolve => internal.forEach(listener => listener(message, { tab: { id: options.senderTab ?? calls.find(call => call.id)?.id }, frameId: options.frameId ?? 0 }, resolve))),
     } },
   });
   vm.runInContext(fs.readFileSync(`${__dirname}/scoreboard_content.js`, "utf8"), context);
-  return { calls, internal, content, send: (request = { scoreboard: { action: "fetch" } }, url = "https://multisport420.web.app/scoreboard") => new Promise(resolve => {
+  if (options.hiddenFrame) background.withScoreboardFrame = options.hiddenFrame;
+  return { calls, internal, content, storage, updated, activated, send: (request = { scoreboard: { action: "fetch" } }, url = "https://multisport420.web.app/scoreboard") => new Promise(resolve => {
     external.forEach(listener => listener(request, { url }, resolve));
   }) };
 }
@@ -134,12 +150,62 @@ test("localhost can request the scoreboard", async () => {
   assert.equal(result.fetched, 1);
 });
 
+test("remembers only real ESPN league visits and falls back without overwriting them", async () => {
+  const saved = { leagueId: "456", year: 2026, visitedAt: Date.now() };
+  const h = harness({ tabs: [], storage: { scoreboardLastOpenedLeague: saved },
+    hiddenFrame: async (url) => { assert.equal(url, "https://fantasy.espn.com/football/league?leagueId=456&seasonId=2026"); return { fetched: 1, data: {} }; } });
+  assert.equal((await h.send()).fetched, 1);
+  assert.equal(h.storage.scoreboardLastOpenedLeague, saved);
+  const mismatch = await h.send({ scoreboard: { action: "fetch", leagueId: "789" } });
+  assert.equal(mismatch.fetched, 0);
+  assert.match(mismatch.error, /once in Chrome/);
+  const observed = { id: 20, url: "https://fantasy.espn.com/football/team?leagueId=789&seasonId=2025" };
+  h.updated[0](20, { url: observed.url }, observed);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.storage.scoreboardLastOpenedLeague.leagueId, "789");
+  assert.equal(h.storage.scoreboardLastOpenedLeague.year, 2025);
+  h.updated[0](20, { url: "https://evil.example/?leagueId=999" }, { id: 20, url: "https://evil.example/?leagueId=999" });
+  h.updated[0](21, { url: observed.url }, { ...observed, incognito: true });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.storage.scoreboardLastOpenedLeague.leagueId, "789");
+});
+
+test("an older matching tab cannot replace the more recently visited saved league", async () => {
+  const saved = { leagueId: "456", year: 2026, visitedAt: Date.now() };
+  const h = harness({ tabs: [{ id: 10, active: false, lastAccessed: 1,
+    url: "https://fantasy.espn.com/football/team?leagueId=123&seasonId=2025" }],
+    storage: { scoreboardLastOpenedLeague: saved } });
+  assert.equal((await h.send()).leagueId, "123");
+  assert.equal(h.storage.scoreboardLastOpenedLeague, saved);
+});
+
 test("the website marker exposes only this extension ID", () => {
   const document = { documentElement: { dataset: {} } };
   vm.runInNewContext(fs.readFileSync(`${__dirname}/content_script.js`, "utf8"), {
     document, chrome: { runtime: { id: "multisport-extension-id" } },
   });
   assert.deepEqual(document.documentElement.dataset, { multisport420ExtensionId: "multisport-extension-id" });
+});
+
+test("custom ESPN logos use the authenticated ESPN connection and tolerate missing images", async () => {
+  const logo = "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/custom-image";
+  const badLogo = `${logo}-missing`;
+  const h = harness({ fetch: async (url, request) => {
+    if (url === logo) {
+      assert.equal(request.credentials, "include");
+      return { ok: true, blob: async () => new Blob(["fixture"], { type: "image/png" }) };
+    }
+    if (url === badLogo) return { ok: false, status: 404 };
+    const view = new URL(url).searchParams.get("view");
+    return ok(view === "kona_playercard" ? { players: [] } : view === "proTeamSchedules_wl" ? { settings: { proTeams: [] } }
+      : { id: 123, schedule: [], teams: [{id:1, logo}, {id:2, logo}, {id:3, logo:badLogo}, {id:4, logo:"https://evil.example/logo.png"}] });
+  } });
+  const result = await h.send();
+  assert.equal(result.data.scoreboardDetails.teamLogos[1], "data:image/png;base64,Zml4dHVyZQ==");
+  assert.equal(result.data.scoreboardDetails.teamLogos[2], result.data.scoreboardDetails.teamLogos[1]);
+  assert.equal(result.data.scoreboardDetails.teamLogos[3], undefined);
+  assert.equal(h.calls.filter(call => call.url === logo).length, 1);
+  assert.equal(h.calls.some(call => call.url?.includes("evil.example")), false);
 });
 
 const ok = data => ({ ok: true, json: async () => data });

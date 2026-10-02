@@ -40,21 +40,21 @@
       <header>
         <p class="brand">multisport420</p>
         <h1>Privacy policy</h1>
-        <p class="updated">Last updated <time datetime="2026-09-13">September 13, 2026</time></p>
+        <p class="updated">Last updated <time datetime="2026-10-02">October 2, 2026</time></p>
       </header>
 
       <p>This policy covers the multisport420 website and its companion Chrome extension. It explains the data used for stream viewing, ESPN fantasy scoreboards, and optional phone remote rooms. This privacy page works without signing in and contains no scripts, tracking, or remote assets.</p>
 
       <section aria-labelledby="fantasy">
         <h2 id="fantasy">ESPN fantasy scoreboards</h2>
-        <p>When you load or refresh a fantasy scoreboard, the extension finds an open ESPN Fantasy football tab. It reads matching tab URLs, including league and season identifiers, and uses active-tab status and recency to choose a tab.</p>
+        <p>When you load or refresh a fantasy scoreboard, the extension finds an open ESPN Fantasy football tab. It reads matching tab URLs, including league and season identifiers, and uses active-tab status and recency to choose a tab. It saves the last league ID, season, and visit time from real ESPN tabs in local extension storage. When no matching tab is open, it opens that league in an invisible extension iframe; background loads never change the saved preference.</p>
         <p>The extension requests a full league response from ESPN using your existing ESPN session. That response can include league, team, and member information; rosters; matchups; scores; settings; and projections. Your browser includes ESPN session cookies in the request. The extension does not read or copy cookie values, collect your ESPN password, or change your ESPN lineup.</p>
-        <p>The response passes through the extension to the requesting multisport420 page. The current extension accepts requests from multisport420.web.app and localhost pages. Scoreboard calculations run in your browser. The fantasy response is not sent to developer servers, the stream proxy, or Firebase remote rooms, and is not saved to browser storage by the scoreboard. Local diagnostic messages can include projected rosters and league, team, and week identifiers in the browser developer console.</p>
+        <p>Custom ESPN team logos are fetched with the existing ESPN session and passed as inline images so they display outside ESPN. The response passes through the extension to the requesting multisport420 page. The current extension accepts requests from multisport420.web.app and localhost pages. Scoreboard calculations run in your browser. The fantasy response is not sent to developer servers, the stream proxy, or Firebase remote rooms, and is not saved to browser storage by the scoreboard. Local diagnostic messages can include projected rosters and league, team, and week identifiers in the browser developer console.</p>
       </section>
 
       <section aria-labelledby="extension">
         <h2 id="extension">Extension permissions and media controls</h2>
-        <p>The extension uses access to supported pages to provide fantasy scoreboards, playback and mute controls, and hiding of known popup overlays. Media controls inspect and modify page elements; they do not record video or audio. The extension does not add analytics or use accessed information for advertising.</p>
+        <p>The extension uses access to supported pages to provide fantasy scoreboards, playback and mute controls, and hiding of known popup overlays. Storage and offscreen permissions support the saved league and hidden iframe. A narrowly scoped response-header rule permits embedding only that ESPN league page inside the extension’s hidden document. Media controls inspect and modify page elements; they do not record video or audio. The extension does not add analytics or use accessed information for advertising.</p>
         <p>multisport420 complies with the <a href="https://developer.chrome.com/docs/webstore/program-policies/user-data-faq" rel="noreferrer">Chrome Web Store User Data Policy</a>, including its Limited Use requirements. Data accessed through extension permissions is used only to provide the features described here. It is not sold or used for personalized advertising.</p>
       </section>
 
@@ -72,9 +72,9 @@
 
       <section aria-labelledby="controls">
         <h2 id="controls">Retention and your controls</h2>
-        <p>Scoreboard data is processed in memory while pages are open and is normally released on reload or close. Developer tools may retain console output according to your browser settings. Local caches and the unlock flag remain until overwritten or cleared.</p>
+        <p>Scoreboard data is processed in memory while pages are open and is normally released on reload or close. Developer tools may retain console output according to your browser settings. Local caches and the unlock flag remain until overwritten or cleared. The last league preference remains until replaced by another league visit or removed with the extension. The hidden ESPN frame closes after one minute without scoreboard requests.</p>
         <ul>
-          <li>Disable or remove the extension to stop its access. Close all ESPN Fantasy football tabs or remove the scoreboard to stop that view fetching fantasy data. Signing out of ESPN stops access to authenticated league data, but does not stop request attempts.</li>
+          <li>Disable or remove the extension to stop its access. Remove the scoreboard or close Multisport420 to stop that view fetching fantasy data. Closing ESPN tabs alone does not stop requests because the hidden iframe can continue providing the scoreboard. Signing out of ESPN stops access to authenticated league data, but does not stop request attempts.</li>
           <li>Use the website’s cache control to remove the stream-page cache. Clear browser site data to remove both that cache and the unlock flag. Clear browser history or console logs separately if needed.</li>
           <li>Clear a connected room to remove its selected streams and latest command; leave it to disconnect. Clearing does not delete every room field, and clearing browser data does not delete server records.</li>
         </ul>

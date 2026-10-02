@@ -14,6 +14,8 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     let fetches = 0;
     const requests: string[] = [];
     context.on("request", request => requests.push(request.url()));
+    await context.route("https://mystique-api.fantasy.espn.com/**", route => route.fulfill({ contentType: "image/png",
+      body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64") }));
     await context.route("https://team-icons.example.test/**", route => {
       const index = Number(new URL(route.request().url()).pathname.slice(1));
       if (index === 3) return route.fulfill({ status: 404, body: "Missing icon" });
@@ -67,7 +69,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       return route.fulfill({ json: {
         id: 123, scoringPeriodId: 1, settings: { name: "Native scoreboard fixture" },
         teams: ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].map((name, i) => ({ id: i + 1, name,
-          ...(i === 2 ? {} : { logo: `https://team-icons.example.test/${i}` }),
+          ...(i === 2 ? {} : { logo: i === 0 ? "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/alpha" : `https://team-icons.example.test/${i}` }),
           roster: { entries }, record: { overall: { wins: i, losses: 5 - i } } })),
         schedule: [0, 1, 2].map(i => ({ matchupPeriodId: 1,
           home: { teamId: i * 2 + 1, totalPointsLive: 80 + fetches, totalProjectedPointsLive: 120 + i },
@@ -90,7 +92,8 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
 
     const panel = page.locator(".native-scoreboard-container");
     await expect(page.locator(".scoreboard-spotlight")).toHaveCount(1);
-    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveJSProperty("naturalWidth", 80);
+    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveJSProperty("naturalWidth", 1);
+    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveAttribute("src", /^data:image\/png;base64,/);
     await expect(page.getByRole("img", { name: "Charlie icon" })).toHaveText("C");
     await expect(page.getByRole("img", { name: "Delta icon" })).toHaveText("D");
     await expect(page.getByLabel("1 consecutive fantasy win if Alpha wins this week")).toHaveText("👑");

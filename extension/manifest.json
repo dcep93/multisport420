@@ -1,7 +1,9 @@
 {
   "manifest_version": 3,
   "name": "multisport420",
-  "version": "0.3.4",
+  "version": "0.3.5",
+  "minimum_chrome_version": "116",
+  "permissions": ["storage", "offscreen", "declarativeNetRequestWithHostAccess"],
   "description": "Companion for multisport420.web.app: video playback, mute controls, popup blocking, and live ESPN fantasy scoreboards.",
   "icons": {
     "16": "icons/icon-16.png",
@@ -57,7 +59,9 @@
       ],
       "js": [
         "scoreboard_content.js"
-      ]
+      ],
+      "all_frames": true,
+      "run_at": "document_start"
     }
   ],
   "background": {
@@ -71,6 +75,7 @@
   },
   "host_permissions": [
     "https://fantasy.espn.com/*",
+    "https://mystique-api.fantasy.espn.com/*",
     "https://lm-api-reads.fantasy.espn.com/*"
   ]
 }

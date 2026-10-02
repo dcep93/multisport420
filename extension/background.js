@@ -1,1 +1,1 @@
-importScripts("scoreboard.js");
+importScripts("scoreboard_frame.js", "scoreboard.js");

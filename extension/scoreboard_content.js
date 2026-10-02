@@ -3,12 +3,34 @@
   const playerPageSize = 500;
   const maxPlayerPages = 20;
 
-  async function fetchDetails(endpoint, year, request) {
+  async function fetchDetails(endpoint, year, request, teams) {
     const details = {};
     const warnings = [];
     // A partial pool must never masquerade as league-wide leaders. Publish it
     // only after count/short-page termination confirms that pagination finished.
     await Promise.all([
+      (async () => {
+        const logos = {};
+        const images = new Map();
+        await Promise.all(teams.map(async team => {
+          if (typeof team.logo !== "string" || !team.logo.startsWith("https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/")) return;
+          if (!images.has(team.logo)) images.set(team.logo, (async () => {
+            const response = await fetch(team.logo, request);
+            if (!response.ok) throw new Error("Custom team logo unavailable");
+            const blob = await response.blob();
+            if (blob.size > 1024 * 1024 || !/^image\/(png|jpeg|gif|webp|avif)$/.test(blob.type)) throw new Error("Unsupported team logo");
+            return new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = () => reject(new Error("Custom team logo unreadable"));
+              reader.readAsDataURL(blob);
+            });
+          })());
+          try { logos[team.id] = await images.get(team.logo); }
+          catch { /* A missing image must not drop scores or other team logos. */ }
+        }));
+        if (Object.keys(logos).length) details.teamLogos = logos;
+      })(),
       (async () => {
         const url = new URL(endpoint);
         url.search = "?view=kona_playercard";
@@ -71,7 +93,7 @@
     return details;
   }
 
-  chrome.runtime.onMessage.addListener((message, sender, reply) => {
+  function handleMessage(message, sender, reply) {
     if (message?.type !== `${prefix}fetch`) return false;
     if (sender.id !== chrome.runtime.id) return false;
     (async () => {
@@ -107,7 +129,7 @@
         if (!data || !Array.isArray(data.teams) || !Array.isArray(data.schedule)) {
           return { error: "ESPN did not return a league scoreboard. Check that you are signed in to the correct league." };
         }
-        data.scoreboardDetails = await fetchDetails(endpoint.href, year, request);
+        data.scoreboardDetails = await fetchDetails(endpoint.href, year, request, data.teams);
         return { data, year, leagueId, fetchedAt: Date.now() };
       } catch (error) {
         return { error: error.name === "AbortError"
@@ -118,5 +140,16 @@
       }
     })().then(reply, () => reply({ error: "Reload the ESPN tab and Multisport420 extension, then try again." }));
     return true;
-  });
+  }
+  chrome.runtime.onMessage.addListener(handleMessage);
+  // Only the extension-created offscreen frame uses a port. Ordinary ESPN
+  // tabs continue to use targeted top-frame messages.
+  if (typeof window !== "undefined" && window.top !== window &&
+      /^#multisport420-scoreboard=[a-f0-9-]+$/.test(location.hash)) {
+    const token = location.hash.split("=")[1];
+    const port = chrome.runtime.connect({ name: `${prefix}${token}` });
+    port.onMessage.addListener(message => handleMessage(message, { id: chrome.runtime.id }, response => {
+      try { port.postMessage({ requestId: message.requestId, response }); } catch { /* Frame closed. */ }
+    }));
+  }
 })();
