@@ -31,8 +31,8 @@ Players align by lineup slot; repeated slots get separate rows. Bench and IR
 players align by position and remain labeled. Unequal rosters retain every
 player with an empty opposing side. Single teams retain their full roster list.
 Completed NFL games omit player projections; a locked lineup alone
-does not indicate a completed game. A star marks players included in the special
-optimized projection described below, including players currently on the bench.
+does not indicate a completed game. The special optimized projection described
+below still accounts for eligible players currently on the bench.
 Team actual scores remain ESPN's totals and do not include bench points.
 
 The spotlight sidebar shows the week's top five scorers at every position plus
@@ -40,7 +40,9 @@ the top five unowned players across positions, with **week score (season score)*
 using the league's scoring settings. Rankings use actual weekly points, not
 projections. Unowned players must have ESPN's unowned status and be absent from
 all league rosters, including bench, IR and eliminated teams. Long rosters and
-rankings scroll vertically. At widths of 720px or less, the leaderboard moves
+rankings scroll vertically. The expanded view uses a full-width matchup card,
+mirrored team summaries, and a shared table with subtle bench separation.
+At widths of 800px or less, the leaderboard moves
 below the matchups.
 
 The strip scrolls horizontally

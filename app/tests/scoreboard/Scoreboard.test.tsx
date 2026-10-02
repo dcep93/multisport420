@@ -161,7 +161,7 @@ it("uses exactly five compact matchup rows and switches to paired spotlight with
   expect(send).toHaveBeenCalledTimes(1);
 });
 
-it.each(["head-to-head", "guillotine"])("renders all roster rows, omits final-game projections, and labels optimized bench picks in %s", async mode => {
+it.each(["head-to-head", "guillotine"])("renders all roster rows and final-game scores without optimization copy in %s", async mode => {
   window.history.replaceState({}, "", `/scoreboard?mode=${mode}`);
   const data: any = response();
   data.data.id = 203836968;
@@ -191,8 +191,10 @@ it.each(["head-to-head", "guillotine"])("renders all roster rows, omits final-ga
   expect(within(finished).queryByTitle("Player projection")).not.toBeInTheDocument();
   const selected = within(table).getByRole("row", { name: /Better bench/ });
   expect(selected).toHaveTextContent("Bench");
-  expect(selected).toHaveTextContent("Better bench★");
-  expect(within(selected).getByTitle("Included in optimized projection at QB")).toBeInTheDocument();
+  expect(selected).toHaveTextContent("Better bench");
+  expect(screen.queryByText(/Included in optimized projection/)).not.toBeInTheDocument();
+  expect(document.body.textContent).not.toContain("★");
+  expect(screen.getByText("(130.00)")).toBeInTheDocument();
   expect(within(selected).getByTitle("Player projection")).toHaveTextContent("(20.00)");
 });
 
@@ -218,8 +220,8 @@ it("pairs roster players by position in score/name/position/name/score order, re
     ["2.00 (12.00)", "Left RB", "RB", "Right RB", "5.00 (15.00)"],
     ["3.00 (13.00)", "Extra RB", "RB", "—", "—"],
     ["—", "—", "Bench · RB", "Bench RB", "7.00 (17.00)"],
-    ["4.00 (14.00)", "Bench WR★", "Bench · WR", "Other bench WR", "8.00 (18.00)"],
+    ["4.00 (14.00)", "Bench WR", "Bench · WR", "Other bench WR", "8.00 (18.00)"],
     ["—", "—", "IR · TE", "Injured", "9.00 (19.00)"],
   ]);
-  expect(within(table).getByTitle("Included in optimized projection at FLEX")).toBeInTheDocument();
+  expect(table.textContent).not.toContain("★");
 });
