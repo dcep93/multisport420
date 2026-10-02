@@ -2,8 +2,17 @@ import type { Snapshot, Team } from "./data";
 import type { PlayerScore, RosterPlayer } from "./players";
 import { matchupRows } from "./matchupRows";
 import { activityClass, activityLabel } from "./liveGames";
+import type { ReactNode } from "react";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
+
+function PlayerLink({ player, className, children }: { player: PlayerScore; className: string; children?: ReactNode }) {
+  const query = new URLSearchParams({ nameFilter: player.name.replace(/\s+/g, "_") });
+  return <a className={`${className} scoreboard-player-link`} href={`https://fantasy420.web.app/#PlayerStats?${query}`}
+    target="_blank" rel="noopener noreferrer" title={`${player.name} stats (opens in a new tab)`}>
+    {children ?? player.name}
+  </a>;
+}
 
 function PlayerPoints({ player }: { player?: PlayerScore }) {
   return player ? <>{points(player.score)}{!player.completed && <span className="scoreboard-player-projection" title="Player projection"> ({points(player.projected)})</span>}</> : <>—</>;
@@ -11,7 +20,7 @@ function PlayerPoints({ player }: { player?: PlayerScore }) {
 
 function PlayerName({ player }: { player?: RosterPlayer }) {
   return player ? <span className="scoreboard-player-label">
-    <span className="scoreboard-player-name" title={player.name}>{player.name}</span>
+    <PlayerLink player={player} className="scoreboard-player-name" />
   </span> : <>—</>;
 }
 
@@ -50,7 +59,7 @@ export function Roster({ team }: { team: Team }) {
       ].filter(Boolean).join(" ")}>
         <th scope="row"><span className="scoreboard-player-label">
           <span className="scoreboard-player-slot" title={`${player.position} · ${player.slot}`}>{player.slot}</span>
-          <span className="scoreboard-player-name" title={player.name}>{player.name}</span>
+          <PlayerLink player={player} className="scoreboard-player-name" />
           </span>
         </th>
         <td><PlayerPoints player={player} /></td>
@@ -64,7 +73,7 @@ function Ranking({ title, players, showPosition = false }: { title: string; play
     <h3>{title}</h3>
     {players.length ? <ol>{players.map((player, index) => <li key={player.id} className={activityClass(player)} title={activityLabel(player.activity)}>
       <span className="scoreboard-ranking-rank" aria-hidden="true">{index + 1}</span>
-      <span className="scoreboard-ranking-name" title={`${player.name} · ${player.position}`}>{player.name}{showPosition && <small>{player.position}</small>}</span>
+      <PlayerLink player={player} className="scoreboard-ranking-name">{player.name}{showPosition && <small>{player.position}</small>}</PlayerLink>
       <span className="scoreboard-ranking-points">{points(player.score)} <span>({points(player.seasonScore)})</span></span>
     </li>)}</ol> : <p className="scoreboard-detail-empty">No scored players yet.</p>}
   </section>;

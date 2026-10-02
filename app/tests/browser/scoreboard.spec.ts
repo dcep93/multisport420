@@ -189,9 +189,21 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     expect(fetches).toBe(2);
     await page.getByRole("button", { name: "Pause scrolling", exact: true }).click();
     await expect(page.getByRole("button", { name: "Resume scrolling", exact: true })).toBeVisible();
+    await context.route("https://fantasy420.web.app/**", route => route.fulfill({
+      contentType: "text/html", body: "<h1>Player stats destination</h1>",
+    }));
+    const originalUrl = page.url();
+    const [playerPage] = await Promise.all([
+      page.waitForEvent("popup"),
+      page.getByRole("link", { name: "Jalen Hurts", exact: true }).first().click(),
+    ]);
+    await playerPage.waitForLoadState();
+    expect(playerPage.url()).toBe("https://fantasy420.web.app/#PlayerStats?nameFilter=Jalen_Hurts");
+    expect(page.url()).toBe(originalUrl);
+    await playerPage.close();
     // Verify the actual polling cadence through the installed extension bridge.
     await expect.poll(() => fetches, { timeout: 32_000 }).toBeGreaterThanOrEqual(3);
-    expect(requests.some(url => url.includes("fantasy420.web.app"))).toBe(false);
+    expect(requests.some(url => url.includes("fantasy420.web.app"))).toBe(true);
     expect(errors).toEqual([]);
   } finally {
     await context.close();

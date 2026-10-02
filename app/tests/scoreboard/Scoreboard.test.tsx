@@ -5,7 +5,7 @@ import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import Scoreboard from "../../src/app_x/scoreboard/Scoreboard";
 import { extensionHelper } from "../../src/app_x/scoreboard/extension";
-import { MatchupRoster } from "../../src/app_x/scoreboard/PlayerDetails";
+import { Leaderboards, MatchupRoster, Roster } from "../../src/app_x/scoreboard/PlayerDetails";
 import type { RosterPlayer } from "../../src/app_x/scoreboard/players";
 
 vi.mock("../../src/app_x/scoreboard/extension", () => ({ extensionHelper: vi.fn() }));
@@ -247,4 +247,24 @@ it("pairs roster players by position in score/name/position/name/score order, re
   expect(rows[1].children[2]).not.toHaveAttribute("class");
   expect(rows[1].children[3]).toHaveClass("scoreboard-player-red-zone");
   expect(rows[1].children[4]).toHaveClass("scoreboard-player-red-zone");
+});
+
+it("links starters, reserves, and both leaderboards to player stats in a separate tab", () => {
+  const player: RosterPlayer = { id: 1, name: "Ja'Marr Chase", position: "WR", slot: "Bench", slotId: 20,
+    score: 12, projected: 20, seasonScore: 50, completed: false };
+  const team = { id: 1, name: "Alpha", score: 12, projected: 20, players: [player] };
+  render(<>
+    <MatchupRoster left={team} right={{ ...team, id: 2, name: "Bravo" }} />
+    <Roster team={team} />
+    <Leaderboards snapshot={{ leagueId: "123", leagueName: "League", year: 2026, week: 4,
+      fetchedAt: 0, knockout: false, matchups: [[team]],
+      leaders: { unowned: [player], positions: [{ position: "WR", players: [player] }] } }} />
+  </>);
+  const links = screen.getAllByRole("link", { name: /Ja'Marr Chase/ });
+  expect(links).toHaveLength(5);
+  for (const link of links) {
+    expect(link).toHaveAttribute("href", "https://fantasy420.web.app/#PlayerStats?nameFilter=Ja%27Marr_Chase");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  }
 });
