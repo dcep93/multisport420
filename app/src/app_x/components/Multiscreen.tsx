@@ -26,6 +26,13 @@ export default function Multiscreen<T>(props: {
   const { containerRef, displayLogs, focusedSlug, host, onFocus, onRemove, streams } = props;
   const focusedStream =
     streams.find((stream) => stream.slug === focusedSlug) ?? streams[0];
+  const [lastAudioSlug, setLastAudioSlug] = useState<StreamSlug>();
+  // The scoreboard changes the layout without taking audio from the last video.
+  const audioStream = focusedStream && !isFantasyScoreboard(focusedStream)
+    ? focusedStream
+    : streams.find((stream) => stream.slug === lastAudioSlug && !isFantasyScoreboard(stream));
+  const audioSlug = audioStream?.slug;
+  if (lastAudioSlug !== audioSlug) setLastAudioSlug(audioSlug);
   const secondaryCount = Math.max(1, streams.length - 1);
 
   return (
@@ -47,6 +54,7 @@ export default function Multiscreen<T>(props: {
             displayLogs={displayLogs}
             logDelayMs={props.logDelayMs}
             isFocused={stream.slug === focusedStream?.slug}
+            isAudioFocused={stream.slug === audioSlug}
             shouldRefreshLog={stream.slug === props.logRefreshSlug}
             logRefreshRequestId={props.logRefreshRequestId}
             shouldToggleMute={stream.slug === props.muteToggleSlug}
@@ -69,6 +77,7 @@ function ScreenCard<T>(props: {
   displayLogs: boolean;
   logDelayMs: number;
   isFocused: boolean;
+  isAudioFocused: boolean;
   shouldRefreshLog: boolean;
   logRefreshRequestId: number;
   shouldToggleMute: boolean;
@@ -157,7 +166,7 @@ function ScreenCard<T>(props: {
             "screen-focus",
             props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary",
           ].join(" ")}
-          isFocused={props.isFocused}
+          isAudioFocused={props.isAudioFocused}
           shouldToggleMute={props.shouldToggleMute}
           muteToggleRequestId={props.muteToggleRequestId}
           onRefreshStream={props.onRefreshStream}
@@ -177,7 +186,7 @@ function ScreenContent<T>(props: {
   stream: Stream;
   indexedTitle: string;
   className: string;
-  isFocused: boolean;
+  isAudioFocused: boolean;
   shouldToggleMute: boolean;
   muteToggleRequestId: number;
   onRefreshStream: (streamSlug: StreamSlug) => Promise<Stream | null>;
@@ -190,7 +199,7 @@ function ScreenContent<T>(props: {
     className,
     host,
     indexedTitle,
-    isFocused,
+    isAudioFocused,
     muteToggleRequestId,
     onClick,
     onDebugTitleChange,
@@ -203,7 +212,7 @@ function ScreenContent<T>(props: {
   const [srcDoc, setSrcDoc] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null);
-  const isMuted = useScreenMuted(isFocused, shouldToggleMute, muteToggleRequestId);
+  const isMuted = useScreenMuted(isAudioFocused, shouldToggleMute, muteToggleRequestId);
   const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [refreshOverride, setRefreshOverride] = useState<{
     sourceStreamKey: string;

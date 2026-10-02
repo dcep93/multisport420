@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-// Keep app/remote mute choices for the current spotlight session only.
+// Keep app/remote mute choices for the current audio-focus session only.
 export function useScreenMuted(isFocused: boolean, shouldToggleMute: boolean, requestId: number) {
   const [state, setState] = useState({ isFocused, requestId, muted: false });
   let current = state;

@@ -17,7 +17,8 @@ export default function Guide() {
           >
             Multisport420 Chrome extension
           </a>{" "}
-          to remove popups and automatically mute streams that are not in the spotlight.
+          to remove popups and switch audio to the video you spotlight. Spotlighting
+          the fantasy scoreboard preserves the current video’s audio.
         </li>
         <li>
           You can only use this tool if you legally have access to the content.
