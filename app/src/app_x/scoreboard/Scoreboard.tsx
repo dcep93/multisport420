@@ -18,12 +18,17 @@ function Points({ team }: { team: Team }) {
     </p>;
 }
 
-function TeamScore({ team, probability, risk = false, bye = false, spotlight = false }: { team: Team; probability?: number | null; risk?: boolean; bye?: boolean; spotlight?: boolean }) {
+function TeamScore({ team, probability, risk = false, bye = false, spotlight = false, showRoster = false }: { team: Team; probability?: number | null; risk?: boolean; bye?: boolean; spotlight?: boolean; showRoster?: boolean }) {
   const underdog = !risk && probability !== null && probability !== undefined && probability < .5;
   const beansLabel = team.lossesIfLost === undefined ? "Loss streak unavailable"
     : `${team.lossesIfLost} consecutive fantasy ${team.lossesIfLost === 1 ? "loss" : "losses"} if ${team.name} loses this week`;
   return <section className="scoreboard-team" aria-label={team.name}>
-    <h2 className="scoreboard-team-name" title={team.name}>{team.name}</h2>
+    <div className="scoreboard-team-heading">
+      <h2 className="scoreboard-team-name" title={team.name}>{team.name}</h2>
+      {spotlight && team.record && <span className="scoreboard-team-record" title="Current record (wins–losses)">
+        {team.record.wins}–{team.record.losses}
+      </span>}
+    </div>
     <Points team={team} />
     {underdog ? <p className="scoreboard-probability scoreboard-beans" aria-label={beansLabel} title={beansLabel}>
       <span aria-hidden="true">{team.lossesIfLost === undefined ? "—" : "🫘".repeat(team.lossesIfLost)}</span>
@@ -31,7 +36,7 @@ function TeamScore({ team, probability, risk = false, bye = false, spotlight = f
       {probability === null ? "—" : percent(probability)}<span className="scoreboard-probability-label"> {risk ? "elimination" : "win"}</span>
     </p>}
     {bye && <p className="scoreboard-probability">Bye</p>}
-    {spotlight && <Roster team={team} />}
+    {showRoster && <Roster team={team} />}
   </section>;
 }
 
@@ -93,13 +98,13 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
           <article className={`scoreboard-card${spotlight && teams.length === 2 ? " scoreboard-paired" : ""}`} key={key} aria-label={teams.map(team => team.name).join(" versus ")}>
             {!spotlight && teams.length === 2 ? <CompactMatchup teams={teams} probability={probability} /> : <div className={`scoreboard-teams${teams.length === 1 ? " scoreboard-single" : ""}`}>
               {teams.map((team, i) => <TeamScore key={team.id} team={team} bye={teams.length === 1}
-                spotlight={spotlight && teams.length === 1}
+                spotlight={spotlight} showRoster={spotlight && teams.length === 1}
                 probability={teams.length === 1 ? undefined : probability === null ? null : i === 0 ? probability : 1 - probability} />)}
             </div>}
             {spotlight && teams.length === 2 && <MatchupRoster left={teams[0]} right={teams[1]} />}
           </article>) : elimination?.teams.map(({ team, probability }) =>
           <article className="scoreboard-card scoreboard-elimination" key={team.id} aria-label={team.name}>
-            <div className="scoreboard-teams scoreboard-single"><TeamScore team={team} probability={probability} risk spotlight={spotlight} /></div>
+            <div className="scoreboard-teams scoreboard-single"><TeamScore team={team} probability={probability} risk spotlight={spotlight} showRoster={spotlight} /></div>
           </article>)}
         {mode === "head-to-head" && !matchups.length && <p className="scoreboard-empty">{snapshot.knockout ? "No head-to-head pairings. Select Guillotine below to see elimination risk." : "No matchups available this week."}</p>}
         {mode === "guillotine" && !elimination?.teams.length && <p className="scoreboard-empty">No teams with a positive projection this week.</p>}

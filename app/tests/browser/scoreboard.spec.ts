@@ -61,7 +61,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       fetches++;
       return route.fulfill({ json: {
         id: 123, scoringPeriodId: 1, settings: { name: "Native scoreboard fixture" },
-        teams: ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].map((name, i) => ({ id: i + 1, name, roster: { entries } })),
+        teams: ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].map((name, i) => ({ id: i + 1, name, roster: { entries }, record: { overall: { wins: i, losses: 5 - i } } })),
         schedule: [0, 1, 2].map(i => ({ matchupPeriodId: 1,
           home: { teamId: i * 2 + 1, totalPointsLive: 80 + fetches, totalProjectedPointsLive: 120 + i },
           away: { teamId: i * 2 + 2, totalPointsLive: 75, totalProjectedPointsLive: 110 + i },
@@ -83,6 +83,12 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
 
     const panel = page.locator(".native-scoreboard-container");
     await expect(page.locator(".scoreboard-spotlight")).toHaveCount(1);
+    await expect(page.locator('.scoreboard-team[aria-label="Alpha"] .scoreboard-team-record')).toHaveText("0–5");
+    expect(await page.locator(".scoreboard-team-heading").evaluateAll(headings => headings.every(heading => {
+      const name = heading.querySelector("h2")!.getBoundingClientRect();
+      const record = heading.querySelector(".scoreboard-team-record")!.getBoundingClientRect();
+      return record.left >= name.right && record.top < name.bottom && record.bottom > name.top;
+    }))).toBe(true);
     const roster = page.getByRole("table", { name: "Alpha versus Bravo players" });
     await expect(roster.locator("tbody tr")).toHaveCount(16);
     await expect(roster.getByRole("row", { name: /Jalen Hurts/ }).getByTitle("Player projection").first()).toBeVisible();
@@ -126,6 +132,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await page.locator(".stream-toggle").filter({ hasText: "Fixture game" }).click();
     await page.getByRole("button", { name: /Focus screen .*Fixture game/ }).click();
     await expect(page.locator(".scoreboard-compact")).toHaveCount(1);
+    await expect(page.locator(".scoreboard-team-record")).toHaveCount(0);
     await expect(page.locator(".scoreboard-leaderboards")).toHaveCount(0);
     await panel.evaluate(element => {
       element.style.width = "400px";
@@ -154,6 +161,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await page.locator(".scoreboard-controls").scrollIntoViewIfNeeded();
     await page.getByLabel("Mode").selectOption("guillotine");
     await expect(page.locator(".scoreboard-elimination")).toHaveCount(6);
+    await expect(page.locator(".scoreboard-team-record")).toHaveCount(6);
     expect(fetches).toBe(2);
     await page.getByRole("button", { name: "Pause scrolling", exact: true }).click();
     await expect(page.getByRole("button", { name: "Resume scrolling", exact: true })).toBeVisible();

@@ -6,7 +6,7 @@
 .scoreboard-strip { display: flex; flex-wrap: nowrap; gap: 50px; width: 100%; height: 100cqh; overflow-x: auto; overflow-y: hidden; scroll-behavior: auto; overflow-anchor: none; overscroll-behavior-x: contain; scrollbar-width: none; }
 .scoreboard-strip::-webkit-scrollbar { display: none; }
 .scoreboard-strip:focus-visible { outline: 2px solid var(--night-focus, #ff7bc3); outline-offset: -2px; }
-.scoreboard-card { --scoreboard-card-center: var(--night-surface, #151b23); --scoreboard-card-edge: oklch(from var(--scoreboard-card-center) calc(l * 1.6) c h); flex: 0 0 auto; display: flex; width: max-content; height: 100cqh; padding: clamp(2px, 4cqh, 16px) 0; border-radius: 6px; background: linear-gradient(90deg, var(--scoreboard-card-edge) 0%, var(--scoreboard-card-center) 50%, var(--scoreboard-card-edge) 100%); }
+.scoreboard-card { --scoreboard-card-center: var(--night-surface, #151b23); --scoreboard-card-edge: oklch(from var(--scoreboard-card-center) calc(l * 1.6) c h); flex: 0 0 auto; display: flex; width: max-content; height: 100cqh; padding: clamp(2px, 4cqh, 16px) 0; border-radius: 6px; background: linear-gradient(90deg, var(--scoreboard-card-edge) 0%, var(--scoreboard-card-center) 25%, var(--scoreboard-card-center) 75%, var(--scoreboard-card-edge) 100%); }
 .scoreboard-teams { display: grid; grid-template-columns: repeat(2, max-content); min-height: 0; }
 .scoreboard-single { grid-template-columns: max-content; }
 .scoreboard-team { display: flex; flex-direction: column; justify-content: center; gap: clamp(1px, 3cqh, 16px); padding: 0 clamp(8px, 8cqh, 28px); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -57,6 +57,8 @@
 .scoreboard-spotlight .scoreboard-elimination { width: min(400px, 100%); }
 .scoreboard-spotlight .scoreboard-team { display: block; min-width: 0; padding: 0 24px; overflow-y: auto; white-space: normal; scrollbar-width: thin; scrollbar-color: #303946 transparent; }
 .scoreboard-spotlight .scoreboard-team-name { font-size: 15px; line-height: 1.35; font-weight: 500; letter-spacing: -.015em; overflow-wrap: anywhere; color: #c9d0d9; }
+.scoreboard-spotlight .scoreboard-team-heading { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.scoreboard-team-record { flex-shrink: 0; font-size: 11px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--scoreboard-muted); }
 .scoreboard-spotlight .scoreboard-points { font-size: clamp(32px, 4cqw, 48px); gap: 10px; margin: 10px 0 8px; white-space: nowrap; letter-spacing: -.045em; }
 .scoreboard-spotlight .scoreboard-points strong { font-weight: 550; }
 .scoreboard-spotlight .scoreboard-projection { font-size: 14px; font-weight: 400; letter-spacing: -.01em; color: var(--scoreboard-muted); }
@@ -68,6 +70,7 @@
 .scoreboard-spotlight .scoreboard-paired .scoreboard-teams { padding: 0 24px 20px; gap: 48px; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-team { overflow: visible; padding: 0; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team { border: 0; text-align: right; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team .scoreboard-team-heading { justify-content: flex-end; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team .scoreboard-points { justify-content: flex-end; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-probability { margin-bottom: 0; }
 .scoreboard-matchup-roster { padding: 0 24px; }
