@@ -79,3 +79,5 @@ again, open the league normally once. Explicit league overrides must match an
 open or remembered league.
 
 See [scoreboard documentation](../docs/scoreboard.md) for modes and projections.
+
+Version **0.3.6** also handles ESPN custom photos served as `image/jpg`. After updating, reload the extension and refresh any open ESPN league tab so its content script uses the corrected image handling.

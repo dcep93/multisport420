@@ -14,8 +14,8 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     let fetches = 0;
     const requests: string[] = [];
     context.on("request", request => requests.push(request.url()));
-    await context.route("https://mystique-api.fantasy.espn.com/**", route => route.fulfill({ contentType: "image/png",
-      body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=", "base64") }));
+    await context.route("https://mystique-api.fantasy.espn.com/**", route => route.fulfill({ contentType: "image/jpg",
+      body: Buffer.from("/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFAEBAAAAAAAAAAAAAAAAAAAABf/EABQRAQAAAAAAAAAAAAAAAAAAAAD/2gAMAwEAAhEDEQA/AKKAKIP/2Q==", "base64") }));
     await context.route("https://team-icons.example.test/**", route => {
       const index = Number(new URL(route.request().url()).pathname.slice(1));
       if (index === 3) return route.fulfill({ status: 404, body: "Missing icon" });
@@ -93,7 +93,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     const panel = page.locator(".native-scoreboard-container");
     await expect(page.locator(".scoreboard-spotlight")).toHaveCount(1);
     await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveJSProperty("naturalWidth", 1);
-    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveAttribute("src", /^data:image\/png;base64,/);
+    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveAttribute("src", /^data:image\/jpeg;base64,/);
     await expect(page.getByRole("img", { name: "Charlie icon" })).toHaveText("C");
     await expect(page.getByRole("img", { name: "Delta icon" })).toHaveText("D");
     await expect(page.getByLabel("1 consecutive fantasy win if Alpha wins this week")).toHaveText("👑");

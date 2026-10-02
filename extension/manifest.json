@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "multisport420",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "minimum_chrome_version": "116",
   "permissions": ["storage", "offscreen", "declarativeNetRequestWithHostAccess"],
   "description": "Companion for multisport420.web.app: video playback, mute controls, popup blocking, and live ESPN fantasy scoreboards.",

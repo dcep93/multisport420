@@ -17,7 +17,10 @@
           if (!images.has(team.logo)) images.set(team.logo, (async () => {
             const response = await fetch(team.logo, request);
             if (!response.ok) throw new Error("Custom team logo unavailable");
-            const blob = await response.blob();
+            let blob = await response.blob();
+            // ESPN serves uploaded JPEGs as image/jpg. Normalize the alias
+            // before validation and transfer so the app receives standard MIME.
+            if (blob.type === "image/jpg") blob = blob.slice(0, blob.size, "image/jpeg");
             if (blob.size > 1024 * 1024 || !/^image\/(png|jpeg|gif|webp|avif)$/.test(blob.type)) throw new Error("Unsupported team logo");
             return new Promise((resolve, reject) => {
               const reader = new FileReader();

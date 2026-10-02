@@ -187,26 +187,28 @@ test("the website marker exposes only this extension ID", () => {
   assert.deepEqual(document.documentElement.dataset, { multisport420ExtensionId: "multisport-extension-id" });
 });
 
-test("custom ESPN logos use the authenticated ESPN connection and tolerate missing images", async () => {
-  const logo = "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/custom-image";
-  const badLogo = `${logo}-missing`;
-  const h = harness({ fetch: async (url, request) => {
-    if (url === logo) {
-      assert.equal(request.credentials, "include");
-      return { ok: true, blob: async () => new Blob(["fixture"], { type: "image/png" }) };
-    }
-    if (url === badLogo) return { ok: false, status: 404 };
-    const view = new URL(url).searchParams.get("view");
-    return ok(view === "kona_playercard" ? { players: [] } : view === "proTeamSchedules_wl" ? { settings: { proTeams: [] } }
-      : { id: 123, schedule: [], teams: [{id:1, logo}, {id:2, logo}, {id:3, logo:badLogo}, {id:4, logo:"https://evil.example/logo.png"}] });
-  } });
-  const result = await h.send();
-  assert.equal(result.data.scoreboardDetails.teamLogos[1], "data:image/png;base64,Zml4dHVyZQ==");
-  assert.equal(result.data.scoreboardDetails.teamLogos[2], result.data.scoreboardDetails.teamLogos[1]);
-  assert.equal(result.data.scoreboardDetails.teamLogos[3], undefined);
-  assert.equal(h.calls.filter(call => call.url === logo).length, 1);
-  assert.equal(h.calls.some(call => call.url?.includes("evil.example")), false);
-});
+for (const mime of ["image/png", "image/jpeg", "image/jpg"]) {
+  test(`custom ESPN ${mime} logos use the authenticated connection and tolerate missing images`, async () => {
+    const logo = "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/custom-image";
+    const badLogo = `${logo}-missing`;
+    const h = harness({ fetch: async (url, request) => {
+      if (url === logo) {
+        assert.equal(request.credentials, "include");
+        return { ok: true, blob: async () => new Blob(["fixture"], { type: mime }) };
+      }
+      if (url === badLogo) return { ok: false, status: 404 };
+      const view = new URL(url).searchParams.get("view");
+      return ok(view === "kona_playercard" ? { players: [] } : view === "proTeamSchedules_wl" ? { settings: { proTeams: [] } }
+        : { id: 123, schedule: [], teams: [{id:1, logo}, {id:2, logo}, {id:3, logo:badLogo}, {id:4, logo:"https://evil.example/logo.png"}] });
+    } });
+    const result = await h.send();
+    assert.equal(result.data.scoreboardDetails.teamLogos[1], `data:${mime === "image/jpg" ? "image/jpeg" : mime};base64,Zml4dHVyZQ==`);
+    assert.equal(result.data.scoreboardDetails.teamLogos[2], result.data.scoreboardDetails.teamLogos[1]);
+    assert.equal(result.data.scoreboardDetails.teamLogos[3], undefined);
+    assert.equal(h.calls.filter(call => call.url === logo).length, 1);
+    assert.equal(h.calls.some(call => call.url?.includes("evil.example")), false);
+  });
+}
 
 const ok = data => ({ ok: true, json: async () => data });
 const league = { id: 123, teams: [{ id: 1 }], schedule: [] };
