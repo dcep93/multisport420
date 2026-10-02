@@ -1,13 +1,52 @@
 import type { Snapshot, Team } from "./data";
-import type { PlayerScore } from "./players";
+import type { PlayerScore, RosterPlayer } from "./players";
+import { matchupRows } from "./matchupRows";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
+
+function PlayerPoints({ player }: { player?: PlayerScore }) {
+  return player ? <>{points(player.score)}{!player.completed && <span className="scoreboard-player-projection" title="Player projection"> ({points(player.projected)})</span>}</> : <>—</>;
+}
+
+function PlayerName({ player }: { player?: RosterPlayer }) {
+  return player ? <span className="scoreboard-player-label">
+    <span className="scoreboard-player-name" title={player.name}>{player.name}</span>
+    {player.optimizedSlot && <span className="scoreboard-optimized" title={`Included in optimized projection at ${player.optimizedSlot}`}>★</span>}
+  </span> : <>—</>;
+}
+
+function LineupNote({ team, named = false }: { team: Team; named?: boolean }) {
+  if (!team.projectedLineup) return null;
+  return <p className="scoreboard-detail-note">{named && `${team.name}: `}{team.projectedLineup.warning
+    ? `Using ESPN projection: ${team.projectedLineup.warning}` : "★ Included in optimized projection"}</p>;
+}
+
+export function MatchupRoster({ left, right }: { left: Team; right: Team }) {
+  const rows = matchupRows(left.players, right.players);
+  return <div className="scoreboard-matchup-roster">
+    <LineupNote team={left} named /><LineupNote team={right} named />
+    {!left.players?.length && <p className="scoreboard-detail-empty">{left.name}: roster unavailable.</p>}
+    {!right.players?.length && <p className="scoreboard-detail-empty">{right.name}: roster unavailable.</p>}
+    {rows.length > 0 && <table aria-label={`${left.name} versus ${right.name} players`}>
+      <colgroup><col className="scoreboard-matchup-score-col" /><col /><col className="scoreboard-matchup-position-col" /><col /><col className="scoreboard-matchup-score-col" /></colgroup>
+      <thead><tr>
+        <th scope="col" aria-label={`${left.name} score and projection`}>Score (proj)</th>
+        <th scope="col">{left.name}</th><th scope="col">Position</th><th scope="col">{right.name}</th>
+        <th scope="col" aria-label={`${right.name} score and projection`}>Score (proj)</th>
+      </tr></thead>
+      <tbody>{rows.map(row => <tr key={row.key} className={row.reserve ? "scoreboard-bench" : undefined}>
+        <td><PlayerPoints player={row.left} /></td><td><PlayerName player={row.left} /></td>
+        <th scope="row">{row.position}</th>
+        <td><PlayerName player={row.right} /></td><td><PlayerPoints player={row.right} /></td>
+      </tr>)}</tbody>
+    </table>}
+  </div>;
+}
 
 export function Roster({ team }: { team: Team }) {
   if (!team.players?.length) return <p className="scoreboard-detail-empty">Roster unavailable.</p>;
   return <div className="scoreboard-roster">
-    {team.projectedLineup && !team.projectedLineup.warning && <p className="scoreboard-detail-note">★ Included in optimized projection</p>}
-    {team.projectedLineup?.warning && <p className="scoreboard-detail-note">Using ESPN projection: {team.projectedLineup.warning}</p>}
+    <LineupNote team={team} />
     <table aria-label={`${team.name} players`}>
       <thead><tr><th scope="col">Player</th><th scope="col">Score <span>(proj)</span></th></tr></thead>
       <tbody>{team.players.map(player => <tr key={player.id} className={player.slotId === 20 || player.slotId === 21 ? "scoreboard-bench" : undefined}>
@@ -17,7 +56,7 @@ export function Roster({ team }: { team: Team }) {
           {player.optimizedSlot && <span className="scoreboard-optimized" title={`Included in optimized projection at ${player.optimizedSlot}`}>★</span>}
           </span>
         </th>
-        <td>{points(player.score)}{!player.completed && <span className="scoreboard-player-projection" title="Player projection"> ({points(player.projected)})</span>}</td>
+        <td><PlayerPoints player={player} /></td>
       </tr>)}</tbody>
     </table>
   </div>;

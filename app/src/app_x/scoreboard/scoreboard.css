@@ -58,6 +58,21 @@
 .scoreboard-spotlight .scoreboard-team-name { font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
 .scoreboard-spotlight .scoreboard-points { font-size: clamp(24px, 3.5cqw, 40px); margin: 8px 0 5px; white-space: nowrap; }
 .scoreboard-spotlight .scoreboard-probability { font-size: 17px; margin-bottom: 16px; }
+.scoreboard-spotlight .scoreboard-paired { display: block; min-width: 540px; overflow-y: auto; scrollbar-width: thin; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-team { overflow: visible; }
+.scoreboard-matchup-roster { padding: 0 14px; }
+.scoreboard-matchup-roster table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+.scoreboard-matchup-score-col { width: 104px; }
+.scoreboard-matchup-position-col { width: 76px; }
+.scoreboard-matchup-roster th, .scoreboard-matchup-roster td { padding: 9px 4px; border-bottom: 1px solid rgba(174, 184, 197, .12); }
+.scoreboard-matchup-roster th { font-size: 10px; font-weight: 400; color: var(--night-muted, #aeb8c5); }
+.scoreboard-matchup-roster thead th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.scoreboard-matchup-roster td:first-child, .scoreboard-matchup-roster th:first-child { text-align: left; white-space: nowrap; }
+.scoreboard-matchup-roster td:last-child, .scoreboard-matchup-roster th:last-child { text-align: right; white-space: nowrap; }
+.scoreboard-matchup-roster td:nth-child(2), .scoreboard-matchup-roster th:nth-child(2) { text-align: right; }
+.scoreboard-matchup-roster td:nth-child(2) .scoreboard-player-label { justify-content: flex-end; }
+.scoreboard-matchup-roster th:nth-child(3) { text-align: center; white-space: nowrap; }
+.scoreboard-matchup-roster td:nth-child(4), .scoreboard-matchup-roster th:nth-child(4) { text-align: left; }
 .scoreboard-roster table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
 .scoreboard-roster th, .scoreboard-roster td { padding: 9px 0; border-bottom: 1px solid rgba(174, 184, 197, .12); text-align: left; }
 .scoreboard-roster thead th { color: var(--night-muted, #aeb8c5); font-size: 10px; font-weight: 500; }
@@ -89,4 +104,7 @@
   .scoreboard-leaderboards { max-height: 100cqh; min-height: 240px; }
   .scoreboard-spotlight .scoreboard-team { padding: 0 10px; }
   .scoreboard-roster table { font-size: 11px; }
+  .scoreboard-matchup-roster { padding: 0 10px; }
+  .scoreboard-matchup-roster table { font-size: 11px; }
+  .scoreboard-matchup-score-col { width: 94px; }
 }

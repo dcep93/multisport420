@@ -73,9 +73,9 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
 
     const panel = page.locator(".native-scoreboard-container");
     await expect(page.locator(".scoreboard-spotlight")).toHaveCount(1);
-    const roster = page.getByRole("table", { name: "Alpha players" });
+    const roster = page.getByRole("table", { name: "Alpha versus Bravo players" });
     await expect(roster.locator("tbody tr")).toHaveCount(16);
-    await expect(roster.getByRole("row", { name: /Jalen Hurts/ }).getByTitle("Player projection")).toBeVisible();
+    await expect(roster.getByRole("row", { name: /Jalen Hurts/ }).getByTitle("Player projection").first()).toBeVisible();
     await expect(roster.getByRole("row", { name: /Jahmyr Gibbs/ }).getByTitle("Player projection")).toHaveCount(0);
     await expect(roster.getByRole("row", { name: /Player 11/ })).toContainText("Bench");
     await expect(page.getByRole("complementary", { name: "Weekly player leaders" })).toBeVisible();
@@ -86,6 +86,10 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       return a.top === b.top && a.right <= b.left;
     });
     expect(paired).toBe(true);
+    expect(await roster.locator("tbody tr").first().evaluate(row => {
+      const cells = Array.from(row.children).map(cell => cell.getBoundingClientRect());
+      return cells.length === 5 && cells.every((cell, i) => i === 0 || cell.left >= cells[i - 1].right - 1);
+    })).toBe(true);
     await panel.screenshot({ path: "test-results/native-scoreboard-spotlight.png" });
     // Narrow spotlight keeps teams horizontal and puts rankings below them.
     await panel.evaluate(element => { element.style.width = "640px"; element.style.height = "500px"; });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { createScoreboardController } from "./controller";
 import { guillotine, headToHead, type Mode, type Team } from "./data";
 import Autoscroller from "./Autoscroller";
-import { Leaderboards, Roster } from "./PlayerDetails";
+import { Leaderboards, MatchupRoster, Roster } from "./PlayerDetails";
 import "./scoreboard.css";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
@@ -82,12 +82,13 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
     {state.snapshot && state.extensionAvailable && <div className="scoreboard-workspace">
       <Autoscroller paused={scrollPaused} resetKey={mode}>
         {mode === "head-to-head" ? matchups.map(({ teams, probability, key }) =>
-          <article className="scoreboard-card" key={key} aria-label={teams.map(team => team.name).join(" versus ")}>
+          <article className={`scoreboard-card${spotlight && teams.length === 2 ? " scoreboard-paired" : ""}`} key={key} aria-label={teams.map(team => team.name).join(" versus ")}>
             {!spotlight && teams.length === 2 ? <CompactMatchup teams={teams} probability={probability} /> : <div className={`scoreboard-teams${teams.length === 1 ? " scoreboard-single" : ""}`}>
               {teams.map((team, i) => <TeamScore key={team.id} team={team} bye={teams.length === 1}
-                spotlight={spotlight}
+                spotlight={spotlight && teams.length === 1}
                 probability={teams.length === 1 ? undefined : probability === null ? null : i === 0 ? probability : 1 - probability} />)}
             </div>}
+            {spotlight && teams.length === 2 && <MatchupRoster left={teams[0]} right={teams[1]} />}
           </article>) : elimination?.teams.map(({ team, probability }) =>
           <article className="scoreboard-card scoreboard-elimination" key={team.id} aria-label={team.name}>
             <div className="scoreboard-teams scoreboard-single"><TeamScore team={team} probability={probability} risk spotlight={spotlight} /></div>

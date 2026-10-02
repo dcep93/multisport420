@@ -25,9 +25,12 @@ name, score (projection), its win probability, the second team's score
 (projection), and the second team's name. Smaller text fits a 110px panel.
 Matchups continue to scroll horizontally.
 
-When spotlighted, paired teams appear side by side. Each team's full roster has
-one row per player: slot, name, score and (projection). Bench and IR rows are
-labeled. Completed NFL games omit player projections; a locked lineup alone
+When spotlighted, paired teams appear side by side with a shared roster table:
+**score A (projection), player A, position, player B, score B (projection)**.
+Players align by lineup slot; repeated slots get separate rows. Bench and IR
+players align by position and remain labeled. Unequal rosters retain every
+player with an empty opposing side. Single teams retain their full roster list.
+Completed NFL games omit player projections; a locked lineup alone
 does not indicate a completed game. A star marks players included in the special
 optimized projection described below, including players currently on the bench.
 Team actual scores remain ESPN's totals and do not include bench points.

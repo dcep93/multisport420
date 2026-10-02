@@ -5,6 +5,8 @@ import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import Scoreboard from "../../src/app_x/scoreboard/Scoreboard";
 import { extensionHelper } from "../../src/app_x/scoreboard/extension";
+import { MatchupRoster } from "../../src/app_x/scoreboard/PlayerDetails";
+import type { RosterPlayer } from "../../src/app_x/scoreboard/players";
 
 vi.mock("../../src/app_x/scoreboard/extension", () => ({ extensionHelper: vi.fn() }));
 const send = vi.mocked(extensionHelper);
@@ -159,7 +161,8 @@ it("uses exactly five compact matchup rows and switches to paired spotlight with
   expect(send).toHaveBeenCalledTimes(1);
 });
 
-it("renders all roster rows, omits final-game projections, and labels optimized bench picks", async () => {
+it.each(["head-to-head", "guillotine"])("renders all roster rows, omits final-game projections, and labels optimized bench picks in %s", async mode => {
+  window.history.replaceState({}, "", `/scoreboard?mode=${mode}`);
   const data: any = response();
   data.data.id = 203836968;
   data.data.teams[0].id = 6;
@@ -180,14 +183,43 @@ it("renders all roster rows, omits final-game projections, and labels optimized 
   ] };
   send.mockResolvedValue(data);
   render(<Scoreboard />);
-  const table = await screen.findByRole("table", { name: "Alpha players" });
+  const table = await screen.findByRole("table", { name: mode === "head-to-head" ? "Alpha versus Bravo players" : "Alpha players" });
   expect(within(table).getAllByRole("row")).toHaveLength(4);
   const finished = within(table).getByRole("row", { name: /Finished bench/ });
   expect(finished).toHaveTextContent("Bench");
   expect(finished).toHaveTextContent("30.00");
   expect(within(finished).queryByTitle("Player projection")).not.toBeInTheDocument();
   const selected = within(table).getByRole("row", { name: /Better bench/ });
-  expect(selected).toHaveTextContent("BenchBetter bench★");
+  expect(selected).toHaveTextContent("Bench");
+  expect(selected).toHaveTextContent("Better bench★");
   expect(within(selected).getByTitle("Included in optimized projection at QB")).toBeInTheDocument();
   expect(within(selected).getByTitle("Player projection")).toHaveTextContent("(20.00)");
+});
+
+it("pairs roster players by position in score/name/position/name/score order, retaining unequal benches", () => {
+  const player = (id: number, name: string, slotId: number, slot: string, position = slot): RosterPlayer => ({
+    id, name, slotId, slot, position, score: id, projected: id + 10, seasonScore: id + 20, completed: id === 1,
+  });
+  const left = { id: 1, name: "Alpha", score: 10, projected: 20, players: [
+    player(1, "Left QB", 0, "QB"), player(2, "Left RB", 2, "RB"), player(3, "Extra RB", 2, "RB"),
+    { ...player(4, "Bench WR", 20, "Bench", "WR"), optimizedSlot: "FLEX" },
+  ] };
+  const right = { id: 2, name: "Bravo", score: 10, projected: 20, players: [
+    player(5, "Right RB", 2, "RB"), player(6, "Right QB", 0, "QB"),
+    player(7, "Bench RB", 20, "Bench", "RB"), player(8, "Other bench WR", 20, "Bench", "WR"),
+    player(9, "Injured", 21, "IR", "TE"),
+  ] };
+  render(<MatchupRoster left={left} right={right} />);
+  const table = screen.getByRole("table", { name: "Alpha versus Bravo players" });
+  const rows = Array.from(table.querySelectorAll("tbody tr"));
+  const cells = rows.map(row => Array.from(row.children).map(cell => cell.textContent));
+  expect(cells).toEqual([
+    ["1.00", "Left QB", "QB", "Right QB", "6.00 (16.00)"],
+    ["2.00 (12.00)", "Left RB", "RB", "Right RB", "5.00 (15.00)"],
+    ["3.00 (13.00)", "Extra RB", "RB", "—", "—"],
+    ["—", "—", "Bench · RB", "Bench RB", "7.00 (17.00)"],
+    ["4.00 (14.00)", "Bench WR★", "Bench · WR", "Other bench WR", "8.00 (18.00)"],
+    ["—", "—", "IR · TE", "Injured", "9.00 (19.00)"],
+  ]);
+  expect(within(table).getByTitle("Included in optimized projection at FLEX")).toBeInTheDocument();
 });
