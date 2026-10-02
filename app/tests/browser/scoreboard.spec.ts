@@ -14,6 +14,11 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     let fetches = 0;
     const requests: string[] = [];
     context.on("request", request => requests.push(request.url()));
+    await context.route("https://team-icons.example.test/**", route => {
+      const index = Number(new URL(route.request().url()).pathname.slice(1));
+      if (index === 3) return route.fulfill({ status: 404, body: "Missing icon" });
+      return route.fulfill({ contentType: "image/svg+xml", body: `<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80"><rect width="80" height="80" fill="${index % 2 ? '#36454a' : '#4b414b'}"/><text x="40" y="49" fill="#e0e7ed" font-family="sans-serif" font-size="27" text-anchor="middle">${['A','B','C','D','E','F'][index]}</text></svg>` });
+    });
     await context.route("https://site.api.espn.com/**", route => {
       if (!new URL(route.request().url()).searchParams.has("week")) return route.fulfill({ json: { events: [] } });
       return route.fulfill({ json: { season: { year: 2026, type: 2 }, week: { number: 1 }, events: [
@@ -61,7 +66,9 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       fetches++;
       return route.fulfill({ json: {
         id: 123, scoringPeriodId: 1, settings: { name: "Native scoreboard fixture" },
-        teams: ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].map((name, i) => ({ id: i + 1, name, roster: { entries }, record: { overall: { wins: i, losses: 5 - i } } })),
+        teams: ["Alpha", "Bravo", "Charlie", "Delta", "Echo", "Foxtrot"].map((name, i) => ({ id: i + 1, name,
+          ...(i === 2 ? {} : { logo: `https://team-icons.example.test/${i}` }),
+          roster: { entries }, record: { overall: { wins: i, losses: 5 - i } } })),
         schedule: [0, 1, 2].map(i => ({ matchupPeriodId: 1,
           home: { teamId: i * 2 + 1, totalPointsLive: 80 + fetches, totalProjectedPointsLive: 120 + i },
           away: { teamId: i * 2 + 2, totalPointsLive: 75, totalProjectedPointsLive: 110 + i },
@@ -83,6 +90,10 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
 
     const panel = page.locator(".native-scoreboard-container");
     await expect(page.locator(".scoreboard-spotlight")).toHaveCount(1);
+    await expect(page.getByRole("img", { name: "Alpha icon" })).toHaveJSProperty("naturalWidth", 80);
+    await expect(page.getByRole("img", { name: "Charlie icon" })).toHaveText("C");
+    await expect(page.getByRole("img", { name: "Delta icon" })).toHaveText("D");
+    await expect(page.getByLabel("1 consecutive fantasy win if Alpha wins this week")).toHaveText("👑");
     await expect(page.locator('.scoreboard-team[aria-label="Alpha"] .scoreboard-team-record')).toHaveText("0–5");
     expect(await page.locator(".scoreboard-team-heading").evaluateAll(headings => headings.every(heading => {
       const name = heading.querySelector("h2")!.getBoundingClientRect();
@@ -107,6 +118,14 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       return a.top === b.top && a.right <= b.left;
     });
     expect(paired).toBe(true);
+    const centeredIcons = () => page.locator(".scoreboard-paired .scoreboard-teams").evaluateAll(headers => headers.every(header => {
+      const bounds = header.getBoundingClientRect();
+      const icons = header.querySelector(".scoreboard-matchup-icons")!.getBoundingClientRect();
+      const teams = Array.from(header.querySelectorAll(".scoreboard-team")).map(team => team.getBoundingClientRect());
+      return Math.abs((icons.left + icons.right) / 2 - (bounds.left + bounds.right) / 2) < 1
+        && teams[0].right <= icons.left && icons.right <= teams[1].left;
+    }));
+    expect(await centeredIcons()).toBe(true);
     expect(await roster.locator("tbody tr").first().evaluate(row => {
       const cells = Array.from(row.children).map(cell => cell.getBoundingClientRect());
       return cells.length === 5 && cells.every((cell, i) => i === 0 || cell.left >= cells[i - 1].right - 1);
@@ -114,6 +133,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await panel.screenshot({ path: "test-results/native-scoreboard-spotlight.png" });
     // Narrow spotlight keeps teams horizontal and puts rankings below them.
     await panel.evaluate(element => { element.style.width = "640px"; element.style.height = "500px"; });
+    expect(await centeredIcons()).toBe(true);
     expect(await page.locator(".scoreboard-workspace").evaluate(element => {
       const strip = element.querySelector(".scoreboard-strip")!.getBoundingClientRect();
       const leaders = element.querySelector(".scoreboard-leaderboards")!.getBoundingClientRect();
@@ -133,6 +153,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await page.getByRole("button", { name: /Focus screen .*Fixture game/ }).click();
     await expect(page.locator(".scoreboard-compact")).toHaveCount(1);
     await expect(page.locator(".scoreboard-team-record")).toHaveCount(0);
+    await expect(page.locator(".scoreboard-matchup-icons, .scoreboard-crowns")).toHaveCount(0);
     await expect(page.locator(".scoreboard-leaderboards")).toHaveCount(0);
     await panel.evaluate(element => {
       element.style.width = "400px";

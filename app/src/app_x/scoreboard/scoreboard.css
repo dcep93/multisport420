@@ -67,11 +67,11 @@
 .scoreboard-spotlight .scoreboard-win { color: #94c5ac; }
 .scoreboard-spotlight .scoreboard-risk { color: #d99d9d; }
 .scoreboard-spotlight .scoreboard-paired { display: block; min-width: 540px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #303946 transparent; }
-.scoreboard-spotlight .scoreboard-paired .scoreboard-teams { padding: 0 24px 20px; gap: 48px; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-teams { padding: 0 24px 20px; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 16px; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-team { overflow: visible; padding: 0; }
-.scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team { border: 0; text-align: right; }
-.scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team .scoreboard-team-heading { justify-content: flex-end; }
-.scoreboard-spotlight .scoreboard-paired .scoreboard-team + .scoreboard-team .scoreboard-points { justify-content: flex-end; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-team:last-child { border: 0; text-align: right; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-team:last-child .scoreboard-team-heading { justify-content: flex-end; }
+.scoreboard-spotlight .scoreboard-paired .scoreboard-team:last-child .scoreboard-points { justify-content: flex-end; }
 .scoreboard-spotlight .scoreboard-paired .scoreboard-probability { margin-bottom: 0; }
 .scoreboard-matchup-roster { padding: 0 24px; }
 .scoreboard-matchup-roster table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
@@ -122,7 +122,7 @@
   .scoreboard-spotlight .scoreboard-elimination { width: min(400px, 100%); }
   .scoreboard-leaderboards { max-height: 100cqh; min-height: 240px; }
   .scoreboard-spotlight .scoreboard-team { padding: 0 18px; }
-  .scoreboard-spotlight .scoreboard-paired .scoreboard-teams { padding: 0 18px 16px; gap: 32px; }
+  .scoreboard-spotlight .scoreboard-paired .scoreboard-teams { padding: 0 18px 16px; gap: 12px; }
   .scoreboard-roster table { font-size: 11px; }
   .scoreboard-matchup-roster { padding: 0 18px; }
   .scoreboard-matchup-roster table { font-size: 11px; }
@@ -141,4 +141,9 @@
 .scoreboard-roster tbody th:first-child { padding-left: 7px; }
 .scoreboard-roster tbody td:last-child { padding-right: 7px; }
 .scoreboard-ranking li[class] { padding-left: 5px; padding-right: 5px; border-radius: 4px; }
-.scoreboard-spotlight .scoreboard-beans { font-size: 17px; line-height: 1; letter-spacing: 2px; overflow-wrap: anywhere; }
+.scoreboard-spotlight .scoreboard-beans, .scoreboard-spotlight .scoreboard-crowns { font-size: 17px; line-height: 1; letter-spacing: 2px; overflow-wrap: anywhere; }
+
+.scoreboard-matchup-icons { display: flex; align-items: center; justify-content: center; gap: 10px; align-self: center; }
+.scoreboard-team-icon { display: block; width: clamp(32px, 4cqw, 52px); height: clamp(32px, 4cqw, 52px); object-fit: cover; border-radius: 50%; background: #192129; border: 1px solid rgba(174, 184, 197, .16); }
+.scoreboard-team-initials { display: grid; place-items: center; color: #aeb8c5; font-size: 13px; font-weight: 500; }
+.scoreboard-versus { color: #687380; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { createScoreboardController } from "./controller";
 import { guillotine, headToHead, type Mode, type Team } from "./data";
 import Autoscroller from "./Autoscroller";
@@ -8,6 +8,23 @@ import "./scoreboard.css";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
 const percent = (value: number) => `${(value * 100).toFixed(2)}%`;
+
+function TeamIcon({ team }: { team: Team }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  return team.logo && team.logo !== failedUrl
+    ? <img className="scoreboard-team-icon" src={team.logo} alt={`${team.name} icon`} onError={() => setFailedUrl(team.logo!)} />
+    : <span className="scoreboard-team-icon scoreboard-team-initials" role="img" aria-label={`${team.name} icon`}>
+      {team.name.trim().split(/\s+/).map(word => Array.from(word)[0]).slice(0, 2).join("").toUpperCase()}
+    </span>;
+}
+
+function MatchupIcons({ teams }: { teams: Team[] }) {
+  return <div className="scoreboard-matchup-icons">
+    <TeamIcon team={teams[0]} />
+    <span className="scoreboard-versus" aria-hidden="true">vs</span>
+    <TeamIcon team={teams[1]} />
+  </div>;
+}
 
 function Points({ team }: { team: Team }) {
   return <p className="scoreboard-points">
@@ -20,8 +37,11 @@ function Points({ team }: { team: Team }) {
 
 function TeamScore({ team, probability, risk = false, bye = false, spotlight = false, showRoster = false }: { team: Team; probability?: number | null; risk?: boolean; bye?: boolean; spotlight?: boolean; showRoster?: boolean }) {
   const underdog = !risk && probability !== null && probability !== undefined && probability < .5;
+  const favorite = spotlight && !risk && probability !== null && probability !== undefined && probability > .5;
   const beansLabel = team.lossesIfLost === undefined ? "Loss streak unavailable"
     : `${team.lossesIfLost} consecutive fantasy ${team.lossesIfLost === 1 ? "loss" : "losses"} if ${team.name} loses this week`;
+  const crownsLabel = team.winsIfWon === undefined ? "Win streak unavailable"
+    : `${team.winsIfWon} consecutive fantasy ${team.winsIfWon === 1 ? "win" : "wins"} if ${team.name} wins this week`;
   return <section className="scoreboard-team" aria-label={team.name}>
     <div className="scoreboard-team-heading">
       <h2 className="scoreboard-team-name" title={team.name}>{team.name}</h2>
@@ -32,6 +52,8 @@ function TeamScore({ team, probability, risk = false, bye = false, spotlight = f
     <Points team={team} />
     {underdog ? <p className="scoreboard-probability scoreboard-beans" aria-label={beansLabel} title={beansLabel}>
       <span aria-hidden="true">{team.lossesIfLost === undefined ? "—" : "🫘".repeat(team.lossesIfLost)}</span>
+    </p> : favorite ? <p className="scoreboard-probability scoreboard-crowns" aria-label={crownsLabel} title={crownsLabel}>
+      <span aria-hidden="true">{team.winsIfWon === undefined ? "—" : "👑".repeat(team.winsIfWon)}</span>
     </p> : probability !== undefined && <p className={risk ? "scoreboard-probability scoreboard-risk" : "scoreboard-probability scoreboard-win"}>
       {probability === null ? "—" : percent(probability)}<span className="scoreboard-probability-label"> {risk ? "elimination" : "win"}</span>
     </p>}
@@ -97,9 +119,11 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
         {mode === "head-to-head" ? matchups.map(({ teams, probability, key }) =>
           <article className={`scoreboard-card${spotlight && teams.length === 2 ? " scoreboard-paired" : ""}`} key={key} aria-label={teams.map(team => team.name).join(" versus ")}>
             {!spotlight && teams.length === 2 ? <CompactMatchup teams={teams} probability={probability} /> : <div className={`scoreboard-teams${teams.length === 1 ? " scoreboard-single" : ""}`}>
-              {teams.map((team, i) => <TeamScore key={team.id} team={team} bye={teams.length === 1}
+              {teams.map((team, i) => <Fragment key={team.id}><TeamScore team={team} bye={teams.length === 1}
                 spotlight={spotlight} showRoster={spotlight && teams.length === 1}
-                probability={teams.length === 1 ? undefined : probability === null ? null : i === 0 ? probability : 1 - probability} />)}
+                probability={teams.length === 1 ? undefined : probability === null ? null : i === 0 ? probability : 1 - probability} />
+                {spotlight && teams.length === 2 && i === 0 && <MatchupIcons teams={teams} />}
+              </Fragment>)}
             </div>}
             {spotlight && teams.length === 2 && <MatchupRoster left={teams[0]} right={teams[1]} />}
           </article>) : elimination?.teams.map(({ team, probability }) =>

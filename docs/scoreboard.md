@@ -15,7 +15,9 @@ this historical identifier is retained for saved links and rooms only.
 ## Display and refresh
 
 Matchups show names, actual points, projected final points in parentheses, and
-win probability. In expanded head-to-head matchups, the underdog's percentage
+win probability. In expanded head-to-head matchups, the favorite's percentage
+is replaced by one 👑 per consecutive fantasy win they **would have if they won
+this week**. The underdog's percentage
 is replaced by one 🫘 per consecutive fantasy loss they **would have if they
 lost this week**: their streak entering the week plus one. Wins and ties break
 the streak, and byes do not add losses. The current matchup is not counted twice.
@@ -29,7 +31,7 @@ name, score (projection), its win probability, the second team's score
 (projection), and the second team's name. Smaller text fits a 110px panel.
 Matchups continue to scroll horizontally.
 
-When spotlighted, each team's current W–L record appears to the right of its name when ESPN provides it. Paired teams appear side by side with a shared roster table:
+When spotlighted, each team's current W–L record appears to the right of its name when ESPN provides it. Both team icons sit together in the center of the matchup header, separated by a small “vs”; unavailable images fall back to team initials. Paired teams appear side by side with a shared roster table:
 **score A (projection), player A, position, player B, score B (projection)**.
 Players align by lineup slot; repeated slots get separate rows. Bench and IR
 players align by position and remain labeled. Unequal rosters retain every

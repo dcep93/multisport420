@@ -5,6 +5,15 @@ type League = { teams: { id: number; record?: { overall?: { streakType?: string;
 
 /** The hypothetical streak if this matchup is lost, never counting it twice. */
 export function lossesIfThisWeekLost(data: League, teamId: number, period: number): number | undefined {
+  return hypotheticalStreak(data, teamId, period, "LOSS");
+}
+
+/** The hypothetical streak if this matchup is won, excluding its current result. */
+export function winsIfThisWeekWon(data: League, teamId: number, period: number): number | undefined {
+  return hypotheticalStreak(data, teamId, period, "WIN");
+}
+
+function hypotheticalStreak(data: League, teamId: number, period: number, outcome: "WIN" | "LOSS"): number | undefined {
   if (period === 1) return 1;
   const history = data.schedule.filter(matchup => (matchup.matchupPeriodId ?? Infinity) < period
     && (matchup.home?.teamId === teamId || matchup.away?.teamId === teamId));
@@ -16,7 +25,7 @@ export function lossesIfThisWeekLost(data: League, teamId: number, period: numbe
     periods.set(week, games);
   });
   let count = 1;
-  // Walk backwards so wins/ties break the streak and byes do not add a loss.
+  // Opposite results/ties break the streak; byes do not extend it.
   for (let week = period - 1; week >= 1; week--) {
     const games = periods.get(week);
     if (!games?.length) return fromRecord();
@@ -24,7 +33,7 @@ export function lossesIfThisWeekLost(data: League, teamId: number, period: numbe
     if (!played.length) continue;
     if (played.some(game => !["HOME", "AWAY", "TIE"].includes(game.winner ?? ""))) return fromRecord();
     if (played.some(game => game.winner === "TIE"
-      || (game.winner === "HOME" ? game.home?.teamId : game.away?.teamId) === teamId)) return count;
+      || ((game.winner === "HOME" ? game.home?.teamId : game.away?.teamId) === teamId) !== (outcome === "WIN"))) return count;
     count++;
   }
   return count;
@@ -36,8 +45,8 @@ export function lossesIfThisWeekLost(data: League, teamId: number, period: numbe
       && ["HOME", "AWAY", "TIE"].includes(game.winner ?? ""));
     if (currentIsFinal) return undefined;
     const record = data.teams.find(team => team.id === teamId)?.record?.overall;
-    if (record?.streakType === "WIN" || record?.streakType === "TIE") return 1;
-    if (record?.streakType === "LOSS" && Number.isInteger(record.streakLength) && record.streakLength! >= 0
+    if (record?.streakType === (outcome === "WIN" ? "LOSS" : "WIN") || record?.streakType === "TIE") return 1;
+    if (record?.streakType === outcome && Number.isInteger(record.streakLength) && record.streakLength! >= 0
       && record.streakLength! < period) return record.streakLength! + 1;
     return undefined;
   }

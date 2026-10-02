@@ -59,7 +59,7 @@ it("fetches once in StrictMode and switches modes without fetching", async () =>
   expect(send).toHaveBeenCalledTimes(1);
   expect(screen.getByText(/THUNDERDOME/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Mode"), { target: { value: "head-to-head" } });
-  expect(screen.getByText("68.07%")).toBeInTheDocument();
+  expect(screen.getByLabelText("1 consecutive fantasy win if Alpha wins this week")).toHaveTextContent("👑");
   expect(send).toHaveBeenCalledTimes(1);
   const refreshed = response();
   refreshed.data.schedule[0].home.totalPointsLive = 82;
@@ -114,7 +114,7 @@ it("keeps matchup statistics together, with controls after the strip", async () 
   expect(screen.queryByText("Alpha +5.00")).not.toBeInTheDocument();
   expect(screen.getAllByTitle("Projected final")).toHaveLength(2);
   expect(screen.getByText("(120.00)")).toBeInTheDocument();
-  expect(screen.getByText("68.07%")).toBeInTheDocument();
+  expect(screen.getByLabelText("1 consecutive fantasy win if Alpha wins this week")).toHaveTextContent("👑");
   expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
   expect(screen.getByLabelText("1 consecutive fantasy loss if Bravo loses this week")).toHaveTextContent("🫘");
   expect(screen.queryByText(/Fetches:/)).not.toBeInTheDocument();
@@ -146,7 +146,7 @@ it("preserves zero scores, missing projections, and byes", async () => {
   expect(screen.getByRole("heading", { name: "Charlie" }).closest("article")!.querySelectorAll(".scoreboard-team")).toHaveLength(1);
 });
 
-it("replaces only the underdog percentage with the loss streak they would have after this week", async () => {
+it("shows hypothetical winning and losing streaks in expanded matchups", async () => {
   window.history.replaceState({}, "", "/scoreboard?mode=head-to-head");
   const result: any = response();
   result.data.scoringPeriodId = 4;
@@ -156,7 +156,7 @@ it("replaces only the underdog percentage with the loss streak they would have a
   send.mockResolvedValue(result);
   render(<Scoreboard />);
   expect(await screen.findByLabelText("3 consecutive fantasy losses if Bravo loses this week")).toHaveTextContent("🫘🫘🫘");
-  expect(screen.getByText("68.07%")).toBeInTheDocument();
+  expect(screen.getByLabelText("3 consecutive fantasy wins if Alpha wins this week")).toHaveTextContent("👑👑👑");
   expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
 });
 

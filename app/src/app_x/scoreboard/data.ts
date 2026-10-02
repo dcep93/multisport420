@@ -1,9 +1,9 @@
 import { guillotineSigma, headToHeadProbability, probNormalMinAll } from "./probability";
 import { optimizeProjectedLineup, type ProjectedLineup } from "./lineup";
 import { playerDetails, type Leaders, type RosterPlayer } from "./players";
-import { lossesIfThisWeekLost } from "./lossStreak";
+import { lossesIfThisWeekLost, winsIfThisWeekWon } from "./lossStreak";
 
-export type Team = { id: number; name: string; score: number | null; projected: number | null; record?: { wins: number; losses: number }; projectedLineup?: ProjectedLineup; players?: RosterPlayer[]; lossesIfLost?: number };
+export type Team = { id: number; name: string; logo?: string; score: number | null; projected: number | null; record?: { wins: number; losses: number }; projectedLineup?: ProjectedLineup; players?: RosterPlayer[]; lossesIfLost?: number; winsIfWon?: number };
 export type ScoredTeam = Team & { score: number; projected: number };
 export type Snapshot = { leagueId: string; leagueName: string; year: number; week: number; matchups: Team[][]; knockout: boolean; fetchedAt: number; leaders?: Leaders; detailsWarning?: string };
 export type Mode = "head-to-head" | "guillotine";
@@ -19,6 +19,8 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
   const details = playerDetails(data, year);
   const names = new Map<number, string>(data.teams.map((team: any) => [team.id,
     team.name || [team.location, team.nickname].filter(Boolean).join(" ") || `Team ${team.id}`]));
+  const logos = new Map<number, string | undefined>(data.teams.map((team: any) => [team.id,
+    typeof team.logo === "string" && /^https?:\/\//i.test(team.logo) ? team.logo : undefined]));
   const records = new Map<number, Team["record"]>(data.teams.map((team: any) => {
     const record = team.record?.overall;
     return [team.id, record && Number.isInteger(record.wins) && record.wins >= 0 &&
@@ -37,13 +39,17 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
         const projectedLineup = optimizeProjectedLineup(data, team, year);
         const players = details.roster(team, projectedLineup);
         const lossesIfLost = knockout ? undefined : lossesIfThisWeekLost(data, team.teamId, period);
+        const winsIfWon = knockout ? undefined : winsIfThisWeekWon(data, team.teamId, period);
+        const logo = logos.get(team.teamId);
         const record = records.get(team.teamId);
         return { id: team.teamId, name: names.get(team.teamId) || `Team ${team.teamId}`,
           score: finite(team.totalPointsLive),
           projected: projectedLineup ? projectedLineup.projected : finite(team.totalProjectedPointsLive),
           ...(record ? { record } : {}),
+          ...(logo ? { logo } : {}),
           ...(projectedLineup ? { projectedLineup } : {}), ...(players ? { players } : {}),
-          ...(lossesIfLost === undefined ? {} : { lossesIfLost }) };
+          ...(lossesIfLost === undefined ? {} : { lossesIfLost }),
+          ...(winsIfWon === undefined ? {} : { winsIfWon }) };
       }))
     .filter((teams: Team[]) => teams.length > 0);
   return { leagueId: String(data.id), leagueName: data.settings?.name || `League ${data.id}`,
