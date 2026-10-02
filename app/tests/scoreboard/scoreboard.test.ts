@@ -238,7 +238,7 @@ describe('optimized projected-roster integration', () => {
     expect(target.score).toBe(4);
     expect(target.projected).toBe(24);
     expect(target.projectedLineup?.players.map(player => player.name).sort()).toEqual(['Player 101', 'Player 103']);
-    expect(opponent).toEqual({ id: 2, name: 'Opponent', score: 0, projected: 25 });
+    expect(opponent).toEqual({ id: 2, name: 'Opponent', score: 0, projected: 25, ...(!knockout ? { lossesIfLost: 1 } : {}) });
     if (knockout) {
       const targetRisk = guillotine(snapshot).teams.find(row => row.team.id === 1)!.probability;
       expect(targetRisk).toBeCloseTo(probNormalMinAll([24, 25], [guillotineSigma(4, 24), guillotineSigma(0, 25)])[0], 8);

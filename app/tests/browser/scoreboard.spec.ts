@@ -14,7 +14,17 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     let fetches = 0;
     const requests: string[] = [];
     context.on("request", request => requests.push(request.url()));
-    await context.route("https://site.api.espn.com/**", route => route.fulfill({ json: { events: [] } }));
+    await context.route("https://site.api.espn.com/**", route => {
+      if (!new URL(route.request().url()).searchParams.has("week")) return route.fulfill({ json: { events: [] } });
+      return route.fulfill({ json: { season: { year: 2026, type: 2 }, week: { number: 1 }, events: [
+        { competitions: [{ status: { type: { state: "in" } }, situation: { possession: "1", isRedZone: false },
+          competitors: [{ team: { id: "1" } }, { team: { id: "3" } }] }] },
+        { competitions: [{ status: { type: { state: "in" } }, situation: { possession: "4", isRedZone: true },
+          competitors: [{ team: { id: "4" } }, { team: { id: "5" } }] }] },
+        { competitions: [{ status: { type: { state: "post", completed: true } },
+          competitors: [{ team: { id: "2" } }, { team: { id: "6" } }] }] },
+      ] } });
+    });
     await context.route("https://proxy420.appspot.com/**", route => {
       const target = (route.request().postDataJSON() as { url: string }).url;
       return route.fulfill({ contentType: "text/html", body: target.includes("/watch/")
@@ -78,6 +88,11 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await expect(roster.getByRole("row", { name: /Jalen Hurts/ }).getByTitle("Player projection").first()).toBeVisible();
     await expect(roster.getByRole("row", { name: /Jahmyr Gibbs/ }).getByTitle("Player projection")).toHaveCount(0);
     await expect(roster.getByRole("row", { name: /Player 11/ })).toContainText("Bench");
+    await expect(roster.getByRole("row", { name: /Jalen Hurts/ }).locator(".scoreboard-player-possession")).toHaveCount(4);
+    await expect(roster.getByRole("row", { name: /Drake London/ }).locator(".scoreboard-player-playing")).toHaveCount(4);
+    await expect(roster.getByRole("row", { name: /George Kittle/ }).locator(".scoreboard-player-red-zone")).toHaveCount(4);
+    await expect(roster.getByRole("row", { name: /Jahmyr Gibbs/ }).locator('.scoreboard-player-playing, .scoreboard-player-possession, .scoreboard-player-red-zone')).toHaveCount(0);
+    await expect(page.getByLabel("1 consecutive fantasy loss if Bravo loses this week")).toHaveText("🫘");
     await expect(page.getByRole("complementary", { name: "Weekly player leaders" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Unowned · All positions" }).locator("li")).toHaveCount(5);
     await expect(page.getByRole("region", { name: "QB", exact: true }).locator("li")).toHaveCount(5);

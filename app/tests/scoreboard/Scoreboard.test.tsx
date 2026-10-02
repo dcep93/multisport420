@@ -9,6 +9,7 @@ import { MatchupRoster } from "../../src/app_x/scoreboard/PlayerDetails";
 import type { RosterPlayer } from "../../src/app_x/scoreboard/players";
 
 vi.mock("../../src/app_x/scoreboard/extension", () => ({ extensionHelper: vi.fn() }));
+vi.mock("../../src/app_x/scoreboard/useLiveScoreboard", () => ({ useLiveScoreboard: (snapshot: unknown) => ({ snapshot }) }));
 const send = vi.mocked(extensionHelper);
 const originalParent = window.parent;
 const response = () => ({ fetched: 1, year: 2026, fetchedAt: Date.now(), data: {
@@ -114,7 +115,8 @@ it("keeps matchup statistics together, with controls after the strip", async () 
   expect(screen.getAllByTitle("Projected final")).toHaveLength(2);
   expect(screen.getByText("(120.00)")).toBeInTheDocument();
   expect(screen.getByText("68.07%")).toBeInTheDocument();
-  expect(screen.getByText("31.93%")).toBeInTheDocument();
+  expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("1 consecutive fantasy loss if Bravo loses this week")).toHaveTextContent("🫘");
   expect(screen.queryByText(/Fetches:/)).not.toBeInTheDocument();
   const strip = screen.getByRole("region", { name: "Scoreboard matchups" });
   const footer = screen.getByRole("contentinfo");
@@ -142,6 +144,20 @@ it("preserves zero scores, missing projections, and byes", async () => {
   expect(screen.getAllByText("—")).toHaveLength(2);
   expect(screen.getByText("(—)")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Charlie" }).closest("article")!.querySelectorAll(".scoreboard-team")).toHaveLength(1);
+});
+
+it("replaces only the underdog percentage with the loss streak they would have after this week", async () => {
+  window.history.replaceState({}, "", "/scoreboard?mode=head-to-head");
+  const result: any = response();
+  result.data.scoringPeriodId = 4;
+  result.data.schedule[0].matchupPeriodId = 4;
+  result.data.schedule.push(...[1, 2, 3].map(week => ({ matchupPeriodId: week, winner: week === 1 ? "AWAY" : "HOME",
+    home: { teamId: 1 }, away: { teamId: 2 } })));
+  send.mockResolvedValue(result);
+  render(<Scoreboard />);
+  expect(await screen.findByLabelText("3 consecutive fantasy losses if Bravo loses this week")).toHaveTextContent("🫘🫘🫘");
+  expect(screen.getByText("68.07%")).toBeInTheDocument();
+  expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
 });
 
 it("uses exactly five compact matchup rows and switches to paired spotlight without refetching", async () => {
@@ -211,6 +227,8 @@ it("pairs roster players by position in score/name/position/name/score order, re
     player(7, "Bench RB", 20, "Bench", "RB"), player(8, "Other bench WR", 20, "Bench", "WR"),
     player(9, "Injured", 21, "IR", "TE"),
   ] };
+  left.players[1].activity = "playing";
+  right.players[0].activity = "red-zone";
   render(<MatchupRoster left={left} right={right} />);
   const table = screen.getByRole("table", { name: "Alpha versus Bravo players" });
   const rows = Array.from(table.querySelectorAll("tbody tr"));
@@ -224,4 +242,9 @@ it("pairs roster players by position in score/name/position/name/score order, re
     ["—", "—", "IR · TE", "Injured", "9.00 (19.00)"],
   ]);
   expect(table.textContent).not.toContain("★");
+  expect(rows[1].children[0]).toHaveClass("scoreboard-player-playing");
+  expect(rows[1].children[1]).toHaveClass("scoreboard-player-playing");
+  expect(rows[1].children[2]).not.toHaveAttribute("class");
+  expect(rows[1].children[3]).toHaveClass("scoreboard-player-red-zone");
+  expect(rows[1].children[4]).toHaveClass("scoreboard-player-red-zone");
 });

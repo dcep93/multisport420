@@ -1,6 +1,7 @@
 import type { Snapshot, Team } from "./data";
 import type { PlayerScore, RosterPlayer } from "./players";
 import { matchupRows } from "./matchupRows";
+import { activityClass, activityLabel } from "./liveGames";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
 
@@ -28,9 +29,11 @@ export function MatchupRoster({ left, right }: { left: Team; right: Team }) {
       </tr></thead>
       <tbody>{rows.map((row, index) => <tr key={row.key} className={row.reserve
         ? `scoreboard-bench${!rows[index - 1]?.reserve ? " scoreboard-reserve-start" : ""}` : undefined}>
-        <td><PlayerPoints player={row.left} /></td><td><PlayerName player={row.left} /></td>
+        <td className={activityClass(row.left)} title={activityLabel(row.left?.activity)}><PlayerPoints player={row.left} /></td>
+        <td className={activityClass(row.left)} title={activityLabel(row.left?.activity)}><PlayerName player={row.left} /></td>
         <th scope="row">{row.position}</th>
-        <td><PlayerName player={row.right} /></td><td><PlayerPoints player={row.right} /></td>
+        <td className={activityClass(row.right)} title={activityLabel(row.right?.activity)}><PlayerName player={row.right} /></td>
+        <td className={activityClass(row.right)} title={activityLabel(row.right?.activity)}><PlayerPoints player={row.right} /></td>
       </tr>)}</tbody>
     </table>}
   </div>;
@@ -41,8 +44,10 @@ export function Roster({ team }: { team: Team }) {
   return <div className="scoreboard-roster">
     <table aria-label={`${team.name} players`}>
       <thead><tr><th scope="col">Player</th><th scope="col">Score <span>(proj)</span></th></tr></thead>
-      <tbody>{team.players.map((player, index) => <tr key={player.id} className={player.slotId === 20 || player.slotId === 21
-        ? `scoreboard-bench${![20, 21].includes(team.players![index - 1]?.slotId) ? " scoreboard-reserve-start" : ""}` : undefined}>
+      <tbody>{team.players.map((player, index) => <tr key={player.id} title={activityLabel(player.activity)} className={[
+        activityClass(player), player.slotId === 20 || player.slotId === 21
+          ? `scoreboard-bench${![20, 21].includes(team.players![index - 1]?.slotId) ? " scoreboard-reserve-start" : ""}` : "",
+      ].filter(Boolean).join(" ")}>
         <th scope="row"><span className="scoreboard-player-label">
           <span className="scoreboard-player-slot" title={`${player.position} · ${player.slot}`}>{player.slot}</span>
           <span className="scoreboard-player-name" title={player.name}>{player.name}</span>
@@ -57,7 +62,7 @@ export function Roster({ team }: { team: Team }) {
 function Ranking({ title, players, showPosition = false }: { title: string; players: PlayerScore[]; showPosition?: boolean }) {
   return <section className="scoreboard-ranking" aria-label={title}>
     <h3>{title}</h3>
-    {players.length ? <ol>{players.map((player, index) => <li key={player.id}>
+    {players.length ? <ol>{players.map((player, index) => <li key={player.id} className={activityClass(player)} title={activityLabel(player.activity)}>
       <span className="scoreboard-ranking-rank" aria-hidden="true">{index + 1}</span>
       <span className="scoreboard-ranking-name" title={`${player.name} · ${player.position}`}>{player.name}{showPosition && <small>{player.position}</small>}</span>
       <span className="scoreboard-ranking-points">{points(player.score)} <span>({points(player.seasonScore)})</span></span>

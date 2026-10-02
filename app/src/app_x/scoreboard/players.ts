@@ -1,8 +1,10 @@
 import type { ProjectedLineup } from "./lineup";
+import type { PlayerActivity } from "./liveGames";
 
 export type PlayerScore = {
   id: number; name: string; position: string; score: number | null;
   seasonScore: number | null; projected: number | null; completed: boolean;
+  proTeamId?: number; activity?: PlayerActivity;
 };
 export type RosterPlayer = PlayerScore & { slot: string; slotId: number; optimizedSlot?: string };
 export type Leaders = { positions: { position: string; players: PlayerScore[] }[]; unowned: PlayerScore[] };
@@ -48,6 +50,7 @@ export function playerDetails(data: League, year: number) {
     const player = pool.player ?? {};
     const games = proTeams.get(player.proTeamId)?.proGamesByScoringPeriod?.[week];
     return { id, name: player.fullName || `Player ${id}`,
+      ...(Number.isSafeInteger(player.proTeamId) ? { proTeamId: player.proTeamId } : {}),
       position: POSITIONS[player.defaultPositionId ?? 0] ?? (player.defaultPositionId ? `Position ${player.defaultPositionId}` : "—"),
       score: pointsFor(player, year, week, 0), seasonScore: pointsFor(player, year, 0, 0),
       projected: pointsFor(player, year, week, 1),

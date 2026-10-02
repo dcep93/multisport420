@@ -1,8 +1,9 @@
 import { guillotineSigma, headToHeadProbability, probNormalMinAll } from "./probability";
 import { optimizeProjectedLineup, type ProjectedLineup } from "./lineup";
 import { playerDetails, type Leaders, type RosterPlayer } from "./players";
+import { lossesIfThisWeekLost } from "./lossStreak";
 
-export type Team = { id: number; name: string; score: number | null; projected: number | null; projectedLineup?: ProjectedLineup; players?: RosterPlayer[] };
+export type Team = { id: number; name: string; score: number | null; projected: number | null; projectedLineup?: ProjectedLineup; players?: RosterPlayer[]; lossesIfLost?: number };
 export type ScoredTeam = Team & { score: number; projected: number };
 export type Snapshot = { leagueId: string; leagueName: string; year: number; week: number; matchups: Team[][]; knockout: boolean; fetchedAt: number; leaders?: Leaders; detailsWarning?: string };
 export type Mode = "head-to-head" | "guillotine";
@@ -29,10 +30,12 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
       .map((team: any) => {
         const projectedLineup = optimizeProjectedLineup(data, team, year);
         const players = details.roster(team, projectedLineup);
+        const lossesIfLost = knockout ? undefined : lossesIfThisWeekLost(data, team.teamId, period);
         return { id: team.teamId, name: names.get(team.teamId) || `Team ${team.teamId}`,
           score: finite(team.totalPointsLive),
           projected: projectedLineup ? projectedLineup.projected : finite(team.totalProjectedPointsLive),
-          ...(projectedLineup ? { projectedLineup } : {}), ...(players ? { players } : {}) };
+          ...(projectedLineup ? { projectedLineup } : {}), ...(players ? { players } : {}),
+          ...(lossesIfLost === undefined ? {} : { lossesIfLost }) };
       }))
     .filter((teams: Team[]) => teams.length > 0);
   return { leagueId: String(data.id), leagueName: data.settings?.name || `League ${data.id}`,

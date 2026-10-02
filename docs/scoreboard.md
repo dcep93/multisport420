@@ -15,7 +15,11 @@ this historical identifier is retained for saved links and rooms only.
 ## Display and refresh
 
 Matchups show names, actual points, projected final points in parentheses, and
-win probability. Guillotine shows each team's elimination risk. Matchups sort
+win probability. In expanded head-to-head matchups, the underdog's percentage
+is replaced by one 🫘 per consecutive fantasy loss they **would have if they
+lost this week**: their streak entering the week plus one. Wins and ties break
+the streak, and byes do not add losses. The current matchup is not counted twice.
+Guillotine shows each team's elimination risk. Matchups sort
 closest to 50/50 first; Guillotine sorts highest risk first. At most three teams
 above 1% elimination risk triggers THUNDERDOME and hides teams below the threshold.
 Missing scores/projections remain unavailable rather than being replaced by zero.
@@ -35,6 +39,14 @@ does not indicate a completed game. The special optimized projection described
 below still accounts for eligible players currently on the bench.
 Team actual scores remain ESPN's totals and do not include bench points.
 
+Player highlights follow their NFL team's live game: grey while playing,
+yellow with possession, and pink with possession in the red zone. Each player's
+half of the shared row is colored independently; the same highlights appear in
+single-team rosters and leaderboards. Scheduled and completed games have no
+highlight. Possession colors clear at halftime. Public NFL status refreshes
+every 15 seconds with an eight-second timeout; failed polls clear old colors
+and display a status notice. This needs no additional extension update.
+
 The spotlight sidebar shows the week's top five scorers at every position plus
 the top five unowned players across positions, with **week score (season score)**
 using the league's scoring settings. Rankings use actual weekly points, not
@@ -42,6 +54,8 @@ projections. Unowned players must have ESPN's unowned status and be absent from
 all league rosters, including bench, IR and eliminated teams. Long rosters and
 rankings scroll vertically. The expanded view uses a full-width matchup card,
 mirrored team summaries, and a shared table with subtle bench separation.
+Matchup backgrounds have a symmetric gradient, with the same dark center and
+60% higher perceptual lightness at both edges.
 At widths of 800px or less, the leaderboard moves
 below the matchups.
 

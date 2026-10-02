@@ -6,7 +6,7 @@
 .scoreboard-strip { display: flex; flex-wrap: nowrap; gap: 50px; width: 100%; height: 100cqh; overflow-x: auto; overflow-y: hidden; scroll-behavior: auto; overflow-anchor: none; overscroll-behavior-x: contain; scrollbar-width: none; }
 .scoreboard-strip::-webkit-scrollbar { display: none; }
 .scoreboard-strip:focus-visible { outline: 2px solid var(--night-focus, #ff7bc3); outline-offset: -2px; }
-.scoreboard-card { --scoreboard-card-center: var(--night-surface, #151b23); --scoreboard-card-edge: oklch(from var(--scoreboard-card-center) calc(l * 1.2) c h); flex: 0 0 auto; display: flex; width: max-content; height: 100cqh; padding: clamp(2px, 4cqh, 16px) 0; border-radius: 6px; background: linear-gradient(90deg, var(--scoreboard-card-edge) 0%, var(--scoreboard-card-center) 50%, var(--scoreboard-card-edge) 100%); }
+.scoreboard-card { --scoreboard-card-center: var(--night-surface, #151b23); --scoreboard-card-edge: oklch(from var(--scoreboard-card-center) calc(l * 1.6) c h); flex: 0 0 auto; display: flex; width: max-content; height: 100cqh; padding: clamp(2px, 4cqh, 16px) 0; border-radius: 6px; background: linear-gradient(90deg, var(--scoreboard-card-edge) 0%, var(--scoreboard-card-center) 50%, var(--scoreboard-card-edge) 100%); }
 .scoreboard-teams { display: grid; grid-template-columns: repeat(2, max-content); min-height: 0; }
 .scoreboard-single { grid-template-columns: max-content; }
 .scoreboard-team { display: flex; flex-direction: column; justify-content: center; gap: clamp(1px, 3cqh, 16px); padding: 0 clamp(8px, 8cqh, 28px); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -126,3 +126,16 @@
   .scoreboard-matchup-score-col { width: 90px; }
   .scoreboard-matchup-position-col { width: 76px; }
 }
+
+/* Each side is independent: an opponent's possession never colors both players. */
+.scoreboard-page .scoreboard-player-playing { background: rgba(178, 188, 202, .13); }
+.scoreboard-page .scoreboard-player-possession { background: rgba(246, 205, 74, .23); }
+.scoreboard-page .scoreboard-player-red-zone { background: rgba(245, 115, 180, .28); }
+.scoreboard-matchup-roster td:first-child { padding-left: 7px; }
+.scoreboard-matchup-roster td:nth-child(2) { padding-right: 7px; }
+.scoreboard-matchup-roster td:nth-child(4) { padding-left: 7px; }
+.scoreboard-matchup-roster td:last-child { padding-right: 7px; }
+.scoreboard-roster tbody th:first-child { padding-left: 7px; }
+.scoreboard-roster tbody td:last-child { padding-right: 7px; }
+.scoreboard-ranking li[class] { padding-left: 5px; padding-right: 5px; border-radius: 4px; }
+.scoreboard-spotlight .scoreboard-beans { font-size: 17px; line-height: 1; letter-spacing: 2px; overflow-wrap: anywhere; }
