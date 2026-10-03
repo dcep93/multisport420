@@ -18,11 +18,14 @@ function TeamIcon({ team }: { team: Team }) {
     </span>;
 }
 
-function MatchupIcons({ teams }: { teams: Team[] }) {
+function MatchupIcons({ teams, probability }: { teams: Team[]; probability: number | null }) {
   return <div className="scoreboard-matchup-icons">
     <TeamIcon team={teams[0]} />
     <span className="scoreboard-versus" aria-hidden="true">vs</span>
     <TeamIcon team={teams[1]} />
+    <p className="scoreboard-matchup-probability scoreboard-win" aria-label={`${teams[0].name} win probability`}>
+      {probability === null ? "—" : percent(probability)}<span className="scoreboard-probability-label"> win</span>
+    </p>
   </div>;
 }
 
@@ -54,7 +57,7 @@ function TeamScore({ team, probability, risk = false, bye = false, spotlight = f
       <span aria-hidden="true">{team.lossesIfLost === undefined ? "—" : "🫘".repeat(team.lossesIfLost)}</span>
     </p> : favorite ? <p className="scoreboard-probability scoreboard-crowns" aria-label={crownsLabel} title={crownsLabel}>
       <span aria-hidden="true">{team.winsIfWon === undefined ? "—" : "👑".repeat(team.winsIfWon)}</span>
-    </p> : probability !== undefined && <p className={risk ? "scoreboard-probability scoreboard-risk" : "scoreboard-probability scoreboard-win"}>
+    </p> : probability !== undefined && (!spotlight || risk) && <p className={risk ? "scoreboard-probability scoreboard-risk" : "scoreboard-probability scoreboard-win"}>
       {probability === null ? "—" : percent(probability)}<span className="scoreboard-probability-label"> {risk ? "elimination" : "win"}</span>
     </p>}
     {bye && <p className="scoreboard-probability">Bye</p>}
@@ -122,7 +125,7 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
               {teams.map((team, i) => <Fragment key={team.id}><TeamScore team={team} bye={teams.length === 1}
                 spotlight={spotlight} showRoster={spotlight && teams.length === 1}
                 probability={teams.length === 1 ? undefined : probability === null ? null : i === 0 ? probability : 1 - probability} />
-                {spotlight && teams.length === 2 && i === 0 && <MatchupIcons teams={teams} />}
+                {spotlight && teams.length === 2 && i === 0 && <MatchupIcons teams={teams} probability={probability} />}
               </Fragment>)}
             </div>}
             {spotlight && teams.length === 2 && <MatchupRoster left={teams[0]} right={teams[1]} />}

@@ -124,9 +124,12 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     const centeredIcons = () => page.locator(".scoreboard-paired .scoreboard-teams").evaluateAll(headers => headers.every(header => {
       const bounds = header.getBoundingClientRect();
       const icons = header.querySelector(".scoreboard-matchup-icons")!.getBoundingClientRect();
+      const probability = header.querySelector(".scoreboard-matchup-probability")!.getBoundingClientRect();
       const teams = Array.from(header.querySelectorAll(".scoreboard-team")).map(team => team.getBoundingClientRect());
       return Math.abs((icons.left + icons.right) / 2 - (bounds.left + bounds.right) / 2) < 1
-        && teams[0].right <= icons.left && icons.right <= teams[1].left;
+        && teams[0].right <= icons.left && icons.right <= teams[1].left
+        && probability.top >= icons.bottom && probability.bottom <= bounds.bottom
+        && Math.abs((probability.left + probability.right) / 2 - (icons.left + icons.right) / 2) < 1;
     }));
     expect(await centeredIcons()).toBe(true);
     expect(await roster.locator("tbody tr").first().evaluate(row => {

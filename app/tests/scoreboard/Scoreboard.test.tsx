@@ -141,7 +141,7 @@ it("preserves zero scores, missing projections, and byes", async () => {
   expect(screen.queryByText("Tied")).not.toBeInTheDocument();
   expect(screen.getByText("Bye")).toBeInTheDocument();
   expect(screen.getAllByText("0.00")).toHaveLength(3);
-  expect(screen.getAllByText("—")).toHaveLength(2);
+  expect(screen.getAllByText("—")).toHaveLength(1);
   expect(screen.getByText("(—)")).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Charlie" }).closest("article")!.querySelectorAll(".scoreboard-team")).toHaveLength(1);
 });
@@ -157,6 +157,7 @@ it("shows hypothetical winning and losing streaks in expanded matchups", async (
   render(<Scoreboard />);
   expect(await screen.findByLabelText("3 consecutive fantasy losses if Bravo loses this week")).toHaveTextContent("🫘🫘🫘");
   expect(screen.getByLabelText("3 consecutive fantasy wins if Alpha wins this week")).toHaveTextContent("👑👑👑");
+  expect(screen.getByLabelText("Alpha win probability")).toHaveTextContent("68.07% win");
   expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
 });
 
