@@ -24,7 +24,7 @@ function MatchupIcons({ teams, probability }: { teams: Team[]; probability: numb
     <span className="scoreboard-versus" aria-hidden="true">vs</span>
     <TeamIcon team={teams[1]} />
     <p className="scoreboard-matchup-probability scoreboard-win" aria-label={`${teams[0].name} win probability`}>
-      {probability === null ? "—" : percent(probability)}<span className="scoreboard-probability-label"> win</span>
+      {probability === null ? "—" : percent(probability)}
     </p>
   </div>;
 }

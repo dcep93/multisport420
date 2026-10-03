@@ -157,7 +157,7 @@ it("shows hypothetical winning and losing streaks in expanded matchups", async (
   render(<Scoreboard />);
   expect(await screen.findByLabelText("3 consecutive fantasy losses if Bravo loses this week")).toHaveTextContent("🫘🫘🫘");
   expect(screen.getByLabelText("3 consecutive fantasy wins if Alpha wins this week")).toHaveTextContent("👑👑👑");
-  expect(screen.getByLabelText("Alpha win probability")).toHaveTextContent("68.07% win");
+  expect(screen.getByLabelText("Alpha win probability").textContent).toBe("68.07%");
   expect(screen.queryByText("31.93%")).not.toBeInTheDocument();
 });
 
