@@ -12,6 +12,9 @@ test("highlights the owning team's name and moves it across a completed drive", 
   await page.locator(".screen-card").nth(1).locator(".screen-focus-overlay").click();
   await expect(owner).toHaveText("Green Bay Packers");
   await expect(banner).toHaveAttribute("data-indicator", "big-play");
+  const alertBall = banner.getByRole("img", { name: "Home in possession" });
+  await expect(alertBall).toBeVisible();
+  expect(await alertBall.evaluate(element => element.parentElement?.lastElementChild === element)).toBe(true);
   await banner.screenshot({ path: "test-results/possession-big-play.png" });
 
   await page.goto("/tests/fixtures/indicators.html?handoff=Downs");

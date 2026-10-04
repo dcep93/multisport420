@@ -68,16 +68,31 @@ describe("Screen title bar", () => {
     expect(homeIcon.parentElement?.lastElementChild).toBe(homeIcon);
   });
 
-  it("keeps the blue alert football without a timestamp after the fixed screen number", () => {
+  it("keeps the big-play alert without inventing possession when the owner is unknown", () => {
     const label = "Denver Broncos @ Kansas City Chiefs";
     const { container, rerender } = render(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay />);
     const title = () => [container.querySelector(".screen-title-hotkey")?.textContent, ...[...container.querySelector(".screen-letter")!.children].map(child => child.textContent)].join(" ");
-    expect(title()).toBe("(1) 🏈 Denver Broncos @ Kansas City Chiefs");
+    expect(title()).toBe("(1) Denver Broncos @ Kansas City Chiefs");
+    expect(screen.queryByRole("img")).toBeNull();
     expect(container.firstElementChild?.getAttribute("data-indicator")).toBe("big-play");
     rerender(<ScreenTitleBar className="" label={label} screenNumber={1} bigPlay redZone />);
     expect(title()).toBe(`(1) ${label}`);
     rerender(<ScreenTitleBar className="" label={label} screenNumber={1} />);
     expect(title()).toBe(`(1) ${label}`);
+  });
+
+  it.each([false, true])("keeps the football beside the highlighted owner throughout a big play (home=%s)", isHomeTeam => {
+    const team = isHomeTeam ? "Home" : "Away";
+    const props = { className: "", label: "Away @ Home", possession: { team, isHomeTeam } };
+    const { container, rerender } = render(<ScreenTitleBar {...props} />);
+    for (const bigPlay of [false, true, false]) {
+      rerender(<ScreenTitleBar {...props} bigPlay={bigPlay} />);
+      const icon = screen.getByRole("img", { name: `${team} in possession` });
+      expect(container.querySelector(".screen-title-team-owning")?.textContent).toBe(team);
+      expect(isHomeTeam ? icon.parentElement?.lastElementChild : icon.parentElement?.firstElementChild).toBe(icon);
+      expect(container.firstElementChild?.getAttribute("aria-describedby")).toBe(icon.id);
+      expect(container.firstElementChild?.getAttribute("data-indicator")).toBe(bigPlay ? "big-play" : "none");
+    }
   });
 
   it("never closes the screen when using the nested refresh button with the keyboard", () => {

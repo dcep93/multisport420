@@ -120,7 +120,7 @@ export default function ScreenTitleBar(props: {
       role="button"
       tabIndex={0}
       aria-label={`Close screen ${indexedLabel}`}
-      aria-describedby={!showBigPlay && props.possession ? possessionId : undefined}
+      aria-describedby={props.possession ? possessionId : undefined}
       onClick={props.onClose}
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget) return;
@@ -151,15 +151,13 @@ export default function ScreenTitleBar(props: {
           }}
         >
           <span ref={textRef} className="screen-letter">
-            {showBigPlay ? <>
-              <span className="screen-title-possession" role="img" aria-label="Big play">🏈</span>
-            </> : props.possession && !props.possession.isHomeTeam ? possession : null}
+            {props.possession && !props.possession.isHomeTeam ? possession : null}
             <span>{matchup ? <>
               <span className={props.possession && !props.possession.isHomeTeam ? "screen-title-team screen-title-team-owning" : "screen-title-team"}>{matchup[1]}</span>
               {matchup[2]}
               <span className={props.possession?.isHomeTeam ? "screen-title-team screen-title-team-owning" : "screen-title-team"}>{matchup[3]}</span>
             </> : props.label}</span>
-            {!showBigPlay && props.possession?.isHomeTeam ? possession : null}
+            {props.possession?.isHomeTeam ? possession : null}
           </span>
         </div>
         {props.onRefresh ? (
