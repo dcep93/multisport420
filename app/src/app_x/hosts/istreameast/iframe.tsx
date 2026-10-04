@@ -6,6 +6,7 @@ function scrollLockScriptRunner() {
   const APP_MESSAGE_SOURCE = "multisport420-app";
   const SET_MUTED = "multisport420:set-muted";
   const TOGGLE_MUTE = "multisport420:toggle-mute";
+  const AUDIO_READY = "multisport420:audio-ready";
   let lastSetMutedMessage: unknown = null;
 
   const lockCurrentScrollPosition = () => {
@@ -40,6 +41,13 @@ function scrollLockScriptRunner() {
     };
 
     window.addEventListener("message", (event) => {
+      // document_idle controllers may start after the promotion/load command.
+      if (event.data?.source === APP_MESSAGE_SOURCE && event.data?.type === AUDIO_READY) {
+        if (playerFrame instanceof HTMLIFrameElement && event.source === playerFrame.contentWindow && lastSetMutedMessage) {
+          forwardMessage(lastSetMutedMessage);
+        }
+        return;
+      }
       if (
         event.data?.source !== APP_MESSAGE_SOURCE ||
         ![TOGGLE_MUTE, SET_MUTED].includes(event.data?.type)
@@ -60,10 +68,9 @@ function scrollLockScriptRunner() {
         if (lastSetMutedMessage) {
           forwardMessage(lastSetMutedMessage);
         }
-        lockCurrentScrollPosition();
       },
-      { once: true },
     );
+    playerFrame.addEventListener("load", lockCurrentScrollPosition, { once: true });
   };
 
   if (document.readyState === "loading") {

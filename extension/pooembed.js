@@ -38,6 +38,8 @@
   });
 
   waitForVideoElement();
+  // Ask for the current state after our listener exists, even if load already fired.
+  window.parent.postMessage({ source: APP_MESSAGE_SOURCE, type: "multisport420:audio-ready" }, "*");
 
   function waitForVideoElement() {
     let stopped = false;

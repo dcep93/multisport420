@@ -12,6 +12,7 @@ function harness(options = {}) {
   const listeners = new Map();
   const animationFrames = [];
   const logs = [];
+  const parentMessages = [];
   class Video {
     constructor() {
       this.muted = options.initialMuted ?? false;
@@ -37,6 +38,7 @@ function harness(options = {}) {
     console: { log(...args) { logs.push(args); } },
     document: { querySelector(selector) { assert.equal(selector, "video"); return attachedVideo; } },
     window: {
+      parent: { postMessage(message) { parentMessages.push(message); } },
       location: { ancestorOrigins: options.ancestors ?? ["https://multisport420.web.app"] },
       addEventListener(type, listener) {
         if (!listeners.has(type)) listeners.set(type, []);
@@ -46,7 +48,7 @@ function harness(options = {}) {
     },
   });
   return {
-    video, logs,
+    video, logs, parentMessages,
     send(type, muted, source = SOURCE) {
       for (const listener of listeners.get("message") ?? []) {
         listener({ data: { source, type, muted } });
@@ -58,6 +60,14 @@ function harness(options = {}) {
     },
   };
 }
+
+test("controller requests the latest audio state when it is ready", () => {
+  const h = harness();
+  assert.equal(h.parentMessages.length, 1);
+  assert.equal(h.parentMessages[0].source, SOURCE);
+  assert.equal(h.parentMessages[0].type, "multisport420:audio-ready");
+  assert.equal(harness({ ancestors: [] }).parentMessages.length, 0);
+});
 
 test("independent screen players accept mute toggles without direct player interaction", () => {
   const first = harness();

@@ -7,6 +7,53 @@ const controllers = {
   current: readFileSync(new URL("../../../extension/pooembed.js", import.meta.url), "utf8"),
 };
 
+const audioRelay = readFileSync(new URL("../../../extension/embedsports.js", import.meta.url), "utf8");
+
+for (const lateLayer of ["controller", "nested controller", "relay"]) {
+test(`closing spotlight restores audio when the replacement ${lateLayer} starts late`, async ({ context, page }) => {
+  await context.route(/https:\/\/[^/]*espn\.com\//, route => route.fulfill({ json: { events: [] } }));
+  await context.route("https://proxy420.appspot.com/**", route => {
+    const target = (route.request().postDataJSON() as { url: string }).url;
+    if (target.includes("espn.com")) return route.fulfill({ json: { events: [] } });
+    if (target.includes("/watch/")) return route.fulfill({ contentType: "text/html", body: `<iframe id="main-player" src="https://player.example.test/${target.split("/").pop()}"></iframe>` });
+    return route.fulfill({ contentType: "text/html", body: `<div class="events-list">${[1, 2].map(index => `<div class="event-card" data-start-ts="${Math.floor(Date.now() / 1000)}" onclick="window.location.href='/watch/${index}'"><span class="event-league">MLB</span><span class="event-title">Away ${index} vs Home ${index}</span></div>`).join("")}</div>` });
+  });
+  await context.route("https://player.example.test/**", route => {
+    const nested = lateLayer !== "controller" && !route.request().url().endsWith("/video");
+    return route.fulfill({
+      contentType: "text/html",
+      // Model document_idle scripts attaching after the frame has loaded.
+      body: nested
+        ? `<iframe id="nested-player" src="https://player.example.test/video"></iframe>${lateLayer === "relay" ? "" : `<script>${audioRelay}</script>`}`
+        : `<video muted></video><script>HTMLMediaElement.prototype.play = () => Promise.resolve();</script>${lateLayer === "relay" ? `<script>${controllers.current}</script>` : ""}`,
+    });
+  });
+  await page.goto("http://localhost:4173/");
+  await page.getByLabel("categories", { exact: true }).selectOption("MLB");
+  for (let index = 0; index < 2; index++) await page.locator(".stream-toggle").nth(index).click();
+  const cards = page.locator(".screen-card");
+  const replacement = cards.nth(1).frameLocator(".screen-iframe").frameLocator("#multisport-player-frame").locator("body");
+  await expect(replacement).toHaveCount(1);
+  // Let the replacement receive the promotion command before its controller exists.
+  await replacement.evaluate(() => window.addEventListener("message", event => {
+    if (event.data?.type === "multisport420:set-muted" && event.data.muted === false) document.body.dataset.promoted = "true";
+  }));
+  await cards.nth(0).locator(".screen-title-bar-shell").click();
+  await expect(cards).toHaveCount(1);
+  const promotedFrame = cards.nth(0).frameLocator(".screen-iframe").frameLocator("#multisport-player-frame");
+  const promotedVideo = (lateLayer === "controller" ? promotedFrame : promotedFrame.frameLocator("#nested-player")).locator("video");
+  await expect.poll(() => promotedFrame.locator("body").evaluate(() => document.body.dataset.promoted)).toBe("true");
+  const lateTarget = lateLayer === "relay" ? promotedFrame.locator("body") : promotedVideo;
+  await lateTarget.evaluate((_, controller) => { const script = document.createElement("script"); script.textContent = controller; document.body.append(script); }, lateLayer === "relay" ? audioRelay : controllers.current);
+  await expect.poll(() => promotedVideo.evaluate((video: HTMLVideoElement) => video.muted)).toBe(false);
+  // Ready synchronization must leave later user mute choices alone.
+  await page.keyboard.press("Digit1");
+  await expect.poll(() => promotedVideo.evaluate((video: HTMLVideoElement) => video.muted)).toBe(true);
+  await page.keyboard.press("Digit1");
+  await expect.poll(() => promotedVideo.evaluate((video: HTMLVideoElement) => video.muted)).toBe(false);
+});
+}
+
 for (const [version, controller] of Object.entries(controllers)) {
 test(`fixed hotkeys and audio follow every numbered spotlight with ${version}`, async ({ context, page }) => {
   await context.route(/https:\/\/[^/]*espn\.com\//, route => route.fulfill({ json: { events: [] } }));

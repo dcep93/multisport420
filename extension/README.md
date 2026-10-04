@@ -27,6 +27,11 @@ spotlight unmutes the stream, including streams muted manually in the player.
 Reload the extension and refresh the viewing page after upgrading to apply these
 audio fixes to already-open players.
 
+Version **0.3.7** restores the current audio state when a player controller starts
+late, including when closing the spotlight promotes another stream. Nested
+players also request the latest state when ready. Reload the extension and
+refresh the viewing page to apply this fix.
+
 ## Embed.st players (0.3.1 or later)
 
 ### Popup protection (0.3.3)
