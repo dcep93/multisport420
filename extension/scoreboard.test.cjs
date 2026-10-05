@@ -28,19 +28,11 @@ function harness(options = {}) {
         return new Promise(resolve => content(message, { id: "extension" }, resolve));
       },
     },
-    storage: { local: {
-      async get(key) { return { [key]: storage[key] }; },
-      async set(values) { Object.assign(storage, values); },
-    } },
   } });
   background.importScripts = (...filenames) => filenames.forEach(filename => vm.runInContext(fs.readFileSync(`${__dirname}/${filename}`, "utf8"), background));
   vm.runInContext(fs.readFileSync(`${__dirname}/background.js`, "utf8"), background);
   const context = vm.createContext({ URL, Date, AbortController,
-    FileReader: class {
-      readAsDataURL(blob) {
-        blob.arrayBuffer().then(bytes => { this.result = `data:${blob.type};base64,${Buffer.from(bytes).toString("base64")}`; this.onload(); });
-      }
-    },
+    btoa,
     setTimeout: options.setTimeout ?? setTimeout, clearTimeout,
     location: { href: options.page ?? tabs[0]?.url },
     fetch: async (url, request) => {
@@ -57,8 +49,18 @@ function harness(options = {}) {
       sendMessage: message => new Promise(resolve => internal.forEach(listener => listener(message, { tab: { id: options.senderTab ?? calls.find(call => call.id)?.id }, frameId: options.frameId ?? 0 }, resolve))),
     } },
   });
+  vm.runInContext(fs.readFileSync(`${__dirname}/scoreboard_fetch.js`, "utf8"), context);
   vm.runInContext(fs.readFileSync(`${__dirname}/scoreboard_content.js`, "utf8"), context);
-  if (options.hiddenFrame) background.withScoreboardFrame = options.hiddenFrame;
+  Object.assign(background, { fetch: context.fetch, AbortController, btoa,
+    setTimeout: (fn, ms) => ms === 12000 && options.setTimeout ? options.setTimeout(fn, ms) : setTimeout(fn, ms),
+    scoreboardLeagueStore: {
+      async get() { return storage.scoreboardLastOpenedLeague; },
+      async remember(visit) {
+        const saved = storage.scoreboardLastOpenedLeague;
+        if (!saved || visit.visitedAt >= saved.visitedAt) storage.scoreboardLastOpenedLeague = visit;
+      },
+    },
+  });
   return { calls, internal, content, storage, updated, activated, send: (request = { scoreboard: { action: "fetch" } }, url = "https://multisport420.web.app/scoreboard") => new Promise(resolve => {
     external.forEach(listener => listener(request, { url }, resolve));
   }) };
@@ -152,8 +154,7 @@ test("localhost can request the scoreboard", async () => {
 
 test("remembers only real ESPN league visits and falls back without overwriting them", async () => {
   const saved = { leagueId: "456", year: 2026, visitedAt: Date.now() };
-  const h = harness({ tabs: [], storage: { scoreboardLastOpenedLeague: saved },
-    hiddenFrame: async (url) => { assert.equal(url, "https://fantasy.espn.com/football/league?leagueId=456&seasonId=2026"); return { fetched: 1, data: {} }; } });
+  const h = harness({ tabs: [], storage: { scoreboardLastOpenedLeague: saved } });
   assert.equal((await h.send()).fetched, 1);
   assert.equal(h.storage.scoreboardLastOpenedLeague, saved);
   const mismatch = await h.send({ scoreboard: { action: "fetch", leagueId: "789" } });
@@ -378,4 +379,63 @@ test("content script rejects forged extension senders and navigated origins befo
     assert.ok(result.error);
     assert.equal(navigated.calls.filter(call => call.url).length, 0);
   }
+});
+
+test("closed-tab worker uses the saved league and preserves full player details and logos", async () => {
+  const logo = "https://mystique-api.fantasy.espn.com/apis/v1/domains/lm/images/worker";
+  const h = harness({ tabs: [], storage: { scoreboardLastOpenedLeague: { leagueId: "123", year: 2026, visitedAt: 1 } },
+    fetch: (url, request) => {
+      assert.equal(request.credentials, "include");
+      assert.equal(request.cache, "no-store");
+      if (url === logo) return { ok: true, blob: async () => new Blob(["worker"], { type: "image/jpg" }) };
+      return detailFetch(filter => ok({ players: playerBatch(filter.offset, filter.offset ? 1 : 500), totalPlayers: 501 }))(url, request)
+        .json().then(data => ok(data.id ? { ...data, teams: [{ id: 1, logo }] } : data));
+    } });
+  const result = await h.send();
+  assert.equal(result.error, undefined);
+  assert.equal(result.fetched, 1);
+  assert.equal(result.year, 2026);
+  assert.equal(result.data.scoreboardDetails.players.length, 501);
+  assert.deepEqual(result.data.scoreboardDetails.proTeams, proTeams);
+  assert.equal(result.data.scoreboardDetails.teamLogos[1], "data:image/jpeg;base64,d29ya2Vy");
+  assert.equal(h.calls.some(call => call.id !== undefined), false);
+});
+
+test("closed-tab concurrent refreshes share a request and failures permit retry", async () => {
+  let resolveResponse;
+  let begin;
+  const started = new Promise(resolve => { begin = resolve; });
+  const h = harness({ tabs: [], storage: { scoreboardLastOpenedLeague: { leagueId: "123", year: 2026, visitedAt: 1 } },
+    fetch: () => { begin(); return new Promise(resolve => { resolveResponse = resolve; }); } });
+  const first = h.send();
+  const second = h.send();
+  await started;
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.length, 1);
+  resolveResponse({ ok: false, status: 403 });
+  const results = await Promise.all([first, second]);
+  assert.ok(results.every(result => result.fetched === 1 && /Sign in/.test(result.error)));
+  const retry = h.send();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(h.calls.length, 2);
+  resolveResponse({ ok: false, status: 503 });
+  assert.match((await retry).error, /503/);
+});
+
+test("submission needs no storage, offscreen, header-modification or cookies permission", () => {
+  const manifest = JSON.parse(fs.readFileSync(`${__dirname}/manifest.json`, "utf8"));
+  assert.deepEqual(manifest.permissions ?? [], []);
+  const espn = manifest.content_scripts.find(script => script.js.includes("scoreboard_content.js"));
+  assert.equal(espn.all_frames, undefined);
+  assert.deepEqual(espn.js, ["scoreboard_fetch.js", "scoreboard_content.js"]);
+});
+
+test("real top-level content-script visits seed the preference, while frames cannot", async () => {
+  const h = harness({ tabs: [] });
+  const tab = { id: 20, url: "https://fantasy.espn.com/football/team?leagueId=456&seasonId=2026" };
+  const listener = h.internal[0];
+  assert.equal(listener({ type: "multisport420:scoreboard:visited" }, { tab, frameId: 1 }, () => {}), false);
+  assert.equal(h.storage.scoreboardLastOpenedLeague, undefined);
+  await new Promise(resolve => listener({ type: "multisport420:scoreboard:visited" }, { tab, frameId: 0 }, resolve));
+  assert.equal(h.storage.scoreboardLastOpenedLeague.leagueId, "456");
 });

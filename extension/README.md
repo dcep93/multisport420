@@ -58,30 +58,32 @@ after upgrading.
 
 ## Fantasy scoreboard (0.3.0 or later)
 
-With extension **0.3.5 or later**, open your signed-in ESPN Fantasy football league
-once in Chrome. The extension remembers the last real league tab locally and can
-reopen it in an invisible iframe after you close the tab. Select
-NFL in Multisport420 and add **Fantasy scoreboard**. It loads once and refreshes
-every 30 seconds; the title refresh button and phone remote also refresh it.
-Fantasy420's website and extension are not required.
+With extension **0.3.8 or later**, open your signed-in ESPN Fantasy football league
+once in Chrome. The extension remembers the last real league tab in IndexedDB.
+After you close it, the background worker fetches ESPN data directly; it does not
+open a tab, iframe, or hidden document. Select NFL in Multisport420 and add
+**Fantasy scoreboard**. It loads once and refreshes every 30 seconds; the title
+refresh button and phone remote also refresh it. Fantasy420 is not required.
 
-When upgrading, reload the extension, the ESPN league tab, and Multisport420.
-Older Multisport extension versions do not advertise scoreboard support.
+When upgrading, reload the extension and Multisport420, and refresh an existing
+ESPN league tab or visit your league once. This seeds the new IndexedDB preference:
+0.3.8 no longer has permission to read the previous chrome.storage preference.
+You can then close the ESPN tab. ESPN authentication and browser cookie settings
+still determine whether authenticated background requests succeed; sign in again
+if the scoreboard reports an authentication error.
 
 The extension exposes its runtime ID only on Multisport420 and localhost. Its
-service worker accepts scoreboard requests only from those origins, chooses an
-active/recent matching ESPN tab, or uses the last manually opened league in an
-offscreen iframe when no matching tab exists. The content script fetches league
-data with the existing ESPN login. Hidden frames never update the remembered
-league; they close after a minute without scoreboard requests. The extension
-uses storage and offscreen permissions plus a narrowly scoped header rule that
-lets only its own hidden frame embed that specific ESPN league page. Requests use a fixed ESPN endpoint,
-no cache, and timeouts. No cookies are read or copied by the extension, no lineup
-changes are submitted, and league responses are not saved or sent to developer servers. Only the last
-league ID, season, and visit time persist locally. Custom ESPN logos are fetched
-using the same ESPN session and passed to the scoreboard as inline images. If ESPN needs you to sign in
-again, open the league normally once. Explicit league overrides must match an
-open or remembered league.
+service worker accepts scoreboard requests only from those origins. Existing
+active/recent matching ESPN tabs take priority; otherwise it uses the last manually
+opened league for direct background requests. Background requests never update
+that preference. The extension requests no storage, offscreen, header-modification,
+or cookies API permissions. Existing ESPN host permissions allow the requests.
+Requests use fixed ESPN endpoints, credentials, no cache, and timeouts. No cookies
+are read or copied by the extension, no lineup changes are submitted, and league
+responses are not saved or sent to developer servers. Only the last league ID,
+season, and visit time persist locally. Custom ESPN logos use the same session
+and are passed as inline images. Explicit league overrides must match an open
+or remembered league.
 
 See [scoreboard documentation](../docs/scoreboard.md) for modes and projections.
 

@@ -3,7 +3,7 @@
   const pending = new Map();
   const prefix = "multisport420:scoreboard:";
   const fail = (error, fetched = 0) => ({ error, fetched });
-  const lastLeagueKey = "scoreboardLastOpenedLeague";
+  const inflight = new Map();
   let remembering = Promise.resolve();
 
   function leagueFromTab(tab) {
@@ -21,10 +21,7 @@
     const league = leagueFromTab(tab);
     if (!league || tab.incognito) return remembering;
     remembering = remembering.catch(() => {}).then(async () => {
-      const previous = (await chrome.storage.local.get(lastLeagueKey))[lastLeagueKey];
-      if (!previous || visitedAt >= previous.visitedAt) await chrome.storage.local.set({
-        [lastLeagueKey]: { ...league, visitedAt },
-      });
+      await scoreboardLeagueStore.remember({ ...league, visitedAt });
     });
     return remembering;
   }
@@ -47,11 +44,16 @@
   }
 
   chrome.runtime.onMessage.addListener((message, sender, reply) => {
+    // A content script also reports its real tab load, covering worker startup
+    // while Chrome is delivering the navigation events.
+    if (message?.type === `${prefix}visited`) {
+      if (!sender.tab || sender.frameId !== 0) return false;
+      rememberTab(sender.tab).then(() => reply(true), () => reply(false));
+      return true;
+    }
     if (message?.type !== `${prefix}started`) return false;
     const request = pending.get(message.requestId);
-    const matches = request && (request.frameUrl
-      ? !sender.tab && sender.url === request.frameUrl
-      : sender.tab?.id === request.tabId && sender.frameId === 0);
+    const matches = request && sender.tab?.id === request.tabId && sender.frameId === 0;
     if (!matches) {
       reply(false);
       return false;
@@ -92,23 +94,27 @@
         return fetchFromTarget({ tabId: tab.id, send: message => chrome.tabs.sendMessage(tab.id, message, { frameId: 0 }) }, options);
       }
       await remembering;
-      const saved = (await chrome.storage.local.get(lastLeagueKey))[lastLeagueKey];
+      const saved = await scoreboardLeagueStore.get();
       if (!saved || !/^\d+$/.test(saved.leagueId || "") ||
           (options.leagueId !== undefined && String(options.leagueId) !== saved.leagueId)) {
         return fail("Open your ESPN Fantasy football league once in Chrome, then refresh. The extension will remember it after you close the tab.");
       }
-      const url = new URL("https://fantasy.espn.com/football/league");
-      url.searchParams.set("leagueId", saved.leagueId);
-      const year = options.year ?? saved.year;
-      if (Number.isInteger(year) && year >= 2000 && year <= 2100) url.searchParams.set("seasonId", year);
-      return withScoreboardFrame(url.href, target => fetchFromTarget(target, options));
+      const now = new Date();
+      const year = options.year ?? saved.year ?? (now.getFullYear() - (now.getMonth() < 2 ? 1 : 0));
+      const key = `${saved.leagueId}:${year}`;
+      if (!inflight.has(key)) {
+        const request = fetchScoreboardData({ leagueId: saved.leagueId, year });
+        inflight.set(key, request);
+        request.finally(() => inflight.delete(key)).catch(() => {});
+      }
+      return inflight.get(key);
     })().then(reply, error => reply(fail(error.message || "Unable to connect to ESPN. Reload the Multisport420 extension and try again.")));
     return true;
   });
 
   async function fetchFromTarget(target, options) {
     const requestId = crypto.randomUUID();
-    const request = { tabId: target.tabId, frameUrl: target.frameUrl, fetched: 0 };
+    const request = { tabId: target.tabId, fetched: 0 };
     pending.set(requestId, request);
     let timer;
     try {
@@ -126,8 +132,7 @@
     } catch (error) {
       return fail(request.fetched
         ? (error.message || "The ESPN tab closed before the request finished.")
-        : target.frameUrl ? "Could not connect to your saved ESPN league. Open it once in Chrome, then refresh."
-          : "Reload your ESPN league tab to activate the updated Multisport420 extension, then try again.", request.fetched);
+        : "Reload your ESPN league tab to activate the updated Multisport420 extension, then try again.", request.fetched);
     } finally {
       clearTimeout(timer);
       pending.delete(requestId);
