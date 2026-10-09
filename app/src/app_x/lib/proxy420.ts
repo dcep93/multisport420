@@ -8,6 +8,7 @@ type ProxyFetchTextArgs = {
   options?: RequestInit;
   localMaxAgeMs?: number;
   remoteMaxAgeMs?: number;
+  validateText?: (text: string) => void;
 };
 
 type CacheEntry = {
@@ -19,8 +20,14 @@ type CacheEntry = {
 export async function fetchTextThroughProxy(request: ProxyFetchTextArgs) {
   const cacheKey = getCacheKey(request);
   const cachedText = await getCachedText(cacheKey, request.localMaxAgeMs).catch(() => undefined);
+  let rejectedCache = false;
   if (cachedText !== undefined) {
-    return cachedText;
+    try {
+      request.validateText?.(cachedText);
+      return cachedText;
+    } catch {
+      rejectedCache = true;
+    }
   }
 
   const response = await fetch(PROXY_URL, {
@@ -29,17 +36,18 @@ export async function fetchTextThroughProxy(request: ProxyFetchTextArgs) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      maxAgeMs: request.remoteMaxAgeMs,
+      maxAgeMs: rejectedCache ? 0 : request.remoteMaxAgeMs,
       url: request.url,
       options: request.options,
     }),
   });
 
+  const text = await response.text();
+  // Cloudflare may serve the same interstitial with HTTP 200, 403, or 503.
+  request.validateText?.(text);
   if (!response.ok) {
     throw new Error(`Proxy request failed with status ${response.status}.`);
   }
-
-  const text = await response.text();
 
   await putCachedText(cacheKey, text).catch(() => undefined);
 
@@ -98,6 +106,7 @@ function normalizeOptions(options: RequestInit | undefined) {
 }
 
 async function getCachedText(key: string, maxAgeMs: number = Number.POSITIVE_INFINITY) {
+  if (maxAgeMs <= 0) return undefined;
   const entry = await withStore("readonly", (store) => requestToPromise(store.get(key)));
   if (!entry) return undefined;
 

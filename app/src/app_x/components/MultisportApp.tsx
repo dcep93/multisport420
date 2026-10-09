@@ -28,7 +28,7 @@ export default function MultisportApp() {
   const allStreams = useMemo(() => withFantasyScoreboard(hostStreams), [hostStreams]);
   const multisport420Installed = useSyncExternalStore(subscribeMultisport420Extension, hasMultisport420Extension, () => false);
   const [streamReloadKey, setStreamReloadKey] = useState(0);
-  const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamError, setStreamError] = useState<Error | null>(null);
   const [focusedSlug, setFocusedSlug] = useState<StreamSlug>("");
   const [muteToggleSlug, setMuteToggleSlug] = useState<StreamSlug>("");
   const [muteToggleRequestId, setMuteToggleRequestId] = useState(0);
@@ -66,7 +66,7 @@ export default function MultisportApp() {
   useEffect(() => {
     let isActive = true;
 
-    HOST.getStreams()
+    HOST.getStreams(streamReloadKey > 0 ? { maxAgeMs: 0 } : undefined)
       .then((fetchedStreams) => {
         if (!isActive) return;
         setAllStreams(fetchedStreams);
@@ -76,7 +76,7 @@ export default function MultisportApp() {
         console.error(error);
         if (!isActive) return;
         setAllStreams([]);
-        setStreamError(error instanceof Error ? error.message : "Unable to load streams. Please retry.");
+        setStreamError(error instanceof Error ? error : new Error("Unable to load streams. Please retry."));
       });
 
     return () => {
@@ -194,8 +194,13 @@ export default function MultisportApp() {
   }
 
   async function handleRefreshStreams() {
-    const fetchedStreams = await HOST.getStreams({ maxAgeMs: 0 });
-    setAllStreams(fetchedStreams);
+    try {
+      const fetchedStreams = await HOST.getStreams({ maxAgeMs: 0 });
+      setAllStreams(fetchedStreams);
+      setStreamError(null);
+    } catch (error) {
+      setStreamError(error instanceof Error ? error : new Error("Unable to load streams. Please retry."));
+    }
   }
 
   async function handleRefreshStream(streamSlug: StreamSlug) {

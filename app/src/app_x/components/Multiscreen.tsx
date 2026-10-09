@@ -7,6 +7,8 @@ import { useScreenMuted } from "../hooks/useScreenMuted";
 import ScreenTitleBar from "./ScreenTitleBar";
 import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 import FantasyScoreboard from "./FantasyScoreboard";
+import StreamProviderAccess from "./StreamProviderAccess";
+import { StreamProviderBlockedError } from "../lib/streamProviderAccess";
 
 export default function Multiscreen<T>(props: {
   containerRef?: Ref<HTMLElement>;
@@ -211,6 +213,7 @@ function ScreenContent<T>(props: {
   } = props;
   const [srcDoc, setSrcDoc] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [accessError, setAccessError] = useState<StreamProviderBlockedError | null>(null);
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null);
   const isMuted = useScreenMuted(isAudioFocused, shouldToggleMute, muteToggleRequestId);
   const [refreshRequestId, setRefreshRequestId] = useState(0);
@@ -261,6 +264,7 @@ function ScreenContent<T>(props: {
         if (!isActive) return;
         setSrcDoc(renderedSrcDoc);
         setErrorMessage("");
+        setAccessError(null);
         onRefreshButtonStateChange?.(false);
       })
       .catch((error) => {
@@ -269,6 +273,7 @@ function ScreenContent<T>(props: {
         setSrcDoc("");
         const nextErrorMessage = getStreamContentErrorMessage(error);
         setErrorMessage(nextErrorMessage);
+        setAccessError(error instanceof StreamProviderBlockedError ? error : null);
         onDebugTitleChange?.(nextErrorMessage);
         onRefreshButtonStateChange?.(false);
       });
@@ -306,7 +311,7 @@ function ScreenContent<T>(props: {
 
   return (
     <div className={className}>
-      {onClick ? (
+      {onClick && !accessError ? (
         <button
           type="button"
           className="screen-focus-overlay"
@@ -315,9 +320,10 @@ function ScreenContent<T>(props: {
         />
       ) : null}
       {errorMessage ? (
-        <pre className="screen-content-error" role="alert">
-          {errorMessage}
-        </pre>
+        <div className="screen-content-error" role="alert">
+          <p>{errorMessage}</p>
+          <StreamProviderAccess error={accessError} />
+        </div>
       ) : (
       <iframe
           key={`${resolvedStream.slug}-${resolvedStream.raw_url}-${refreshRequestId}`}

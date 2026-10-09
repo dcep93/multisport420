@@ -1,4 +1,5 @@
 import { fetchTextThroughProxy } from "../../lib/proxy420";
+import { checkStreamProviderAccess } from "../../lib/streamProviderAccess";
 import {
   ISTREAMEAST_URL,
   LOCAL_PROXY_CACHE_MAX_AGE_MS,
@@ -12,6 +13,7 @@ export async function fetchIstreameastHtml(
 ) {
   return fetchTextThroughProxy({
     url: ISTREAMEAST_URL,
+    validateText: (html) => checkStreamProviderAccess(html, ISTREAMEAST_URL),
     localMaxAgeMs,
     remoteMaxAgeMs,
     options: {
@@ -29,6 +31,7 @@ export async function fetchIstreameastPageText(
 ) {
   return fetchTextThroughProxy({
     url: targetUrl,
+    validateText: (html) => checkStreamProviderAccess(html, targetUrl),
     localMaxAgeMs,
     remoteMaxAgeMs,
     options: {

@@ -3,6 +3,7 @@ import { formatShaTooltip } from "../config/sha_x";
 import type { Category, Stream, StreamCategory, StreamSlug } from "../config/types";
 import Guide from "./Guide";
 import Options from "./Options";
+import StreamProviderAccess from "./StreamProviderAccess";
 
 const MOBILE_MENU_BREAKPOINT_PX = 960;
 
@@ -12,7 +13,7 @@ export default function Menu(props: {
   categories: readonly StreamCategory[];
   streams: Stream[];
   isLoadingStreams: boolean;
-  streamError?: string | null;
+  streamError?: Error | string | null;
   onRetryStreams?: () => void;
   selectedSlugs: StreamSlug[];
   onToggle: (streamSlug: StreamSlug) => void;
@@ -47,7 +48,13 @@ export default function Menu(props: {
       </div>
 
       <div className="stream-list">
-        {props.streamError ? <div role="alert"><p>{props.streamError}</p><button type="button" onClick={props.onRetryStreams}>Retry streams</button></div> : null}
+        {props.streamError ? (
+          <div role="alert">
+            <p>{props.streamError instanceof Error ? props.streamError.message : props.streamError}</p>
+            <StreamProviderAccess error={props.streamError} />
+            <button type="button" onClick={props.onRetryStreams}>Retry streams</button>
+          </div>
+        ) : null}
         {!props.isLoadingStreams && !props.streamError && props.streams.length === 0 ? <p role="status">No live or upcoming streams in this category.</p> : null}
         {props.isLoadingStreams ? (
           <div className="stream-list-loading" aria-live="polite" aria-busy="true">
