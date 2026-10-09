@@ -1,4 +1,5 @@
-export const ISTREAMEAST_URL = "https://streameasto.cx/";
+// Use the provider's player site, which serves both listings and watch pages.
+export const ISTREAMEAST_URL = "https://streamseaste.cx/";
 export const LOCAL_PROXY_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 export const REMOTE_PROXY_CACHE_MAX_AGE_MS = 5 * 60 * 1000;
 export const UPCOMING_WINDOW_SECONDS = 60 * 60;
