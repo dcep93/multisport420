@@ -67,8 +67,21 @@ export function parseStreamWatchPage(streamWatchPageHtml: string, pageUrl = ISTR
     .map((candidateUrl) => candidateUrl?.trim() ?? "")
     .find(Boolean);
 
+  const embedPageUrl = resolveUrl(embedPageUrlCandidate ?? "", pageUrl);
+  const advertisedSources = Array.from(document.querySelectorAll(".stream-btn, .server-btn"))
+    .map((button) => ({
+      label: button.textContent?.trim() ?? "",
+      url: resolveUrl(button.getAttribute("data-src") || decodePlayerUrl(button.getAttribute("data-e") ?? ""), pageUrl),
+    }))
+    .filter((source) => source.url);
+  const sourceUrls = Array.from(new Set([embedPageUrl, ...advertisedSources.map((source) => source.url)].filter(Boolean)));
+
   return {
-    embedPageUrl: resolveUrl(embedPageUrlCandidate ?? "", pageUrl),
+    embedPageUrl: embedPageUrl || sourceUrls[0] || "",
+    embedSources: sourceUrls.map((url, index) => ({
+      url,
+      label: advertisedSources.find((source) => source.url === url)?.label || `Stream ${index + 1}`,
+    })),
     // The new listing links to a match-info page; its Watch link leads to the player page.
     watchPageUrl: resolveUrl(Array.from(document.querySelectorAll("a[href]"))
       .find((link) => link.textContent?.trim().toLowerCase() === "watch")?.getAttribute("href") ?? "", pageUrl),
