@@ -4,6 +4,7 @@ import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import Autoscroller from "../../src/app_x/scoreboard/Autoscroller";
+import { setHorizontalScrollMode } from "../../src/app_x/hooks/useHorizontalScrolling";
 
 let width: number;
 let viewport: number;
@@ -11,6 +12,7 @@ let motionListeners: Set<(event: MediaQueryListEvent) => void>;
 let reduced: boolean;
 
 beforeEach(() => {
+  localStorage.clear();
   vi.useFakeTimers();
   width = 1200;
   viewport = 200;
@@ -27,6 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  localStorage.clear();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
@@ -218,12 +221,33 @@ it("honors reduced motion on mount and when the preference changes", () => {
   const { strip } = mount();
   advance(20000);
   expect(strip.scrollLeft).toBe(0);
+  reduced = false;
   act(() => motionListeners.forEach(listener => listener({ matches: false } as MediaQueryListEvent)));
   advance(6000);
   expect(strip.scrollLeft).toBeCloseTo(100);
+  reduced = true;
   act(() => motionListeners.forEach(listener => listener({ matches: true } as MediaQueryListEvent)));
   advance(20000);
   expect(strip.scrollLeft).toBeCloseTo(100);
+});
+
+it("overrides reduced motion with On without resetting progress or overriding the pause button", () => {
+  reduced = true;
+  const { strip, rerender } = mount();
+  advance(6000);
+  expect(strip.scrollLeft).toBe(0);
+  act(() => setHorizontalScrollMode("on"));
+  advance(6000);
+  expect(strip.scrollLeft).toBeCloseTo(100);
+  act(() => setHorizontalScrollMode("off"));
+  advance(10000);
+  expect(strip.scrollLeft).toBeCloseTo(100);
+  act(() => setHorizontalScrollMode("on"));
+  advance(1000);
+  expect(strip.scrollLeft).toBeCloseTo(200);
+  rerender(<Autoscroller paused resetKey="first">{contents}</Autoscroller>);
+  advance(10000);
+  expect(strip.scrollLeft).toBeCloseTo(200);
 });
 
 it("cleans up timers and listeners through StrictMode and unmount", () => {

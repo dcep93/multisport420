@@ -1,4 +1,5 @@
 import { VIEWING_LAYOUTS, type ViewingLayout } from "../lib/viewingLayouts";
+import HorizontalScrollControls from "./HorizontalScrollControls";
 
 export default function ViewingControls(props: {
   layout: ViewingLayout;
@@ -23,5 +24,6 @@ export default function ViewingControls(props: {
         onChange={(event) => props.onShowStreamSelectorChange(event.target.checked)} />
     </label>
     <p className="viewing-description">Show Stream 1 / Stream 2 choices above each player.</p>
+    <HorizontalScrollControls />
   </section>;
 }

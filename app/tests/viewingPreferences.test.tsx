@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it } from "vitest";
-import { act, cleanup, fireEvent, render, renderHook } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, within } from "@testing-library/react";
 import { useViewingPreferences } from "../src/app_x/hooks/useViewingPreferences";
 import ViewingControls from "../src/app_x/components/ViewingControls";
 import { arrangeScreens, VIEWING_LAYOUTS } from "../src/app_x/lib/viewingLayouts";
@@ -28,7 +28,7 @@ it("offers twelve accessible layouts and changes the settings from their control
       onShowStreamSelectorChange={(showStreamSelector) => setValue({ ...value, showStreamSelector })} />;
   }
   const view = render(<Controls />);
-  expect(view.getAllByRole("option")).toHaveLength(12);
+  expect(within(view.getByRole("combobox", { name: "Layout" })).getAllByRole("option")).toHaveLength(12);
   fireEvent.change(view.getByRole("combobox", { name: "Layout" }), { target: { value: "dual" } });
   expect(view.getByText(/independent left \/ right placement/)).toBeTruthy();
   fireEvent.click(view.getByRole("checkbox", { name: "Show stream selector" }));

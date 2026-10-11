@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import ScreenTitleBar from "../src/app_x/components/ScreenTitleBar";
+import { setHorizontalScrollMode } from "../src/app_x/hooks/useHorizontalScrolling";
 
 let notifyResize: () => void;
 let disconnect: ReturnType<typeof vi.fn>;
@@ -9,6 +10,7 @@ let frames: Map<number, FrameRequestCallback>;
 let motion: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
+  localStorage.clear();
   frames = new Map();
   let nextFrame = 0;
   disconnect = vi.fn();
@@ -26,7 +28,7 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", vi.fn(() => motion));
 });
 
-afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); localStorage.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function overflow(container: HTMLElement) {
   const viewport = container.querySelector<HTMLDivElement>(".screen-title-viewport")!;
@@ -141,12 +143,28 @@ describe("Screen title bar", () => {
     fireEvent.keyDown(viewport, { key: "Home" });
     expect(viewport.scrollLeft).toBe(0);
     motion.matches = false;
-    notifyResize();
+    act(() => motion.addEventListener.mock.calls[0][1]());
     expect(frames.size).toBe(1);
     vi.spyOn(viewport, "matches").mockImplementation(selector => selector === ":focus-visible");
     act(() => viewport.focus());
     expect(frames.size).toBe(0);
   });
+});
+
+it("lets the saved On setting scroll titles despite reduced motion, and Off stops them", () => {
+  motion.matches = true;
+  const { container } = render(<ScreenTitleBar className="" label="A long game title" />);
+  const viewport = overflow(container);
+  expect(frames.size).toBe(0);
+  act(() => setHorizontalScrollMode("on"));
+  tick(0);
+  for (let time = 1800; time <= 2800; time += 50) tick(time);
+  expect(viewport.scrollLeft).toBeGreaterThan(15);
+  act(() => setHorizontalScrollMode("off"));
+  expect(frames.size).toBe(0);
+  const position = viewport.scrollLeft;
+  tick(6000);
+  expect(viewport.scrollLeft).toBe(position);
 });
 
 it("resumes after pointer focus, including a focused refresh button, but pauses for keyboard use", () => {

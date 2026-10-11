@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useHorizontalScrolling } from "../hooks/useHorizontalScrolling";
 
 export default function ScreenTitleBar(props: {
   label: string;
@@ -15,6 +16,7 @@ export default function ScreenTitleBar(props: {
   latestBigPlayClock?: string;
 }) {
   const shellRef = useRef<HTMLDivElement>(null);
+  const { enabled: scrollingEnabled } = useHorizontalScrolling();
   const viewportRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const possessionId = useId();
@@ -29,7 +31,6 @@ export default function ScreenTitleBar(props: {
     if (!shell || !viewport || !text) return;
     if (showBigPlay) viewport.scrollLeft = 0;
 
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let frame: number | undefined;
     let maximum = 0;
     let direction = 1;
@@ -65,7 +66,7 @@ export default function ScreenTitleBar(props: {
       frame = requestAnimationFrame(tick);
     };
     const start = () => {
-      if (frame === undefined && maximum > 1 && !hovered && !focused && !reducedMotion?.matches) {
+      if (frame === undefined && maximum > 1 && !hovered && !focused && scrollingEnabled) {
         frame = requestAnimationFrame(tick);
       }
     };
@@ -89,7 +90,6 @@ export default function ScreenTitleBar(props: {
       focused = event.relatedTarget instanceof Node && shell.contains(event.relatedTarget);
       if (!focused) start();
     };
-    const motionChange = () => { stop(); start(); };
     const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(measure);
     observer?.observe(viewport);
     observer?.observe(text);
@@ -100,7 +100,6 @@ export default function ScreenTitleBar(props: {
     shell.addEventListener("pointerdown", pointerDown);
     shell.addEventListener("keydown", keyDown);
     window.addEventListener("resize", measure);
-    reducedMotion?.addEventListener("change", motionChange);
     measure();
     return () => {
       stop();
@@ -112,9 +111,8 @@ export default function ScreenTitleBar(props: {
       shell.removeEventListener("pointerdown", pointerDown);
       shell.removeEventListener("keydown", keyDown);
       window.removeEventListener("resize", measure);
-      reducedMotion?.removeEventListener("change", motionChange);
     };
-  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam, showBigPlay]);
+  }, [indexedLabel, props.possession?.team, props.possession?.isHomeTeam, showBigPlay, scrollingEnabled]);
 
   const possession = props.possession ? (
     <span id={possessionId} className="screen-title-possession" role="img" aria-label={`${props.possession.team} in possession`}>

@@ -1,4 +1,5 @@
 import { type ReactNode, useLayoutEffect, useRef } from "react";
+import { useHorizontalScrolling } from "../hooks/useHorizontalScrolling";
 
 const START_HOLD_MS = 5000;
 const HOLD_MS = 2500;
@@ -11,13 +12,12 @@ export default function Autoscroller({ children, paused, resetKey }: {
   resetKey: string;
 }) {
   const stripRef = useRef<HTMLDivElement>(null);
-  const pausedRef = useRef(paused);
-  useLayoutEffect(() => { pausedRef.current = paused; }, [paused]);
+  const { enabled } = useHorizontalScrolling();
+  const pausedRef = useRef(paused || !enabled);
+  useLayoutEffect(() => { pausedRef.current = paused || !enabled; }, [paused, enabled]);
 
   useLayoutEffect(() => {
     const strip = stripRef.current!;
-    const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    let reducedMotion = media?.matches ?? false;
     let hovered = strip.matches(":hover");
     // Mouse clicks also focus scrollable regions. Only keyboard focus should
     // pause indefinitely; otherwise moving the pointer away never resumes.
@@ -62,9 +62,6 @@ export default function Autoscroller({ children, paused, resetKey }: {
     const onPointerUp = () => {
       if (dragging) { dragging = false; interact(); }
     };
-    const onMotionChange = (event: MediaQueryListEvent) => {
-      reducedMotion = event.matches;
-    };
     const reconcileSize = () => {
       const maximum = Math.max(0, strip.scrollWidth - strip.clientWidth);
       if (position > maximum) writePosition(maximum);
@@ -78,7 +75,7 @@ export default function Autoscroller({ children, paused, resetKey }: {
       let elapsed = Math.min(100, now - previousTime);
       previousTime = now;
       const maximum = reconcileSize();
-      if (pausedRef.current || reducedMotion || hovered || focused || dragging || maximum === 0) return;
+      if (pausedRef.current || hovered || focused || dragging || maximum === 0) return;
       onScroll();
       if (hold > 0) {
         const consumed = Math.min(hold, elapsed);
@@ -117,8 +114,6 @@ export default function Autoscroller({ children, paused, resetKey }: {
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", onPointerUp);
     window.addEventListener("resize", reconcileSize);
-    if (media?.addEventListener) media.addEventListener("change", onMotionChange);
-    else media?.addListener(onMotionChange);
     const timer = window.setInterval(tick, TICK_MS);
 
     return () => {
@@ -135,8 +130,6 @@ export default function Autoscroller({ children, paused, resetKey }: {
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", onPointerUp);
       window.removeEventListener("resize", reconcileSize);
-      if (media?.removeEventListener) media.removeEventListener("change", onMotionChange);
-      else media?.removeListener(onMotionChange);
     };
   }, [resetKey]);
 
