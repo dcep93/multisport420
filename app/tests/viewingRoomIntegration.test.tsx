@@ -20,8 +20,12 @@ it("publishes layout, explicit sides and actual audio choice on joining, then re
   await waitFor(() => expect(view.getByRole("button", { name: "Game A", exact: true })).toBeTruthy());
   for (const title of ["A", "B", "C"]) fireEvent.click(view.getByRole("button", { name: `Game ${title}`, exact: true }));
   fireEvent.change(view.getByRole("combobox", { name: "Layout" }), { target: { value: "dual" } });
-  fireEvent.click(view.getByRole("button", { name: "Promote Game C to right" }));
-  fireEvent.click(view.getByRole("button", { name: "Sound on right: Game C" }));
+  expect(view.queryByRole("button", { name: /Promote Game C/ })).toBeNull();
+  const players = Array.from(view.container.querySelectorAll("iframe"));
+  fireEvent.click(view.getByRole("button", { name: "Sound on right: Game B" }));
+  fireEvent.click(view.getByRole("button", { name: "Focus screen (3) Game C" }));
+  expect(Array.from(view.container.querySelectorAll("iframe"))).toEqual(players);
+  expect(view.container.querySelectorAll('[data-audible="true"]')).toHaveLength(1);
   fireEvent.change(view.getByRole("textbox", { name: "Room ID (optional)" }), { target: { value: "layout-test" } });
   fireEvent.click(view.getByRole("button", { name: "Join", exact: true }));
   const published = fixture.connection.connect.mock.calls[0][1] as RoomState;

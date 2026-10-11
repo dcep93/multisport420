@@ -46,6 +46,19 @@ describe("shared layout, placement, and audio", () => {
     expect(reduceRoom(muted, { type: "audio", slug: "a" }, "3")).toMatchObject({ audioSlug: "a", audioMuted: false });
     expect(reduceRoom(rightAudio, { type: "focus", slug: "b" }, "4")).toMatchObject({ leftSlug: "a", rightSlug: "b" });
   });
+  it.each(["focus", "select"] as const)("%s promotes a preview into the side selected for audio", (type) => {
+    for (const audioSlug of ["a", "b"]) {
+      const next = reduceRoom({ ...dual, audioSlug }, { type, slug: "c" }, "preview");
+      expect(next).toMatchObject({ leftSlug: audioSlug === "a" ? "c" : "a", rightSlug: audioSlug === "b" ? "c" : "b", focusedSlug: "c", audioSlug: "c", audioMuted: false });
+      expect(next.streams).toBe(dual.streams);
+    }
+  });
+  it("uses the last audio side while muted and keeps video audio when promoting the scoreboard", () => {
+    expect(reduceRoom({ ...dual, audioSlug: "b", audioMuted: true }, { type: "focus", slug: "c" }, "preview"))
+      .toMatchObject({ leftSlug: "a", rightSlug: "c", audioSlug: "c", audioMuted: false });
+    expect(reduceRoom({ ...dual, audioSlug: "b" }, { type: "focus", slug: FANTASY_SCOREBOARD.slug }, "scoreboard"))
+      .toMatchObject({ leftSlug: "a", rightSlug: FANTASY_SCOREBOARD.slug, audioSlug: "b" });
+  });
   it("swaps without duplicating players and preserves scoreboard audio behavior", () => {
     expect(reduceRoom(dual, { type: "swap-sides" }, "1")).toMatchObject({ leftSlug: "b", rightSlug: "a", audioSlug: "a" });
     const scoreboard = reduceRoom(dual, { type: "promote", side: "left", slug: FANTASY_SCOREBOARD.slug }, "2");

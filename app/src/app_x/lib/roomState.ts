@@ -118,7 +118,8 @@ export function reduceRoom(room: RoomState, action: RoomAction, commandId: strin
         return { ...room, ...presentation, audioMuted: !presentation.audioMuted, command: { id: commandId, type: "mute", slug: action.slug } };
       }
       return { ...room, ...presentation, focusedSlug: action.slug,
-        ...(presentation.layout === "dual" && action.slug !== presentation.leftSlug && action.slug !== presentation.rightSlug ? { leftSlug: action.slug } : {}),
+        ...(presentation.layout === "dual" && action.slug !== presentation.leftSlug && action.slug !== presentation.rightSlug
+          ? { [presentation.audioSlug === presentation.rightSlug ? "rightSlug" : "leftSlug"]: action.slug } : {}),
         ...(video(action.slug) ? { audioSlug: action.slug, audioMuted: action.slug === presentation.audioSlug ? presentation.audioMuted : false } : {}),
       };
     case "refresh-log":

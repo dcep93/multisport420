@@ -152,8 +152,8 @@ function ScreenCard<T>(props: {
         .join(" ")}
     >
       <ScreenTitleBar
-        controls={props.dualSide && <span className="dual-title-controls" onClick={(event) => event.stopPropagation()}>
-          {(props.dualSide !== "Preview" || props.isAudioFocused) && <button type="button" className="dual-audio-button"
+        controls={props.dualSide && (props.dualSide !== "Preview" || props.isAudioFocused) && <span className="dual-title-controls" onClick={(event) => event.stopPropagation()}>
+          <button type="button" className="dual-audio-button"
             disabled={isScoreboard || !props.onPresentationAction}
             title={isScoreboard ? "No audio" : props.isAudioFocused && !props.audioMuted ? `Mute ${props.dualSide.toLowerCase()}` : `Listen to ${props.dualSide.toLowerCase()}`}
             aria-label={isScoreboard ? `${props.dualSide} scoreboard has no audio` : props.isAudioFocused && !props.audioMuted ? `Mute ${props.dualSide.toLowerCase()} sound` : `Sound on ${props.dualSide.toLowerCase()}: ${props.stream.title}`}
@@ -161,11 +161,7 @@ function ScreenCard<T>(props: {
             onClick={() => props.onPresentationAction?.(props.isAudioFocused && !props.audioMuted
               ? { type: "audio-muted", value: true } : { type: "audio", slug: props.stream.slug })}>
             <span aria-hidden="true">{props.isAudioFocused && !props.audioMuted ? "🔊" : "🔇"}</span>
-          </button>}
-          {props.dualSide === "Preview" && props.onPresentationAction && <>
-            <button type="button" title="Promote to left" aria-label={`Promote ${props.stream.title} to left`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "left", slug: props.stream.slug })}><span aria-hidden="true">←</span></button>
-            <button type="button" title="Promote to right" aria-label={`Promote ${props.stream.title} to right`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "right", slug: props.stream.slug })}><span aria-hidden="true">→</span></button>
-          </>}
+          </button>
         </span>}
         className={[
           "spotlight-title-bar",
@@ -206,7 +202,7 @@ function ScreenCard<T>(props: {
           spotlight={props.isProminent}
           indexedTitle={indexedTitle}
           className={`screen-focus ${props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary"}`}
-          onClick={props.isFocused ? undefined : props.onFocus}
+          onClick={props.isFocused && props.dualSide !== "Preview" ? undefined : props.onFocus}
           onRefreshReady={handleRefreshReady}
           refreshRequestId={props.logRefreshRequestId}
           shouldRefresh={props.shouldRefreshLog}
@@ -226,7 +222,7 @@ function ScreenCard<T>(props: {
           stream={props.stream}
           onRefreshButtonStateChange={setIsRefreshing}
           onRefreshReady={handleRefreshReady}
-          onClick={props.isFocused ? undefined : props.onFocus}
+          onClick={props.isFocused && props.dualSide !== "Preview" ? undefined : props.onFocus}
           onDebugTitleChange={setTitleTooltip}
         />}
       </div>
