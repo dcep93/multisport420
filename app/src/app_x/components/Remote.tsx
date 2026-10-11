@@ -3,6 +3,7 @@ import useRoom from "../hooks/useRoom";
 import { presentationOf, type RoomAction } from "../lib/roomState";
 import { VIEWING_LAYOUTS, type ViewingLayout } from "../lib/viewingLayouts";
 import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
+import { useRemoteGridDrag } from "../hooks/useRemoteGridDrag";
 
 export default function Remote({ roomId }: { roomId: string }) {
   const room = useRoom();
@@ -18,6 +19,7 @@ export default function Remote({ roomId }: { roomId: string }) {
   const focused = room.room?.focusedSlug;
   const viewing = presentationOf(room.room ?? { streams: [], focusedSlug: "", displayLogs: true, command: null });
   const dual = viewing.layout === "dual";
+  const grid = viewing.layout === "grid";
   const audible = viewing.audioMuted ? "" : viewing.audioSlug;
   const audioStream = streams.find((stream) => stream.slug === audible);
   const online = room.status === "connected";
@@ -31,6 +33,8 @@ export default function Remote({ roomId }: { roomId: string }) {
     if (await room.send(action)) setFeedback(message);
     setPending(false);
   }
+  const reorder = useRemoteGridDrag(grid && ready && !pending, streams.map((stream) => stream.slug),
+    (slug, targetSlug) => void send({ type: "reorder", slug, targetSlug }, "Order updated"));
 
   return (
     <main className="remote-shell">
@@ -42,7 +46,7 @@ export default function Remote({ roomId }: { roomId: string }) {
         <div className="remote-title">
           <p className="remote-eyebrow">PHONE REMOTE</p>
           <h1>{roomId || "Default room"}</h1>
-          <p>{dual ? "Choose a side with the arrows. Tap 🔊 to listen." : "Tap to spotlight. Tap again to mute."}</p>
+          <p>{grid ? "Drag ⠿ to rearrange. Tap a game for audio." : dual ? "Choose a side with the arrows. Tap 🔊 to listen." : "Tap to spotlight. Tap again to mute."}</p>
         </div>
         {room.status === "error" || room.status === "offline" ? (
           <div className="remote-notice">
@@ -91,22 +95,26 @@ export default function Remote({ roomId }: { roomId: string }) {
           <button className="remote-swap" type="button" disabled={!ready || pending || !viewing.rightSlug}
             onClick={() => void send({ type: "swap-sides" }, "Left and right swapped")}>⇄ Swap sides</button>
         </section>}
-        <div className="remote-bubbles" aria-label="Streams" aria-busy={room.status === "connecting"}>
+        <div ref={reorder.container} className="remote-bubbles" aria-label="Streams" aria-busy={room.status === "connecting"}>
           {streams.map((stream, index) => {
             const active = stream.slug === (dual ? audible : focused);
             const side = stream.slug === viewing.leftSlug ? "Left" : stream.slug === viewing.rightSlug ? "Right" : "Preview";
             return (
-              <div key={stream.slug} className="remote-stream-card">
+              <div key={stream.slug} data-reorder-slug={stream.slug}
+                className={`remote-stream-card${grid ? " is-reorderable" : ""}${reorder.drag?.slug === stream.slug ? " is-dragging" : ""}${reorder.drag?.target === stream.slug && reorder.drag.slug !== stream.slug ? " is-drop-target" : ""}`}>
+              {grid && <button type="button" className="remote-drag-handle" aria-label={`Reorder ${stream.title}`}
+                title="Drag to reorder, or use arrow keys" aria-disabled={!ready || pending || streams.length < 2} disabled={!ready || streams.length < 2}
+                {...reorder.handle(stream.slug)}><span aria-hidden="true">⠿</span></button>}
               <button type="button"
                 className={`remote-bubble ${active ? "is-active" : ""}`}
                 aria-pressed={active}
-                aria-label={dual ? `Sound on ${stream.title}` : active ? `Toggle mute for ${stream.title}` : `Spotlight ${stream.title}`}
+                aria-label={dual ? `Sound on ${stream.title}` : active ? `Toggle mute for ${stream.title}` : grid ? `Sound on ${stream.title}` : `Spotlight ${stream.title}`}
                 disabled={!ready || pending || (dual && isFantasyScoreboard(stream))}
                 onClick={() => void send({ type: dual ? "audio" : "select", slug: stream.slug },
-                  dual ? `🔊 ${stream.title}` : active ? "Mute toggled" : `Spotlighting ${stream.title}`)}>
+                  dual || grid ? `🔊 ${stream.title}` : active ? "Mute toggled" : `Spotlighting ${stream.title}`)}>
                 <span className="remote-number">{index + 1}</span>
                 <span className="remote-stream-name">{stream.title}</span>
-                <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊" : "🔇"}` : active ? "Spotlight" : ""}</span>
+                <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊" : "🔇"}` : grid ? stream.slug === audible ? "🔊" : "" : active ? "Spotlight" : ""}</span>
               </button>
               {dual && <div className="remote-promote">
                 {(["left", "right"] as const).map((target) => <button key={target} type="button"

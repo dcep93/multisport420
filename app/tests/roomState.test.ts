@@ -77,6 +77,19 @@ describe("shared layout, placement, and audio", () => {
 });
 
 describe("shared keyboard and remote actions", () => {
+  it("reorders grid positions without changing sound, focus, or concurrent streams", () => {
+    const c = { ...a, slug: "c" };
+    const grid: RoomState = { ...initial, streams: [a, b, c], layout: "grid", audioSlug: "b", audioMuted: true };
+    const moved = reduceRoom(grid, { type: "reorder", slug: "a", targetSlug: "c" }, "order");
+    expect(moved.streams.map((stream) => stream.slug)).toEqual(["b", "c", "a"]);
+    expect({ ...moved, streams: grid.streams }).toEqual(grid);
+    const added = reduceRoom(moved, { type: "toggle-stream", stream: { ...a, slug: "d" } }, "add");
+    expect(reduceRoom(added, { type: "reorder", slug: "a", targetSlug: "b" }, "order2").streams.map((stream) => stream.slug)).toEqual(["a", "b", "c", "d"]);
+    for (const action of [{ type: "reorder", slug: "gone", targetSlug: "b" }, { type: "reorder", slug: "a", targetSlug: "gone" }, { type: "reorder", slug: "a", targetSlug: "a" }] as const) {
+      expect(reduceRoom(grid, action, "stale")).toBe(grid);
+    }
+    expect(reduceRoom(initial, { type: "reorder", slug: "a", targetSlug: "b" }, "wrong-layout")).toBe(initial);
+  });
   it("selects another stream, then toggles mute when selected again", () => {
     const selected = reduceRoom(initial, { type: "select", slug: "b" }, "1");
     expect(selected.focusedSlug).toBe("b");

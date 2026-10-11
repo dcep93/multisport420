@@ -16,7 +16,7 @@ beforeEach(() => {
   connection.room = { streams: [a, b, c, FANTASY_SCOREBOARD], focusedSlug: "a", displayLogs: true, command: null, layout: "dual", leftSlug: "a", rightSlug: "b", audioSlug: "a", audioMuted: false };
   connection.send.mockImplementation(async (action) => { connection.room = reduceRoom(connection.room!, action, "command"); return true; });
 });
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
 it("controls layout, both positions, sound, and mute through shared room state", async () => {
   const view = render(<Remote roomId="test" />);
@@ -45,4 +45,52 @@ it("never enables controls while disconnected and prevents sound selection for t
   expect((view.getByRole("button", { name: "Sound on left", exact: true }) as HTMLButtonElement).disabled).toBe(true);
   expect((view.getByRole("combobox", { name: "Layout" }) as HTMLSelectElement).closest("fieldset")?.disabled).toBe(true);
   expect((view.getByRole("button", { name: `Sound on ${FANTASY_SCOREBOARD.title}` }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it("offers grid-only keyboard reordering without selecting or muting a game", async () => {
+  const view = render(<Remote roomId="test" />);
+  expect(view.queryByRole("button", { name: "Reorder Game A" })).toBeNull();
+  fireEvent.change(view.getByRole("combobox", { name: "Layout" }), { target: { value: "grid" } });
+  await waitFor(() => expect(view.getByRole("button", { name: "Reorder Game A" })).toBeTruthy());
+  connection.send.mockClear();
+  fireEvent.keyDown(view.getByRole("button", { name: "Reorder Game A" }), { key: "ArrowDown" });
+  await waitFor(() => expect(connection.room?.streams.map((s) => s.slug)).toEqual(["b", "c", "a", FANTASY_SCOREBOARD.slug]));
+  expect(connection.send).toHaveBeenCalledExactlyOnceWith({ type: "reorder", slug: "a", targetSlug: "c" });
+  expect(connection.room).toMatchObject({ focusedSlug: "a", audioSlug: "a", audioMuted: false });
+  connection.viewerCount = 0;
+  view.rerender(<Remote roomId="test" />);
+  expect((view.getByRole("button", { name: "Reorder Game A" }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it.each(["mouse", "touch"])("reorders with a %s drag and cancels an outside drop", async (pointerType) => {
+  vi.stubGlobal("PointerEvent", class extends MouseEvent {
+    pointerId = 1; isPrimary = true; pointerType = pointerType;
+  });
+  connection.room!.layout = "grid";
+  const view = render(<Remote roomId="test" />);
+  const handle = view.getByRole("button", { name: "Reorder Game C" });
+  Object.defineProperty(handle, "setPointerCapture", { value: vi.fn() });
+  const hit = vi.fn(() => view.container.querySelector('[data-reorder-slug="a"]'));
+  const original = document.elementFromPoint;
+  document.elementFromPoint = hit;
+  try {
+    fireEvent.pointerDown(handle, { button: 0, clientX: 250, clientY: 300 });
+    fireEvent.pointerMove(handle, { clientX: 50, clientY: 150 });
+    expect(view.container.querySelector('[data-reorder-slug="a"]')?.classList.contains("is-drop-target")).toBe(true);
+    fireEvent.pointerUp(handle, { clientX: 50, clientY: 150 });
+    await waitFor(() => expect(connection.room?.streams[0].slug).toBe("c"));
+    expect(connection.send).toHaveBeenCalledExactlyOnceWith({ type: "reorder", slug: "c", targetSlug: "a" });
+    connection.send.mockClear();
+    hit.mockReturnValue(null);
+    fireEvent.pointerDown(handle, { button: 0, clientX: 50, clientY: 150 });
+    fireEvent.pointerMove(handle, { clientX: 500, clientY: 150 });
+    fireEvent.pointerUp(handle, { clientX: 500, clientY: 150 });
+    expect(connection.send).not.toHaveBeenCalled();
+    hit.mockReturnValue(view.container.querySelector('[data-reorder-slug="a"]'));
+    fireEvent.pointerDown(handle, { button: 0, clientX: 50, clientY: 150 });
+    fireEvent.pointerMove(handle, { clientX: 100, clientY: 150 });
+    fireEvent.pointerCancel(handle);
+    fireEvent.pointerUp(handle, { clientX: 100, clientY: 150 });
+    expect(connection.send).not.toHaveBeenCalled();
+  } finally { document.elementFromPoint = original; }
 });

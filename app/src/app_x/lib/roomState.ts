@@ -29,6 +29,7 @@ export type RoomAction =
   | { type: "audio"; slug: string }
   | { type: "audio-muted" | "stream-selector"; value: boolean }
   | { type: "swap-sides" }
+  | { type: "reorder"; slug: string; targetSlug: string }
   | { type: "clear" };
 
 export function presentationOf(room: RoomState): Presentation {
@@ -89,6 +90,15 @@ export function reduceRoom(room: RoomState, action: RoomAction, commandId: strin
   const presentation = presentationOf(room);
   const video = (slug: string) => room.streams.some((stream) => stream.slug === slug && !isFantasyScoreboard(stream));
   switch (action.type) {
+    case "reorder": {
+      if (presentation.layout !== "grid") return room;
+      const from = room.streams.findIndex((stream) => stream.slug === action.slug);
+      const to = room.streams.findIndex((stream) => stream.slug === action.targetSlug);
+      if (from < 0 || to < 0 || from === to) return room;
+      const streams = [...room.streams];
+      streams.splice(to, 0, streams.splice(from, 1)[0]);
+      return { ...room, streams };
+    }
     case "layout":
       return isViewingLayout(action.layout) ? { ...room, ...presentation, layout: action.layout } : room;
     case "stream-selector":

@@ -57,6 +57,11 @@ export default function Multiscreen<T>(props: {
   const ordered = fixedOrder ? streams : [main, ...(layout === "dual" && right ? [right] : []),
     ...streams.filter((stream) => stream !== main && (layout !== "dual" || stream !== right))];
   const arrangement = arrangeScreens(layout, streams.length);
+  // Move grid cells with CSS, not iframe DOM nodes: moving an iframe reloads it.
+  const [mountOrder, setMountOrder] = useState(() => streams.map((stream) => stream.slug));
+  const stableOrder = [...mountOrder.filter((slug) => streams.some((stream) => stream.slug === slug)),
+    ...streams.filter((stream) => !mountOrder.includes(stream.slug)).map((stream) => stream.slug)];
+  if (stableOrder.length !== mountOrder.length || stableOrder.some((slug, index) => slug !== mountOrder[index])) setMountOrder(stableOrder);
 
   return (
     <section ref={containerRef} className="multiscreen-column">
@@ -64,7 +69,10 @@ export default function Multiscreen<T>(props: {
         className={`screen-layout screen-layout-${layout}${streams.length === 1 ? " screen-layout-solo" : ""}`}
         style={arrangement.grid}
       >
-        {streams.map((stream, index) => (
+        {stableOrder.map((slug) => {
+          const index = streams.findIndex((stream) => stream.slug === slug);
+          const stream = streams[index];
+          return (
           <ScreenCard
             key={stream.slug}
             host={host}
@@ -89,7 +97,7 @@ export default function Multiscreen<T>(props: {
             onFocus={() => onFocus(stream.slug)}
             onRemove={() => onRemove(stream.slug)}
           />
-        ))}
+        ); })}
       </div>
     </section>
   );

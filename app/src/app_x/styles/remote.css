@@ -92,6 +92,12 @@
 .remote-side button { width: 100%; }
 .remote-swap { grid-column: 1 / -1; }
 .remote-stream-card { min-width: 0; }
+.remote-stream-card.is-reorderable { position: relative; }
+.is-reorderable .remote-bubble { padding-top: 42px; }
+.remote-drag-handle { position: absolute; z-index: 1; top: 4px; right: 8px; width: 44px; height: 38px; border: 0; border-radius: 10px; background: transparent; color: var(--ww-accent-amber); font: 24px system-ui; cursor: grab; touch-action: none; user-select: none; }
+.remote-drag-handle:active { cursor: grabbing; }
+.remote-stream-card.is-dragging { opacity: .55; }
+.remote-stream-card.is-drop-target .remote-bubble { outline: 2px dashed var(--ww-accent-amber); outline-offset: 3px; }
 .remote-stream-card .remote-bubble { width: 100%; height: 100%; }
 .remote-stream-card:has(.remote-promote) .remote-bubble { height: auto; border-radius: 24px 24px 8px 8px; }
 .remote-promote { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }

@@ -135,6 +135,25 @@ it("keeps dual sides pinned when sound changes, shows mute state, and retains pl
   expect(container.querySelectorAll("iframe")[1]).toBe(frameB);
 });
 
+it("reorders grid cells without moving iframe nodes or changing audio", async () => {
+  const { rerender, frameA, frameB, audioA, audioB, container } = await setup();
+  const state: RoomState = { streams: base.streams, layout: "grid", focusedSlug: "a", audioSlug: "a", audioMuted: false, displayLogs: false, command: null };
+  rerender(<Multiscreen {...base} layout="grid" focusedSlug="a" presentation={presentationOf(state)} />);
+  const previousCell = frameA.closest("article")!.style.gridColumn;
+  const domOrder = Array.from(container.querySelectorAll("article"));
+  const moved = reduceRoom(state, { type: "reorder", slug: "a", targetSlug: "b" }, "move");
+  audioA.mockClear(); audioB.mockClear();
+  rerender(<Multiscreen {...base} streams={moved.streams} layout="grid" focusedSlug="a" presentation={presentationOf(moved)} />);
+  expect(Array.from(container.querySelectorAll("article"))).toEqual(domOrder);
+  expect(container.querySelectorAll("iframe")[0]).toBe(frameA);
+  expect(container.querySelectorAll("iframe")[1]).toBe(frameB);
+  expect(frameA.closest("article")!.style.gridColumn).not.toBe(previousCell);
+  expect(frameA.title).toBe("(2) Screen A");
+  expect(audioA).not.toHaveBeenCalled();
+  expect(audioB).not.toHaveBeenCalled();
+  expect(container.querySelectorAll('[data-audible="true"]')).toHaveLength(1);
+});
+
 it.each(VIEWING_LAYOUTS)("mutes before transferring audio in $label, including reverse tile order", async ({ id: layout }) => {
   const { rerender, audioA, audioB, container } = await setup();
   for (const slug of [b.slug, a.slug]) {
