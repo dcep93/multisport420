@@ -24,14 +24,14 @@ it("controls layout, both positions, sound, and mute through shared room state",
   fireEvent.click(view.getByRole("button", { name: "Promote Game C to right" }));
   await waitFor(() => expect(connection.room).toMatchObject({ leftSlug: "a", rightSlug: "c", audioSlug: "a" }));
   fireEvent.click(view.getByRole("button", { name: "Sound on right", exact: true }));
-  await waitFor(() => expect(view.getByText("🔊 Sound: Game C")).toBeTruthy());
+  await waitFor(() => expect(view.container.querySelector(".remote-audio-status")?.textContent).toBe("🔊 Game C"));
   expect(connection.room).toMatchObject({ leftSlug: "a", rightSlug: "c", audioSlug: "c" });
   fireEvent.click(view.getByRole("button", { name: "Promote Game B to left" }));
   await waitFor(() => expect(connection.room).toMatchObject({ leftSlug: "b", rightSlug: "c", audioSlug: "c" }));
   fireEvent.click(view.getByRole("button", { name: /Swap sides/ }));
   await waitFor(() => expect(connection.room).toMatchObject({ leftSlug: "c", rightSlug: "b", audioSlug: "c" }));
   fireEvent.click(view.getByRole("button", { name: "Mute all", exact: true }));
-  await waitFor(() => expect(view.getByText("🔇 All streams muted")).toBeTruthy());
+  await waitFor(() => expect(view.getByText("🔇 Muted")).toBeTruthy());
   fireEvent.click(view.getByRole("button", { name: "Sound on left", exact: true }));
   await waitFor(() => expect(connection.room).toMatchObject({ audioSlug: "c", audioMuted: false }));
   fireEvent.change(view.getByRole("combobox", { name: "Layout" }), { target: { value: "quad" } });

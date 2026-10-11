@@ -159,7 +159,7 @@ function ScreenCard<T>(props: {
             aria-pressed={props.isAudioFocused && !props.audioMuted}
             onClick={() => props.onPresentationAction?.(props.isAudioFocused && !props.audioMuted
               ? { type: "audio-muted", value: true } : { type: "audio", slug: props.stream.slug })}>
-            {props.dualSide} {props.isAudioFocused && !props.audioMuted ? "🔊 SOUND" : isScoreboard ? "· silent" : "🔇"}
+            {props.dualSide} <span aria-hidden="true">{props.isAudioFocused && !props.audioMuted ? "🔊" : "🔇"}</span>
           </button>}
           {props.dualSide === "Preview" && props.onPresentationAction && <>
             <button type="button" aria-label={`Promote ${props.stream.title} to left`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "left", slug: props.stream.slug })}>← L</button>

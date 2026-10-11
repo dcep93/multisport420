@@ -42,7 +42,7 @@ export default function Remote({ roomId }: { roomId: string }) {
         <div className="remote-title">
           <p className="remote-eyebrow">PHONE REMOTE</p>
           <h1>{roomId || "Default room"}</h1>
-          <p>{dual ? "Place games on either side, then choose which game you hear." : "Tap a stream to focus it. Tap the focused stream again to mute or unmute."}</p>
+          <p>{dual ? "Choose a side with the arrows. Tap 🔊 to listen." : "Tap to spotlight. Tap again to mute."}</p>
         </div>
         {room.status === "error" || room.status === "offline" ? (
           <div className="remote-notice">
@@ -65,9 +65,9 @@ export default function Remote({ roomId }: { roomId: string }) {
               {VIEWING_LAYOUTS.map((layout) => <option key={layout.id} value={layout.id}>{layout.label}</option>)}
             </select>
           </label>
-          <p className="remote-audio-status" role="status">{audioStream ? `🔊 Sound: ${audioStream.title}` : "🔇 All streams muted"}</p>
+          <p className="remote-audio-status" role="status">{audioStream ? `🔊 ${audioStream.title}` : "🔇 Muted"}</p>
           <button type="button" className="remote-refresh" disabled={!viewing.audioSlug}
-            onClick={() => void send({ type: "audio-muted", value: !viewing.audioMuted }, viewing.audioMuted ? "Sound restored" : "All streams muted")}>
+            onClick={() => void send({ type: "audio-muted", value: !viewing.audioMuted }, viewing.audioMuted ? "Unmuted" : "Muted")}>
             {viewing.audioMuted ? "Unmute" : "Mute all"}
           </button>
           <div className="remote-setting-toggles">
@@ -82,10 +82,10 @@ export default function Remote({ roomId }: { roomId: string }) {
             const stream = streams.find((stream) => stream.slug === viewing[side === "left" ? "leftSlug" : "rightSlug"]);
             const hasSound = Boolean(stream && stream.slug === audible);
             return <div key={side} className={`remote-side ${hasSound ? "has-sound" : ""}`}>
-              <h2>{side === "left" ? "Left" : "Right"} <span>{hasSound ? "🔊 SOUND ON" : "🔇 SILENT"}</span></h2>
+              <h2>{side === "left" ? "Left" : "Right"}</h2>
               <p>{stream?.title ?? "Add another stream"}</p>
-              <button type="button" aria-pressed={hasSound} disabled={!ready || pending || !stream || isFantasyScoreboard(stream)}
-                onClick={() => stream && void send({ type: "audio", slug: stream.slug }, `Sound on ${side}`)}>Sound on {side}</button>
+              <button type="button" aria-label={`Sound on ${side}`} title={`Listen to ${side}`} aria-pressed={hasSound} disabled={!ready || pending || !stream || isFantasyScoreboard(stream)}
+                onClick={() => stream && void send({ type: "audio", slug: stream.slug }, `🔊 ${stream.title}`)}><span aria-hidden="true">{hasSound ? "🔊" : "🔇"}</span></button>
             </div>;
           })}
           <button className="remote-swap" type="button" disabled={!ready || pending || !viewing.rightSlug}
@@ -103,10 +103,10 @@ export default function Remote({ roomId }: { roomId: string }) {
                 aria-label={dual ? `Sound on ${stream.title}` : active ? `Toggle mute for ${stream.title}` : `Spotlight ${stream.title}`}
                 disabled={!ready || pending || (dual && isFantasyScoreboard(stream))}
                 onClick={() => void send({ type: dual ? "audio" : "select", slug: stream.slug },
-                  dual ? `Sound on ${stream.title}` : active ? "Mute toggle sent" : `Spotlighting ${stream.title}`)}>
+                  dual ? `🔊 ${stream.title}` : active ? "Mute toggled" : `Spotlighting ${stream.title}`)}>
                 <span className="remote-number">{index + 1}</span>
                 <span className="remote-stream-name">{stream.title}</span>
-                <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊 Sound on" : isFantasyScoreboard(stream) ? "No audio" : "Tap for sound"}` : active ? "Spotlight · mute / unmute" : "Tap to spotlight"}</span>
+                <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊" : "🔇"}` : active ? "Spotlight" : ""}</span>
               </button>
               {dual && <div className="remote-promote">
                 {(["left", "right"] as const).map((target) => <button key={target} type="button"
