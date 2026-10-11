@@ -928,6 +928,13 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   width: 7.5rem;
 }
 
+.dual-title-controls { display: flex; align-items: center; gap: 3px; flex: none; }
+.dual-title-controls button { padding: 3px 5px; border: 1px solid #ffffff30; border-radius: 4px; background: #211e1b; color: white; font: 700 10px system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.dual-title-controls button[aria-pressed="true"] { background: #a0f3be; color: #07341b; border-color: #a0f3be; }
+.dual-title-controls button:disabled { cursor: default; opacity: .65; }
+.screen-layout-dual .screen-card[data-audible="true"] .screen-title-bar-shell[data-indicator="none"] { background: #155b36; box-shadow: inset 0 -2px #a0f3be; }
+.screen-layout-dual .screen-card[data-dual-side="Left"], .screen-layout-dual .screen-card[data-dual-side="Right"] { outline: 1px solid #ffffff30; outline-offset: -1px; }
+
 .viewing-controls {
   margin-top: 20px;
   padding-top: 18px;

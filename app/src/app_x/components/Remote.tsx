@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import useRoom from "../hooks/useRoom";
-import type { RoomAction } from "../lib/roomState";
+import { presentationOf, type RoomAction } from "../lib/roomState";
+import { VIEWING_LAYOUTS, type ViewingLayout } from "../lib/viewingLayouts";
+import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 export default function Remote({ roomId }: { roomId: string }) {
   const room = useRoom();
@@ -14,6 +16,10 @@ export default function Remote({ roomId }: { roomId: string }) {
 
   const streams = room.room?.streams ?? [];
   const focused = room.room?.focusedSlug;
+  const viewing = presentationOf(room.room ?? { streams: [], focusedSlug: "", displayLogs: true, command: null });
+  const dual = viewing.layout === "dual";
+  const audible = viewing.audioMuted ? "" : viewing.audioSlug;
+  const audioStream = streams.find((stream) => stream.slug === audible);
   const online = room.status === "connected";
   const ready = online && room.viewerCount > 0;
   const status = room.status === "connecting" ? "Connecting…"
@@ -36,7 +42,7 @@ export default function Remote({ roomId }: { roomId: string }) {
         <div className="remote-title">
           <p className="remote-eyebrow">PHONE REMOTE</p>
           <h1>{roomId || "Default room"}</h1>
-          <p>Tap a stream to spotlight it.<br />Tap the spotlight again to mute or unmute.</p>
+          <p>{dual ? "Place games on either side, then choose which game you hear." : "Tap a stream to focus it. Tap the focused stream again to mute or unmute."}</p>
         </div>
         {room.status === "error" || room.status === "offline" ? (
           <div className="remote-notice">
@@ -52,26 +58,71 @@ export default function Remote({ roomId }: { roomId: string }) {
         {online && room.viewerCount > 0 && streams.length === 0 && (
           <div className="remote-notice"><p>No streams yet.</p><span>Add a stream on your viewing screen to get started.</span></div>
         )}
+        <fieldset className="remote-settings" disabled={!ready || pending}>
+          <legend>Viewing controls</legend>
+          <label className="remote-layout-label">Layout
+            <select value={viewing.layout} onChange={(event) => void send({ type: "layout", layout: event.target.value as ViewingLayout }, "Layout updated")}>
+              {VIEWING_LAYOUTS.map((layout) => <option key={layout.id} value={layout.id}>{layout.label}</option>)}
+            </select>
+          </label>
+          <p className="remote-audio-status" role="status">{audioStream ? `🔊 Sound: ${audioStream.title}` : "🔇 All streams muted"}</p>
+          <button type="button" className="remote-refresh" disabled={!viewing.audioSlug}
+            onClick={() => void send({ type: "audio-muted", value: !viewing.audioMuted }, viewing.audioMuted ? "Sound restored" : "All streams muted")}>
+            {viewing.audioMuted ? "Unmute" : "Mute all"}
+          </button>
+          <div className="remote-setting-toggles">
+            <label><input type="checkbox" checked={viewing.showStreamSelector}
+              onChange={(event) => void send({ type: "stream-selector", value: event.target.checked }, "Stream selector updated")} /> Show stream selector</label>
+            <label><input type="checkbox" checked={room.room?.displayLogs !== false}
+              onChange={(event) => void send({ type: "display-logs", value: event.target.checked }, "Log preference updated")} /> Spotlight logs</label>
+          </div>
+        </fieldset>
+        {dual && <section className="remote-dual" aria-label="Dual spotlight">
+          {(["left", "right"] as const).map((side) => {
+            const stream = streams.find((stream) => stream.slug === viewing[side === "left" ? "leftSlug" : "rightSlug"]);
+            const hasSound = Boolean(stream && stream.slug === audible);
+            return <div key={side} className={`remote-side ${hasSound ? "has-sound" : ""}`}>
+              <h2>{side === "left" ? "Left" : "Right"} <span>{hasSound ? "🔊 SOUND ON" : "🔇 SILENT"}</span></h2>
+              <p>{stream?.title ?? "Add another stream"}</p>
+              <button type="button" aria-pressed={hasSound} disabled={!ready || pending || !stream || isFantasyScoreboard(stream)}
+                onClick={() => stream && void send({ type: "audio", slug: stream.slug }, `Sound on ${side}`)}>Sound on {side}</button>
+            </div>;
+          })}
+          <button className="remote-swap" type="button" disabled={!ready || pending || !viewing.rightSlug}
+            onClick={() => void send({ type: "swap-sides" }, "Left and right swapped")}>⇄ Swap sides</button>
+        </section>}
         <div className="remote-bubbles" aria-label="Streams" aria-busy={room.status === "connecting"}>
           {streams.map((stream, index) => {
-            const active = stream.slug === focused;
+            const active = stream.slug === (dual ? audible : focused);
+            const side = stream.slug === viewing.leftSlug ? "Left" : stream.slug === viewing.rightSlug ? "Right" : "Preview";
             return (
-              <button key={stream.slug} type="button"
+              <div key={stream.slug} className="remote-stream-card">
+              <button type="button"
                 className={`remote-bubble ${active ? "is-active" : ""}`}
-                aria-pressed={active} disabled={!ready || pending}
-                aria-label={active ? `Toggle mute for ${stream.title}` : `Spotlight ${stream.title}`}
-                onClick={() => void send({ type: "select", slug: stream.slug },
-                  active ? "Mute toggle sent" : `Spotlighting ${stream.title}`)}>
+                aria-pressed={active}
+                aria-label={dual ? `Sound on ${stream.title}` : active ? `Toggle mute for ${stream.title}` : `Spotlight ${stream.title}`}
+                disabled={!ready || pending || (dual && isFantasyScoreboard(stream))}
+                onClick={() => void send({ type: dual ? "audio" : "select", slug: stream.slug },
+                  dual ? `Sound on ${stream.title}` : active ? "Mute toggle sent" : `Spotlighting ${stream.title}`)}>
                 <span className="remote-number">{index + 1}</span>
                 <span className="remote-stream-name">{stream.title}</span>
-                <span className="remote-bubble-caption">{active ? "Spotlight · mute / unmute" : "Tap to spotlight"}</span>
+                <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊 Sound on" : isFantasyScoreboard(stream) ? "No audio" : "Tap for sound"}` : active ? "Spotlight · mute / unmute" : "Tap to spotlight"}</span>
               </button>
+              {dual && <div className="remote-promote">
+                {(["left", "right"] as const).map((target) => <button key={target} type="button"
+                  aria-label={`Promote ${stream.title} to ${target}`}
+                  disabled={!ready || pending || stream.slug === viewing[target === "left" ? "leftSlug" : "rightSlug"]}
+                  onClick={() => void send({ type: "promote", side: target, slug: stream.slug }, `${stream.title} moved to ${target}`)}>
+                  {target === "left" ? "← Left" : "Right →"}
+                </button>)}
+              </div>}
+              </div>
             );
           })}
         </div>
         <div className="remote-footer">
           <button className="remote-refresh" type="button"
-            disabled={!ready || !focused || !room.room?.displayLogs || pending}
+            disabled={!ready || !focused || !room.room?.displayLogs || viewing.layout !== "spotlight" || pending}
             onClick={() => void send({ type: "refresh-log" }, "Log refresh sent")}>
             <span aria-hidden="true">↻</span> Refresh spotlight log
           </button>

@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import Multiscreen from "../src/app_x/components/Multiscreen";
 import { FANTASY_SCOREBOARD } from "../src/app_x/lib/fantasyScoreboard";
 import { VIEWING_LAYOUTS } from "../src/app_x/lib/viewingLayouts";
+import { presentationOf, reduceRoom, type RoomState } from "../src/app_x/lib/roomState";
 
 vi.mock("../src/app_x/hooks/useStreamLog", () => ({ useStreamLog: () => ({}) }));
 vi.mock("../src/app_x/components/FantasyScoreboard", () => ({ default: () => <div>Scoreboard</div> }));
@@ -85,7 +86,7 @@ it("starts silently with the scoreboard and does not choose another audio source
   expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
 });
 
-it("switches all six layouts and selectors without reloading players or changing audio", async () => {
+it("switches all twelve layouts and selectors without reloading players or changing audio", async () => {
   const { rerender, frameA, frameB, audioA, audioB, container } = await setup();
   const src = frameA.srcdoc;
   for (const { id: layout } of VIEWING_LAYOUTS) {
@@ -106,6 +107,32 @@ it("switches all six layouts and selectors without reloading players or changing
   expect(audioA).toHaveBeenLastCalledWith(...muteMessage(false));
   fireEvent.load(frameB);
   expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+});
+
+it("keeps dual sides pinned when sound changes, shows mute state, and retains players on swap", async () => {
+  const { rerender, frameA, frameB, audioA, audioB, container, getByRole } = await setup();
+  let state: RoomState = { streams: base.streams, focusedSlug: "a", displayLogs: false, command: null,
+    layout: "dual", leftSlug: "a", rightSlug: "b", audioSlug: "a", audioMuted: false };
+  const show = () => rerender(<Multiscreen {...base} layout="dual" focusedSlug={state.focusedSlug}
+    presentation={presentationOf(state)} onPresentationAction={(action) => { state = reduceRoom(state, action, "test"); show(); }} />);
+  show();
+  const leftPlacement = frameA.closest("article")!.style.gridColumn;
+  const rightPlacement = frameB.closest("article")!.style.gridColumn;
+  audioA.mockClear(); audioB.mockClear();
+  fireEvent.click(getByRole("button", { name: "Sound on right: Screen B" }));
+  expect(frameA.closest("article")!.style.gridColumn).toBe(leftPlacement);
+  expect(frameB.closest("article")!.style.gridColumn).toBe(rightPlacement);
+  expect(audioA).toHaveBeenLastCalledWith(...muteMessage(true));
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(false));
+  expect(container.querySelectorAll('[data-audible="true"]')).toHaveLength(1);
+  fireEvent.click(getByRole("button", { name: "Mute right sound" }));
+  expect(container.querySelectorAll('[data-audible="true"]')).toHaveLength(0);
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+  state = reduceRoom(state, { type: "swap-sides" }, "swap"); show();
+  expect(frameA.closest("article")!.style.gridColumn).toBe(rightPlacement);
+  expect(frameB.closest("article")!.style.gridColumn).toBe(leftPlacement);
+  expect(container.querySelectorAll("iframe")[0]).toBe(frameA);
+  expect(container.querySelectorAll("iframe")[1]).toBe(frameB);
 });
 
 it.each(VIEWING_LAYOUTS)("mutes before transferring audio in $label, including reverse tile order", async ({ id: layout }) => {

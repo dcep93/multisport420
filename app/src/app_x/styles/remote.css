@@ -76,6 +76,26 @@
   color: white;
 }
 .remote-content { max-width: 580px; margin: 0 auto; }
+.remote-settings { margin: 0 0 22px; padding: 18px; border: 1px solid var(--ww-border-strong); border-radius: 20px; min-width: 0; }
+.remote-settings legend { padding: 0 8px; color: var(--ww-accent-cyan); font-size: .85rem; }
+.remote-layout-label { display: grid; gap: 8px; font-size: .9rem; }
+.remote-layout-label select { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--ww-border-strong); border-radius: 12px; color: white; background: #281f1a; color-scheme: dark; font: inherit; }
+.remote-audio-status { color: #b7edc8; font-size: .85rem; line-height: 1.5; }
+.remote-setting-toggles { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; font-size: .8rem; }
+.remote-setting-toggles label { display: flex; align-items: center; gap: 6px; }
+.remote-dual { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 24px; }
+.remote-side { padding: 16px; border: 2px solid #ffffff20; border-radius: 18px; background: #ffffff05; }
+.remote-side.has-sound { border-color: #7ee3a5; background: #153e2a; }
+.remote-side h2 { margin: 0; font-size: 1rem; }
+.remote-side h2 span { display: block; margin-top: 8px; font-size: .65rem; letter-spacing: .06em; }
+.remote-side p { font-size: .85rem; line-height: 1.5; min-height: 3em; overflow-wrap: anywhere; }
+.remote-side button, .remote-swap, .remote-promote button { border: 1px solid var(--ww-border-strong); border-radius: 10px; background: #ffffff0c; color: white; padding: 12px 8px; font: inherit; font-size: .8rem; cursor: pointer; touch-action: manipulation; }
+.remote-side button { width: 100%; }
+.remote-swap { grid-column: 1 / -1; }
+.remote-stream-card { min-width: 0; }
+.remote-stream-card .remote-bubble { width: 100%; height: 100%; }
+.remote-stream-card:has(.remote-promote) .remote-bubble { height: auto; border-radius: 24px 24px 8px 8px; }
+.remote-promote { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
 .remote-brand { color: var(--ww-title-pink); font-family: "Comic Sans MS", cursive; font-size: 1.12rem; text-decoration: none; }
 .remote-title { margin: 42px 0 28px; }
 .remote-eyebrow { color: var(--ww-accent-cyan); font-size: .65rem; letter-spacing: .2em; font-weight: 700; }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { HOST } from "../config/data";
 import type { Category, Stream, StreamSlug } from "../config/types";
 import useSelectedStreamIds from "../hooks/useSelectedStreamIds";
@@ -11,13 +11,10 @@ import PasswordGate from "./PasswordGate";
 import RoomControls from "./RoomControls";
 import ViewingControls from "./ViewingControls";
 import { useViewingPreferences } from "../hooks/useViewingPreferences";
+import { presentationOf, reduceRoom, type Presentation, type RoomAction } from "../lib/roomState";
 import { hasMultisport420Extension, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const IS_DEV = import.meta.env.DEV;
-
-function removeStreamSlug(slugs: StreamSlug[], streamSlug: StreamSlug) {
-  return slugs.filter((slug) => slug !== streamSlug);
-}
 
 export default function MultisportApp() {
   const hostCategories = HOST.getLeagueCategories();
@@ -32,8 +29,7 @@ export default function MultisportApp() {
   const [streamReloadKey, setStreamReloadKey] = useState(0);
   const [streamError, setStreamError] = useState<Error | null>(null);
   const [focusedSlug, setFocusedSlug] = useState<StreamSlug>("");
-  const [muteToggleSlug, setMuteToggleSlug] = useState<StreamSlug>("");
-  const [muteToggleRequestId, setMuteToggleRequestId] = useState(0);
+  const [localPresentation, setLocalPresentation] = useState<Partial<Presentation>>({});
   const [logRefreshSlug, setLogRefreshSlug] = useState<StreamSlug>("");
   const [logRefreshRequestId, setLogRefreshRequestId] = useState(0);
   const [localDisplayLogs, setDisplayLogs] = useState(true);
@@ -41,15 +37,18 @@ export default function MultisportApp() {
   const [logDelayMs, setLogDelayMs] = useState(30_000);
   const streams = filterStreamsByCategory(allStreams, category, multisport420Installed);
   const room = useRoom((command) => {
-    if (command.type === "mute") {
-      setMuteToggleSlug(command.slug);
-      setMuteToggleRequestId((current) => current + 1);
-    } else {
+    if (command.type === "refresh-log") {
       setLogRefreshSlug(command.slug);
       setLogRefreshRequestId((current) => current + 1);
     }
   });
   const { send: sendRoomAction } = room;
+  useEffect(() => {
+    if (!room.room) return;
+    const shared = presentationOf(room.room);
+    setViewing((current) => current.layout === shared.layout && current.showStreamSelector === shared.showStreamSelector
+      ? current : { layout: shared.layout, showStreamSelector: shared.showStreamSelector });
+  }, [room.room, setViewing]);
   const roomId = room.room ? room.roomId : null;
   const displayLogs = room.room?.displayLogs ?? localDisplayLogs;
   const {
@@ -89,6 +88,26 @@ export default function MultisportApp() {
 
   const resolvedFocusedSlug =
     room.room?.focusedSlug ?? (selectedStreams.find((stream) => stream.slug === focusedSlug)?.slug ?? selectedStreams[0]?.slug);
+  const currentRoom = useMemo(() => room.room ?? {
+    ...viewing, ...localPresentation, streams: selectedStreams, focusedSlug: resolvedFocusedSlug ?? "", displayLogs, command: null,
+  }, [room.room, viewing, localPresentation, selectedStreams, resolvedFocusedSlug, displayLogs]);
+  const presentation = presentationOf(currentRoom);
+  const keepPresentation = useCallback((value: Presentation) => {
+    setLocalPresentation({ leftSlug: value.leftSlug, rightSlug: value.rightSlug, audioSlug: value.audioSlug, audioMuted: value.audioMuted });
+    setViewing({ layout: value.layout, showStreamSelector: value.showStreamSelector });
+  }, [setViewing]);
+  const actOnRoom = useCallback((action: RoomAction) => {
+    if (roomId !== null) { void sendRoomAction(action); return; }
+    const next = reduceRoom(currentRoom, action, crypto.randomUUID());
+    setFocusedSlug(next.focusedSlug);
+    setDisplayLogs(next.displayLogs);
+    keepPresentation(presentationOf(next));
+    if (action.type === "remove" || action.type === "toggle-stream") setSelectedSlugs(next.streams.map((stream) => stream.slug));
+    if (action.type === "refresh-log" && next.command?.type === "refresh-log") {
+      setLogRefreshSlug(next.command.slug);
+      setLogRefreshRequestId((current) => current + 1);
+    }
+  }, [roomId, sendRoomAction, currentRoom, keepPresentation, setSelectedSlugs]);
   const shouldScrollToMultiscreenOnLoad = hadHashSelectionOnLoad && selectedStreams.length > 0;
 
   useEffect(() => {
@@ -145,55 +164,20 @@ export default function MultisportApp() {
         return;
       }
 
-      if (roomId !== null) {
-        void sendRoomAction({ type: "select", slug: nextStream.slug });
-        return;
-      }
-
-      if (nextStream.slug === resolvedFocusedSlug) {
-        setMuteToggleSlug(nextStream.slug);
-        setMuteToggleRequestId((current) => current + 1);
-        return;
-      }
-
-      setFocusedSlug(nextStream.slug);
+      actOnRoom({ type: "select", slug: nextStream.slug });
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [displayLogs, resolvedFocusedSlug, selectedStreams, roomId, sendRoomAction]);
+  }, [displayLogs, resolvedFocusedSlug, selectedStreams, roomId, sendRoomAction, actOnRoom]);
 
   function handleToggle(streamSlug: StreamSlug) {
-    if (roomId !== null) {
-      const stream = allStreams?.find((stream) => stream.slug === streamSlug);
-      if (stream) void sendRoomAction({ type: "toggle-stream", stream });
-      return;
-    }
-    if (selectedSlugs.includes(streamSlug)) {
-      const remainingSlugs = removeStreamSlug(selectedSlugs, streamSlug);
-      setSelectedSlugs(remainingSlugs);
-      if (resolvedFocusedSlug === streamSlug) {
-        setFocusedSlug(remainingSlugs[0] ?? "");
-      }
-      return;
-    }
-
-    setSelectedSlugs(selectedSlugs.concat(streamSlug));
-    if (!resolvedFocusedSlug) {
-      setFocusedSlug(streamSlug);
-    }
+    const stream = allStreams?.find((stream) => stream.slug === streamSlug);
+    if (stream) actOnRoom({ type: "toggle-stream", stream });
   }
 
   function handleRemove(streamSlug: StreamSlug) {
-    if (roomId !== null) {
-      void sendRoomAction({ type: "remove", slug: streamSlug });
-      return;
-    }
-    const remainingSlugs = removeStreamSlug(selectedSlugs, streamSlug);
-    setSelectedSlugs(remainingSlugs);
-    if (resolvedFocusedSlug === streamSlug) {
-      setFocusedSlug(remainingSlugs[0] ?? "");
-    }
+    actOnRoom({ type: "remove", slug: streamSlug });
   }
 
   async function handleRefreshStreams() {
@@ -231,6 +215,7 @@ export default function MultisportApp() {
     setAllStreams(null);
     setStreamReloadKey((current) => current + 1);
     setFocusedSlug("");
+    setLocalPresentation({});
     setDisplayLogs(true);
     setViewing({ layout: "spotlight", showStreamSelector: false });
     setSelectedSlugs([]);
@@ -251,9 +236,9 @@ export default function MultisportApp() {
   return (
     <main className="multisport-shell">
       <Menu
-        viewingControls={<ViewingControls {...viewing}
-          onLayoutChange={(layout) => setViewing((current) => ({ ...current, layout }))}
-          onShowStreamSelectorChange={(showStreamSelector) => setViewing((current) => ({ ...current, showStreamSelector }))} />}
+        viewingControls={<ViewingControls {...presentation}
+          onLayoutChange={(layout) => actOnRoom({ type: "layout", layout })}
+          onShowStreamSelectorChange={(value) => actOnRoom({ type: "stream-selector", value })} />}
         roomControls={<RoomControls room={room} disabled={allStreams === null}
           onJoin={(id) => {
             // Keep the current players mounted while switching rooms, and keep
@@ -261,14 +246,14 @@ export default function MultisportApp() {
             restoreSelection(selectedStreams);
             setFocusedSlug(resolvedFocusedSlug ?? "");
             setDisplayLogs(displayLogs);
-            void room.connect(id, {
-              streams: selectedStreams, focusedSlug: resolvedFocusedSlug ?? "", displayLogs, command: null,
-            });
+            keepPresentation(presentation);
+            void room.connect(id, { ...currentRoom, ...presentation });
           }}
           onLeave={() => {
             restoreSelection(selectedStreams);
             setFocusedSlug(resolvedFocusedSlug ?? "");
             setDisplayLogs(displayLogs);
+            keepPresentation(presentation);
             room.leave();
           }} />}
         category={category}
@@ -292,8 +277,10 @@ export default function MultisportApp() {
       />
       {selectedStreams.length > 0 ? (
         <Multiscreen
-          layout={viewing.layout}
-          showStreamSelector={viewing.showStreamSelector}
+          layout={presentation.layout}
+          showStreamSelector={presentation.showStreamSelector}
+          presentation={presentation}
+          onPresentationAction={actOnRoom}
           containerRef={multiscreenRef}
           host={HOST}
           streams={selectedStreams}
@@ -302,14 +289,10 @@ export default function MultisportApp() {
           focusedSlug={resolvedFocusedSlug}
           logRefreshSlug={logRefreshSlug}
           logRefreshRequestId={logRefreshRequestId}
-          muteToggleSlug={muteToggleSlug}
-          muteToggleRequestId={muteToggleRequestId}
+          muteToggleRequestId={0}
           onRefreshStream={handleRefreshStream}
           onRemove={handleRemove}
-          onFocus={(slug) => {
-            if (roomId !== null) void sendRoomAction({ type: "focus", slug });
-            else setFocusedSlug(slug);
-          }}
+          onFocus={(slug) => actOnRoom({ type: "focus", slug })}
         />
       ) : null}
     </main>

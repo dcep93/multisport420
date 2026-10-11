@@ -10,11 +10,14 @@ import FantasyScoreboard from "./FantasyScoreboard";
 import StreamProviderAccess from "./StreamProviderAccess";
 import { StreamProviderBlockedError } from "../lib/streamProviderAccess";
 import { arrangeScreens, type ViewingLayout } from "../lib/viewingLayouts";
+import type { Presentation, RoomAction } from "../lib/roomState";
 
 export default function Multiscreen<T>(props: {
   containerRef?: Ref<HTMLElement>;
   layout?: ViewingLayout;
   showStreamSelector?: boolean;
+  presentation?: Presentation;
+  onPresentationAction?: (action: RoomAction) => void;
   host: Host<T>;
   streams: Stream[];
   displayLogs: boolean;
@@ -37,7 +40,7 @@ export default function Multiscreen<T>(props: {
   const audioStream = focusedStream && !isFantasyScoreboard(focusedStream)
     ? focusedStream
     : streams.find((stream) => stream.slug === lastAudioSlug && !isFantasyScoreboard(stream));
-  const audioSlug = audioStream?.slug;
+  const audioSlug = props.presentation?.audioSlug ?? audioStream?.slug;
   if (lastAudioSlug !== audioSlug) setLastAudioSlug(audioSlug);
   const [pair, setPair] = useState({ primary: focusedStream?.slug, companion: streams.find((stream) => stream !== focusedStream)?.slug });
   let companionSlug = pair.companion;
@@ -47,8 +50,12 @@ export default function Multiscreen<T>(props: {
   }
   const companion = streams.find((stream) => stream.slug === companionSlug && stream !== focusedStream)
     ?? streams.find((stream) => stream !== focusedStream);
-  const ordered = layout === "grid" ? streams : [focusedStream, ...(layout === "dual" && companion ? [companion] : []),
-    ...streams.filter((stream) => stream !== focusedStream && (layout !== "dual" || stream !== companion))];
+  const left = streams.find((stream) => stream.slug === props.presentation?.leftSlug) ?? focusedStream;
+  const right = streams.find((stream) => stream.slug === props.presentation?.rightSlug && stream !== left) ?? companion;
+  const fixedOrder = ["grid", "columns", "stack"].includes(layout);
+  const main = layout === "dual" ? left : focusedStream;
+  const ordered = fixedOrder ? streams : [main, ...(layout === "dual" && right ? [right] : []),
+    ...streams.filter((stream) => stream !== main && (layout !== "dual" || stream !== right))];
   const arrangement = arrangeScreens(layout, streams.length);
 
   return (
@@ -64,7 +71,10 @@ export default function Multiscreen<T>(props: {
             stream={stream}
             streamIndex={index}
             placement={arrangement.cells[ordered.indexOf(stream)]}
-            isProminent={stream === focusedStream || (layout === "dual" && stream === companion)}
+            isProminent={layout === "dual" ? stream === left || stream === right : ordered.indexOf(stream) < (layout === "triple" ? 3 : layout === "quad" ? 4 : 1)}
+            dualSide={layout === "dual" ? stream === left ? "Left" : stream === right ? "Right" : "Preview" : undefined}
+            onPresentationAction={props.onPresentationAction}
+            audioMuted={props.presentation?.audioMuted}
             showStreamSelector={props.showStreamSelector ?? false}
             displayLogs={displayLogs}
             logDelayMs={props.logDelayMs}
@@ -91,6 +101,9 @@ function ScreenCard<T>(props: {
   streamIndex: number;
   placement: CSSProperties;
   isProminent: boolean;
+  dualSide?: "Left" | "Right" | "Preview";
+  audioMuted?: boolean;
+  onPresentationAction?: (action: RoomAction) => void;
   showStreamSelector: boolean;
   displayLogs: boolean;
   logDelayMs: number;
@@ -128,6 +141,8 @@ function ScreenCard<T>(props: {
       style={props.placement}
       data-audio-focused={props.isAudioFocused}
       data-prominent={props.isProminent}
+      data-dual-side={props.dualSide}
+      data-audible={props.isAudioFocused && !props.audioMuted}
       className={[
         "screen-card",
         props.isFocused ? "screen-card-spotlight is-focused" : "screen-card-secondary",
@@ -137,6 +152,20 @@ function ScreenCard<T>(props: {
         .join(" ")}
     >
       <ScreenTitleBar
+        controls={props.dualSide && <span className="dual-title-controls" onClick={(event) => event.stopPropagation()}>
+          {(props.dualSide !== "Preview" || props.isAudioFocused) && <button type="button" className="dual-audio-button"
+            disabled={isScoreboard || !props.onPresentationAction}
+            aria-label={isScoreboard ? `${props.dualSide} scoreboard has no audio` : props.isAudioFocused && !props.audioMuted ? `Mute ${props.dualSide.toLowerCase()} sound` : `Sound on ${props.dualSide.toLowerCase()}: ${props.stream.title}`}
+            aria-pressed={props.isAudioFocused && !props.audioMuted}
+            onClick={() => props.onPresentationAction?.(props.isAudioFocused && !props.audioMuted
+              ? { type: "audio-muted", value: true } : { type: "audio", slug: props.stream.slug })}>
+            {props.dualSide} {props.isAudioFocused && !props.audioMuted ? "🔊 SOUND" : isScoreboard ? "· silent" : "🔇"}
+          </button>}
+          {props.dualSide === "Preview" && props.onPresentationAction && <>
+            <button type="button" aria-label={`Promote ${props.stream.title} to left`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "left", slug: props.stream.slug })}>← L</button>
+            <button type="button" aria-label={`Promote ${props.stream.title} to right`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "right", slug: props.stream.slug })}>R →</button>
+          </>}
+        </span>}
         className={[
           "spotlight-title-bar",
           props.isFocused ? "" : "spotlight-title-bar-secondary",
@@ -188,6 +217,7 @@ function ScreenCard<T>(props: {
             props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary",
           ].join(" ")}
           isAudioFocused={props.isAudioFocused}
+          controlledMuted={props.audioMuted === undefined ? undefined : !props.isAudioFocused || props.audioMuted}
           showStreamSelector={props.showStreamSelector}
           shouldToggleMute={props.shouldToggleMute}
           muteToggleRequestId={props.muteToggleRequestId}
@@ -209,6 +239,7 @@ function ScreenContent<T>(props: {
   indexedTitle: string;
   className: string;
   isAudioFocused: boolean;
+  controlledMuted?: boolean;
   showStreamSelector: boolean;
   shouldToggleMute: boolean;
   muteToggleRequestId: number;
@@ -236,7 +267,8 @@ function ScreenContent<T>(props: {
   const [errorMessage, setErrorMessage] = useState("");
   const [accessError, setAccessError] = useState<StreamProviderBlockedError | null>(null);
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null);
-  const isMuted = useScreenMuted(isAudioFocused, shouldToggleMute, muteToggleRequestId);
+  const localMuted = useScreenMuted(isAudioFocused, shouldToggleMute, muteToggleRequestId);
+  const isMuted = props.controlledMuted ?? localMuted;
   const [refreshRequestId, setRefreshRequestId] = useState(0);
   const [refreshOverride, setRefreshOverride] = useState<{
     sourceStreamKey: string;

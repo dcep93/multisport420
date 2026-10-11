@@ -1,7 +1,8 @@
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export default function ScreenTitleBar(props: {
   label: string;
+  controls?: ReactNode;
   screenNumber?: number;
   className: string;
   onRefresh?: () => Promise<void>;
@@ -141,6 +142,7 @@ export default function ScreenTitleBar(props: {
       }}
     >
       <div className="screen-title-inner">
+        {props.controls}
         {props.screenNumber !== undefined ? <span className="screen-title-hotkey">({props.screenNumber})</span> : null}
         {props.latestBigPlayClock ? <span className="screen-title-clock">{props.latestBigPlayClock}</span> : null}
         <div

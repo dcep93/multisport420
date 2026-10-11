@@ -21,16 +21,16 @@ it("recovers from invalid saved settings", () => {
   expect(renderHook(useViewingPreferences).result.current[0]).toEqual({ layout: "spotlight", showStreamSelector: false });
 });
 
-it("offers six accessible layouts and changes the settings from their controls", () => {
+it("offers twelve accessible layouts and changes the settings from their controls", () => {
   function Controls() {
     const [value, setValue] = useViewingPreferences();
     return <ViewingControls {...value} onLayoutChange={(layout) => setValue({ ...value, layout })}
       onShowStreamSelectorChange={(showStreamSelector) => setValue({ ...value, showStreamSelector })} />;
   }
   const view = render(<Controls />);
-  expect(view.getAllByRole("option")).toHaveLength(6);
+  expect(view.getAllByRole("option")).toHaveLength(12);
   fireEvent.change(view.getByRole("combobox", { name: "Layout" }), { target: { value: "dual" } });
-  expect(view.getByText(/Two main games side by side/)).toBeTruthy();
+  expect(view.getByText(/independent left \/ right placement/)).toBeTruthy();
   fireEvent.click(view.getByRole("checkbox", { name: "Show stream selector" }));
   expect(JSON.parse(localStorage.getItem("multisport420:viewing")!)).toEqual({ layout: "dual", showStreamSelector: true });
 });
