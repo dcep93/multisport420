@@ -51,7 +51,8 @@ type EspnScoredEvent = {
 export type EspnScheduleEvent = {
   id: number;
   startTimeMs: number;
-  normalizedCompetitors: string[];
+  // Keep each team's aliases together so one team cannot satisfy both sides.
+  normalizedCompetitors: string[][];
 };
 
 export const ESPN_SCOREBOARD_ENDPOINTS: Record<EspnSupportedCategory, EspnScoreboardEndpoint> = {
@@ -156,17 +157,16 @@ function parseEspnScoreboardEvents(payloads: unknown[]): EspnScheduleEvent[] {
       const eventId = parseInt(String(event.id ?? ""), 10);
       const competitors =
         event.competitions?.[0]?.competitors
-          ?.map((competitor) => getEspnTeamNames(competitor.team))
-          .flat() ?? [];
+          ?.map((competitor) => getEspnTeamNames(competitor.team)) ?? [];
       const startTimeMs = Date.parse(event.competitions?.[0]?.date ?? event.date ?? "");
 
       if (!Number.isFinite(eventId) || !Number.isFinite(startTimeMs) || competitors.length === 0) {
         return null;
       }
 
-      const normalizedCompetitors = Array.from(
-        new Set(competitors.map(normalizeTeamName).filter(Boolean)),
-      );
+      const normalizedCompetitors = competitors
+        .map((names) => Array.from(new Set(names.map(normalizeTeamName).filter(Boolean))))
+        .filter((names) => names.length > 0);
 
       if (normalizedCompetitors.length === 0) {
         return null;
@@ -272,16 +272,17 @@ function normalizeTeamName(value: string) {
     .trim();
 }
 
-function scoreEspnEventMatch(streamTeams: string[], espnTeams: string[]) {
-  let score = 0;
-
-  for (const streamTeam of streamTeams) {
-    if (espnTeams.some((espnTeam) => teamNamesMatch(streamTeam, espnTeam))) {
-      score += 1;
-    }
-  }
-
-  return score;
+function scoreEspnEventMatch(streamTeams: string[], espnTeams: string[][]) {
+  // Every named team must match a different competitor. A partial match is
+  // insufficient even if this is the closest game by kickoff time.
+  const matchRemainingTeams = (index: number, used: Set<number>): boolean => {
+    if (index === streamTeams.length) return true;
+    return espnTeams.some((aliases, competitorIndex) => {
+      if (used.has(competitorIndex) || !aliases.some((alias) => teamNamesMatch(streamTeams[index], alias))) return false;
+      return matchRemainingTeams(index + 1, new Set([...used, competitorIndex]));
+    });
+  };
+  return matchRemainingTeams(0, new Set()) ? streamTeams.length : 0;
 }
 
 function teamNamesMatch(left: string, right: string) {
@@ -292,9 +293,7 @@ function teamNamesMatch(left: string, right: string) {
   const leftCompact = left.replaceAll(" ", "");
   const rightCompact = right.replaceAll(" ", "");
 
-  if (leftCompact === rightCompact) {
-    return true;
-  }
-
-  return leftCompact.includes(rightCompact) || rightCompact.includes(leftCompact);
+  // Compare complete aliases only: "NE" must not match "Minnesota" or
+  // "New Orleans", nor may a shared city override different team names.
+  return leftCompact === rightCompact;
 }
