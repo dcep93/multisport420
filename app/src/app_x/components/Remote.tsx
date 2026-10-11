@@ -97,7 +97,7 @@ export default function Remote({ roomId }: { roomId: string }) {
         </section>}
         <div ref={reorder.container} className="remote-bubbles" aria-label="Streams" aria-busy={room.status === "connecting"}>
           {streams.map((stream, index) => {
-            const active = stream.slug === (dual ? audible : focused);
+            const active = stream.slug === (dual ? audible : grid ? viewing.audioSlug : focused);
             const side = stream.slug === viewing.leftSlug ? "Left" : stream.slug === viewing.rightSlug ? "Right" : "Preview";
             return (
               <div key={stream.slug} data-reorder-slug={stream.slug}
@@ -111,7 +111,7 @@ export default function Remote({ roomId }: { roomId: string }) {
                 aria-label={dual ? `Sound on ${stream.title}` : active ? `Toggle mute for ${stream.title}` : grid ? `Sound on ${stream.title}` : `Spotlight ${stream.title}`}
                 disabled={!ready || pending || (dual && isFantasyScoreboard(stream))}
                 onClick={() => void send({ type: dual ? "audio" : "select", slug: stream.slug },
-                  dual || grid ? `🔊 ${stream.title}` : active ? "Mute toggled" : `Spotlighting ${stream.title}`)}>
+                  dual ? `🔊 ${stream.title}` : active ? viewing.audioMuted ? "Unmuted" : "Muted" : grid ? `🔊 ${stream.title}` : `Spotlighting ${stream.title}`)}>
                 <span className="remote-number">{index + 1}</span>
                 <span className="remote-stream-name">{stream.title}</span>
                 <span className="remote-bubble-caption">{dual ? `${side} · ${stream.slug === audible ? "🔊" : "🔇"}` : grid ? stream.slug === audible ? "🔊" : "" : active ? "Spotlight" : ""}</span>

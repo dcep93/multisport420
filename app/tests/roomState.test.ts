@@ -77,6 +77,14 @@ describe("shared layout, placement, and audio", () => {
 });
 
 describe("shared keyboard and remote actions", () => {
+  it("mutes the audible grid game after reordering even when spotlight focus belongs to another game", () => {
+    const grid: RoomState = { ...initial, layout: "grid", audioSlug: "b", audioMuted: false };
+    const moved = reduceRoom(grid, { type: "reorder", slug: "b", targetSlug: "a" }, "reorder");
+    const muted = reduceRoom(moved, { type: "select", slug: "b" }, "mute");
+    expect(muted).toMatchObject({ focusedSlug: "b", audioSlug: "b", audioMuted: true });
+    expect(muted.streams.map(s => s.slug)).toEqual(["b", "a"]);
+    expect(reduceRoom(muted, { type: "select", slug: "b" }, "unmute").audioMuted).toBe(false);
+  });
   it("reorders grid positions without changing sound, focus, or concurrent streams", () => {
     const c = { ...a, slug: "c" };
     const grid: RoomState = { ...initial, streams: [a, b, c], layout: "grid", audioSlug: "b", audioMuted: true };

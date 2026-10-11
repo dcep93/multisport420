@@ -124,8 +124,9 @@ export function reduceRoom(room: RoomState, action: RoomAction, commandId: strin
     case "select":
     case "focus":
       if (!room.streams.some((stream) => stream.slug === action.slug)) return room;
-      if (action.type === "select" && action.slug === room.focusedSlug && action.slug === presentation.audioSlug) {
-        return { ...room, ...presentation, audioMuted: !presentation.audioMuted, command: { id: commandId, type: "mute", slug: action.slug } };
+      if (action.type === "select" && action.slug === presentation.audioSlug
+        && (presentation.layout === "grid" || action.slug === room.focusedSlug)) {
+        return { ...room, ...presentation, focusedSlug: action.slug, audioMuted: !presentation.audioMuted, command: { id: commandId, type: "mute", slug: action.slug } };
       }
       return { ...room, ...presentation, focusedSlug: action.slug,
         ...(presentation.layout === "dual" && action.slug !== presentation.leftSlug && action.slug !== presentation.rightSlug

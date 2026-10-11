@@ -86,7 +86,7 @@ export default function Multiscreen<T>(props: {
             showStreamSelector={props.showStreamSelector ?? false}
             displayLogs={displayLogs}
             logDelayMs={props.logDelayMs}
-            isFocused={stream.slug === focusedStream?.slug}
+            isFocused={stream.slug === (layout === "grid" ? audioSlug : focusedStream?.slug)}
             isAudioFocused={stream.slug === audioSlug}
             shouldRefreshLog={stream.slug === props.logRefreshSlug}
             logRefreshRequestId={props.logRefreshRequestId}

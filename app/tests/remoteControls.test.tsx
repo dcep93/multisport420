@@ -62,6 +62,19 @@ it("offers grid-only keyboard reordering without selecting or muting a game", as
   expect((view.getByRole("button", { name: "Reorder Game A" }) as HTMLButtonElement).disabled).toBe(true);
 });
 
+it("highlights and toggles the audio game after a grid reorder, independently of old spotlight focus", async () => {
+  connection.room = { ...connection.room!, layout: "grid", audioSlug: "b", focusedSlug: "a" };
+  const view = render(<Remote roomId="test" />);
+  expect(view.getByRole("button", { name: "Toggle mute for Game B" }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.keyDown(view.getByRole("button", { name: "Reorder Game B" }), { key: "ArrowLeft" });
+  await waitFor(() => expect(connection.room?.streams[0].slug).toBe("b"));
+  fireEvent.click(view.getByRole("button", { name: "Toggle mute for Game B" }));
+  await waitFor(() => expect(connection.room?.audioMuted).toBe(true));
+  fireEvent.click(view.getByRole("button", { name: "Toggle mute for Game B" }));
+  await waitFor(() => expect(connection.room?.audioMuted).toBe(false));
+  expect(connection.room?.audioSlug).toBe("b");
+});
+
 it.each(["mouse", "touch"])("reorders with a %s drag and cancels an outside drop", async (pointerType) => {
   vi.stubGlobal("PointerEvent", class extends MouseEvent {
     pointerId = 1; isPrimary = true; pointerType = pointerType;

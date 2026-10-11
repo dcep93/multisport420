@@ -154,6 +154,28 @@ it("reorders grid cells without moving iframe nodes or changing audio", async ()
   expect(container.querySelectorAll('[data-audible="true"]')).toHaveLength(1);
 });
 
+it("keeps grid mute and audio transfers working after reorder when spotlight focus differs", async () => {
+  const { rerender, frameA, frameB, audioA, audioB, container } = await setup();
+  let state: RoomState = { streams: base.streams, layout: "grid", focusedSlug: "a", audioSlug: "b", audioMuted: false, displayLogs: false, command: null };
+  const show = () => rerender(<Multiscreen {...base} streams={state.streams} layout="grid" focusedSlug={state.focusedSlug} presentation={presentationOf(state)} />);
+  show();
+  expect(frameB.closest("article")!.classList.contains("is-focused")).toBe(true);
+  state = reduceRoom(state, { type: "reorder", slug: "b", targetSlug: "a" }, "order"); show();
+  state = reduceRoom(state, { type: "select", slug: "b" }, "mute"); show();
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+  state = reduceRoom(state, { type: "select", slug: "b" }, "unmute"); show();
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(false));
+  audioA.mockClear(); audioB.mockClear();
+  state = reduceRoom(state, { type: "select", slug: "a" }, "transfer"); show();
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+  expect(audioA).toHaveBeenLastCalledWith(...muteMessage(false));
+  expect(audioB.mock.invocationCallOrder[0]).toBeLessThan(audioA.mock.invocationCallOrder[0]);
+  state = reduceRoom(state, { type: "audio-muted", value: true }, "all"); show();
+  expect(audioA).toHaveBeenLastCalledWith(...muteMessage(true));
+  expect(container.querySelectorAll('[data-audible="true"]')).toHaveLength(0);
+  expect(Array.from(container.querySelectorAll("iframe"))).toEqual([frameA, frameB]);
+});
+
 it.each(VIEWING_LAYOUTS)("mutes before transferring audio in $label, including reverse tile order", async ({ id: layout }) => {
   const { rerender, audioA, audioB, container } = await setup();
   for (const slug of [b.slug, a.slug]) {
