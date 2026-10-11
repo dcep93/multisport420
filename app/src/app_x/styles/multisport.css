@@ -931,7 +931,7 @@ html:has(.multisport-shell)::-webkit-scrollbar,
 }
 
 .dual-title-controls { display: flex; align-items: center; gap: 3px; flex: none; }
-.dual-title-controls button { padding: 3px 5px; border: 1px solid #ffffff30; border-radius: 4px; background: #211e1b; color: white; font: 700 10px system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.dual-title-controls button { display: inline-grid; place-items: center; width: 22px; height: 20px; padding: 0; border: 1px solid #ffffff30; border-radius: 4px; background: #211e1b; color: white; font: 700 10px system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
 .dual-title-controls button[aria-pressed="true"] { background: var(--ww-audio-bg); color: var(--ww-text-strong); border-color: var(--ww-audio-border); }
 .dual-title-controls button:disabled { cursor: default; opacity: .65; }
 .screen-layout-dual .screen-card[data-audible="true"] .screen-title-bar-shell[data-indicator="none"] { background: var(--ww-audio-bg); box-shadow: inset 0 -1px var(--ww-audio-border); }

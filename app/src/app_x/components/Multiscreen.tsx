@@ -155,15 +155,16 @@ function ScreenCard<T>(props: {
         controls={props.dualSide && <span className="dual-title-controls" onClick={(event) => event.stopPropagation()}>
           {(props.dualSide !== "Preview" || props.isAudioFocused) && <button type="button" className="dual-audio-button"
             disabled={isScoreboard || !props.onPresentationAction}
+            title={isScoreboard ? "No audio" : props.isAudioFocused && !props.audioMuted ? `Mute ${props.dualSide.toLowerCase()}` : `Listen to ${props.dualSide.toLowerCase()}`}
             aria-label={isScoreboard ? `${props.dualSide} scoreboard has no audio` : props.isAudioFocused && !props.audioMuted ? `Mute ${props.dualSide.toLowerCase()} sound` : `Sound on ${props.dualSide.toLowerCase()}: ${props.stream.title}`}
             aria-pressed={props.isAudioFocused && !props.audioMuted}
             onClick={() => props.onPresentationAction?.(props.isAudioFocused && !props.audioMuted
               ? { type: "audio-muted", value: true } : { type: "audio", slug: props.stream.slug })}>
-            {props.dualSide} <span aria-hidden="true">{props.isAudioFocused && !props.audioMuted ? "🔊" : "🔇"}</span>
+            <span aria-hidden="true">{props.isAudioFocused && !props.audioMuted ? "🔊" : "🔇"}</span>
           </button>}
           {props.dualSide === "Preview" && props.onPresentationAction && <>
-            <button type="button" aria-label={`Promote ${props.stream.title} to left`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "left", slug: props.stream.slug })}>← L</button>
-            <button type="button" aria-label={`Promote ${props.stream.title} to right`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "right", slug: props.stream.slug })}>R →</button>
+            <button type="button" title="Promote to left" aria-label={`Promote ${props.stream.title} to left`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "left", slug: props.stream.slug })}><span aria-hidden="true">←</span></button>
+            <button type="button" title="Promote to right" aria-label={`Promote ${props.stream.title} to right`} onClick={() => props.onPresentationAction?.({ type: "promote", side: "right", slug: props.stream.slug })}><span aria-hidden="true">→</span></button>
           </>}
         </span>}
         className={[
