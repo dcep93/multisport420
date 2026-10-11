@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type Ref } from "react";
+import { useCallback, useEffect, useLayoutEffect, useState, type CSSProperties, type Ref } from "react";
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
 import StreamLog from "../lib/renderLog";
@@ -9,9 +9,12 @@ import { isFantasyScoreboard } from "../lib/fantasyScoreboard";
 import FantasyScoreboard from "./FantasyScoreboard";
 import StreamProviderAccess from "./StreamProviderAccess";
 import { StreamProviderBlockedError } from "../lib/streamProviderAccess";
+import { arrangeScreens, type ViewingLayout } from "../lib/viewingLayouts";
 
 export default function Multiscreen<T>(props: {
   containerRef?: Ref<HTMLElement>;
+  layout?: ViewingLayout;
+  showStreamSelector?: boolean;
   host: Host<T>;
   streams: Stream[];
   displayLogs: boolean;
@@ -25,7 +28,8 @@ export default function Multiscreen<T>(props: {
   onRemove: (streamSlug: StreamSlug) => void;
   onFocus: (streamSlug: StreamSlug) => void;
 }) {
-  const { containerRef, displayLogs, focusedSlug, host, onFocus, onRemove, streams } = props;
+  const { containerRef, focusedSlug, host, onFocus, onRemove, streams, layout = "spotlight" } = props;
+  const displayLogs = props.displayLogs && layout === "spotlight";
   const focusedStream =
     streams.find((stream) => stream.slug === focusedSlug) ?? streams[0];
   const [lastAudioSlug, setLastAudioSlug] = useState<StreamSlug>();
@@ -35,17 +39,23 @@ export default function Multiscreen<T>(props: {
     : streams.find((stream) => stream.slug === lastAudioSlug && !isFantasyScoreboard(stream));
   const audioSlug = audioStream?.slug;
   if (lastAudioSlug !== audioSlug) setLastAudioSlug(audioSlug);
-  const secondaryCount = Math.max(1, streams.length - 1);
+  const [pair, setPair] = useState({ primary: focusedStream?.slug, companion: streams.find((stream) => stream !== focusedStream)?.slug });
+  let companionSlug = pair.companion;
+  if (pair.primary !== focusedStream?.slug) {
+    companionSlug = pair.primary;
+    setPair({ primary: focusedStream?.slug, companion: companionSlug });
+  }
+  const companion = streams.find((stream) => stream.slug === companionSlug && stream !== focusedStream)
+    ?? streams.find((stream) => stream !== focusedStream);
+  const ordered = layout === "grid" ? streams : [focusedStream, ...(layout === "dual" && companion ? [companion] : []),
+    ...streams.filter((stream) => stream !== focusedStream && (layout !== "dual" || stream !== companion))];
+  const arrangement = arrangeScreens(layout, streams.length);
 
   return (
     <section ref={containerRef} className="multiscreen-column">
       <div
-        className={streams.length === 1 ? "screen-layout screen-layout-solo" : "screen-layout"}
-        style={
-          {
-            "--screen-columns": secondaryCount,
-          } as CSSProperties
-        }
+        className={`screen-layout screen-layout-${layout}${streams.length === 1 ? " screen-layout-solo" : ""}`}
+        style={arrangement.grid}
       >
         {streams.map((stream, index) => (
           <ScreenCard
@@ -53,6 +63,9 @@ export default function Multiscreen<T>(props: {
             host={host}
             stream={stream}
             streamIndex={index}
+            placement={arrangement.cells[ordered.indexOf(stream)]}
+            isProminent={stream === focusedStream || (layout === "dual" && stream === companion)}
+            showStreamSelector={props.showStreamSelector ?? false}
             displayLogs={displayLogs}
             logDelayMs={props.logDelayMs}
             isFocused={stream.slug === focusedStream?.slug}
@@ -76,6 +89,9 @@ function ScreenCard<T>(props: {
   host: Host<T>;
   stream: Stream;
   streamIndex: number;
+  placement: CSSProperties;
+  isProminent: boolean;
+  showStreamSelector: boolean;
   displayLogs: boolean;
   logDelayMs: number;
   isFocused: boolean;
@@ -109,6 +125,9 @@ function ScreenCard<T>(props: {
 
   return (
     <article
+      style={props.placement}
+      data-audio-focused={props.isAudioFocused}
+      data-prominent={props.isProminent}
       className={[
         "screen-card",
         props.isFocused ? "screen-card-spotlight is-focused" : "screen-card-secondary",
@@ -154,7 +173,7 @@ function ScreenCard<T>(props: {
           </div>
         ) : null}
         {isScoreboard ? <FantasyScoreboard
-          spotlight={props.isFocused}
+          spotlight={props.isProminent}
           indexedTitle={indexedTitle}
           className={`screen-focus ${props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary"}`}
           onClick={props.isFocused ? undefined : props.onFocus}
@@ -169,6 +188,7 @@ function ScreenCard<T>(props: {
             props.isFocused ? "screen-focus-spotlight" : "screen-focus-secondary",
           ].join(" ")}
           isAudioFocused={props.isAudioFocused}
+          showStreamSelector={props.showStreamSelector}
           shouldToggleMute={props.shouldToggleMute}
           muteToggleRequestId={props.muteToggleRequestId}
           onRefreshStream={props.onRefreshStream}
@@ -189,6 +209,7 @@ function ScreenContent<T>(props: {
   indexedTitle: string;
   className: string;
   isAudioFocused: boolean;
+  showStreamSelector: boolean;
   shouldToggleMute: boolean;
   muteToggleRequestId: number;
   onRefreshStream: (streamSlug: StreamSlug) => Promise<Stream | null>;
@@ -294,20 +315,24 @@ function ScreenContent<T>(props: {
     resolvedStream.title,
   ]);
 
-  useEffect(() => {
-    if (!iframeElement) {
-      return;
-    }
-
-    iframeElement.contentWindow?.postMessage(
-      {
-        source: "multisport420-app",
-        type: "multisport420:set-muted",
-        muted: isMuted,
-      },
-      "*",
-    );
+  // Mute the previous player before any passive effect unmutes the next one,
+  // independent of tile order or which layout is currently visible.
+  useLayoutEffect(() => {
+    if (isMuted) iframeElement?.contentWindow?.postMessage({
+      source: "multisport420-app", type: "multisport420:set-muted", muted: true,
+    }, "*");
   }, [iframeElement, isMuted]);
+  useEffect(() => {
+    if (!isMuted) iframeElement?.contentWindow?.postMessage({
+      source: "multisport420-app", type: "multisport420:set-muted", muted: false,
+    }, "*");
+  }, [iframeElement, isMuted]);
+
+  useEffect(() => {
+    iframeElement?.contentWindow?.postMessage({
+      source: "multisport420-app", type: "multisport420:set-stream-selector", visible: props.showStreamSelector,
+    }, "*");
+  }, [iframeElement, props.showStreamSelector]);
 
   return (
     <div className={className}>
@@ -333,11 +358,11 @@ function ScreenContent<T>(props: {
           loading="eager"
           referrerPolicy="no-referrer"
           ref={setIframeElement}
-          onLoad={(event) => event.currentTarget.contentWindow?.postMessage({
-            source: "multisport420-app",
-            type: "multisport420:set-muted",
-            muted: isMuted,
-          }, "*")}
+          onLoad={(event) => {
+            const player = event.currentTarget.contentWindow;
+            player?.postMessage({ source: "multisport420-app", type: "multisport420:set-stream-selector", visible: props.showStreamSelector }, "*");
+            player?.postMessage({ source: "multisport420-app", type: "multisport420:set-muted", muted: isMuted }, "*");
+          }}
         />
       )}
     </div>

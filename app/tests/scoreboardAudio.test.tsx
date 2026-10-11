@@ -3,6 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import Multiscreen from "../src/app_x/components/Multiscreen";
 import { FANTASY_SCOREBOARD } from "../src/app_x/lib/fantasyScoreboard";
+import { VIEWING_LAYOUTS } from "../src/app_x/lib/viewingLayouts";
 
 vi.mock("../src/app_x/hooks/useStreamLog", () => ({ useStreamLog: () => ({}) }));
 vi.mock("../src/app_x/components/FantasyScoreboard", () => ({ default: () => <div>Scoreboard</div> }));
@@ -82,4 +83,42 @@ it("starts silently with the scoreboard and does not choose another audio source
   expect(audioB).not.toHaveBeenCalled();
   fireEvent.load(frameB);
   expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+});
+
+it("switches all six layouts and selectors without reloading players or changing audio", async () => {
+  const { rerender, frameA, frameB, audioA, audioB, container } = await setup();
+  const src = frameA.srcdoc;
+  for (const { id: layout } of VIEWING_LAYOUTS) {
+    audioA.mockClear(); audioB.mockClear();
+    rerender(<Multiscreen {...base} layout={layout} focusedSlug={a.slug} />);
+    expect(container.querySelectorAll("iframe")[0]).toBe(frameA);
+    expect(container.querySelectorAll("iframe")[1]).toBe(frameB);
+    expect(frameA.srcdoc).toBe(src);
+    expect(audioA).not.toHaveBeenCalled();
+    expect(audioB).not.toHaveBeenCalled();
+    expect(container.querySelectorAll('[data-audio-focused="true"]')).toHaveLength(1);
+    if (layout === "dual") expect(container.querySelectorAll('[data-prominent="true"]')).toHaveLength(2);
+  }
+  rerender(<Multiscreen {...base} layout="dual" showStreamSelector focusedSlug={a.slug} />);
+  expect(audioA).toHaveBeenLastCalledWith({ source: "multisport420-app", type: "multisport420:set-stream-selector", visible: true }, "*");
+  expect(frameA.srcdoc).toBe(src);
+  fireEvent.load(frameA);
+  expect(audioA).toHaveBeenLastCalledWith(...muteMessage(false));
+  fireEvent.load(frameB);
+  expect(audioB).toHaveBeenLastCalledWith(...muteMessage(true));
+});
+
+it.each(VIEWING_LAYOUTS)("mutes before transferring audio in $label, including reverse tile order", async ({ id: layout }) => {
+  const { rerender, audioA, audioB, container } = await setup();
+  for (const slug of [b.slug, a.slug]) {
+    audioA.mockClear(); audioB.mockClear();
+    rerender(<Multiscreen {...base} layout={layout} displayLogs focusedSlug={slug} />);
+    const muted = slug === a.slug ? audioB : audioA;
+    const audible = slug === a.slug ? audioA : audioB;
+    expect(muted).toHaveBeenLastCalledWith(...muteMessage(true));
+    expect(audible).toHaveBeenLastCalledWith(...muteMessage(false));
+    expect(muted.mock.invocationCallOrder[0]).toBeLessThan(audible.mock.invocationCallOrder[0]);
+    expect(container.querySelectorAll('[data-audio-focused="true"]')).toHaveLength(1);
+    if (layout !== "spotlight") expect(container.querySelector(".log-panel")).toBeNull();
+  }
 });

@@ -59,6 +59,10 @@ function scrollLockScriptRunner() {
     };
 
     window.addEventListener("message", (event) => {
+      if (event.source === window.parent && event.data?.source === APP_MESSAGE_SOURCE && event.data?.type === "multisport420:set-stream-selector") {
+        document.body.classList.toggle("show-stream-selector", event.data.visible === true);
+        return;
+      }
       // document_idle controllers may start after the promotion/load command.
       if (event.data?.source === APP_MESSAGE_SOURCE && event.data?.type === AUDIO_READY) {
         if (playerFrame instanceof HTMLIFrameElement && event.source === playerFrame.contentWindow && lastSetMutedMessage) {
@@ -114,7 +118,9 @@ export function renderIstreameastPlayerDocument(iframeParams: IframeParams): Rea
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <script dangerouslySetInnerHTML={{ __html: scrollLockScript }} />
         {hasAlternatives && <style>{`
-          .stream-options { height:36px; display:flex; align-items:center; gap:6px; padding:0 8px; box-sizing:border-box; overflow-x:auto; white-space:nowrap; font:12px system-ui,sans-serif; color:#ddd; background:#181818; }
+          .stream-options { height:36px; display:none; align-items:center; gap:6px; padding:0 8px; box-sizing:border-box; overflow-x:auto; white-space:nowrap; font:12px system-ui,sans-serif; color:#ddd; background:#181818; }
+          .show-stream-selector .stream-options { display:flex; }
+          .show-stream-selector #multisport-player-frame { top:36px !important; height:calc(100% - 36px) !important; }
           .stream-options button { border:1px solid #555; border-radius:4px; padding:3px 9px; background:#292929; color:#fff; cursor:pointer; white-space:nowrap; }
           .stream-options button[aria-pressed="true"] { background:#725c16; border-color:#d7b645; }
           .stream-options button:focus-visible { outline:2px solid #fff; outline-offset:1px; }
@@ -148,10 +154,10 @@ export function renderIstreameastPlayerDocument(iframeParams: IframeParams): Rea
             overflow: "hidden",
             overflowX: "hidden",
             overflowY: "hidden",
-            height: hasAlternatives ? "calc(100% - 36px)" : "100%",
+            height: "100%",
             width: "100%",
             position: "absolute",
-            top: hasAlternatives ? 36 : 0,
+            top: 0,
             left: 0,
             right: 0,
             bottom: 0,

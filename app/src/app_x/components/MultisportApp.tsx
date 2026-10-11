@@ -9,6 +9,8 @@ import Multiscreen from "./Multiscreen";
 import { filterStreamsByCategory, getDefaultCategory } from "./optionsShared";
 import PasswordGate from "./PasswordGate";
 import RoomControls from "./RoomControls";
+import ViewingControls from "./ViewingControls";
+import { useViewingPreferences } from "../hooks/useViewingPreferences";
 import { hasMultisport420Extension, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const IS_DEV = import.meta.env.DEV;
@@ -35,6 +37,7 @@ export default function MultisportApp() {
   const [logRefreshSlug, setLogRefreshSlug] = useState<StreamSlug>("");
   const [logRefreshRequestId, setLogRefreshRequestId] = useState(0);
   const [localDisplayLogs, setDisplayLogs] = useState(true);
+  const [viewing, setViewing] = useViewingPreferences();
   const [logDelayMs, setLogDelayMs] = useState(30_000);
   const streams = filterStreamsByCategory(allStreams, category, multisport420Installed);
   const room = useRoom((command) => {
@@ -229,6 +232,7 @@ export default function MultisportApp() {
     setStreamReloadKey((current) => current + 1);
     setFocusedSlug("");
     setDisplayLogs(true);
+    setViewing({ layout: "spotlight", showStreamSelector: false });
     setSelectedSlugs([]);
     hasScrolledFromInitialHashRef.current = false;
   }
@@ -247,6 +251,9 @@ export default function MultisportApp() {
   return (
     <main className="multisport-shell">
       <Menu
+        viewingControls={<ViewingControls {...viewing}
+          onLayoutChange={(layout) => setViewing((current) => ({ ...current, layout }))}
+          onShowStreamSelectorChange={(showStreamSelector) => setViewing((current) => ({ ...current, showStreamSelector }))} />}
         roomControls={<RoomControls room={room} disabled={allStreams === null}
           onJoin={(id) => {
             // Keep the current players mounted while switching rooms, and keep
@@ -285,6 +292,8 @@ export default function MultisportApp() {
       />
       {selectedStreams.length > 0 ? (
         <Multiscreen
+          layout={viewing.layout}
+          showStreamSelector={viewing.showStreamSelector}
           containerRef={multiscreenRef}
           host={HOST}
           streams={selectedStreams}

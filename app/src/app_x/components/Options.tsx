@@ -36,6 +36,7 @@ function formatApproximateSize(sizeBytes: number) {
 
 export default function Options(props: {
   roomControls?: ReactNode;
+  viewingControls?: ReactNode;
   category: Category;
   categories: readonly StreamCategory[];
   onCategoryChange: (value: Category) => void;
@@ -133,6 +134,7 @@ export default function Options(props: {
           />
         </div>
       </div>
+      {props.viewingControls}
       {props.roomControls}
     </section>
   );

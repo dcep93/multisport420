@@ -5,7 +5,8 @@ export default function Guide() {
       <ol className="guide-list">
         <li>This app is used to watch multiple screens at once.</li>
         <li>Click a stream to place it on the multiscreen.</li>
-        <li>Click a tile in the multiscreen to move it to the spotlight.</li>
+        <li>Click a tile to focus that game and select its audio. In Grid wall, tiles stay in place.</li>
+        <li>Choose a layout or show the Stream 1 / Stream 2 selector in Options, beside Phone remote.</li>
         <li>Click a screen title in the multiscreen to remove it.</li>
         <li>This app has popups, often NSFW. I am trying to fix it.</li>
         <li>

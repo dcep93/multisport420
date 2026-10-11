@@ -9,6 +9,7 @@ const MOBILE_MENU_BREAKPOINT_PX = 960;
 
 export default function Menu(props: {
   roomControls?: ReactNode;
+  viewingControls?: ReactNode;
   category: Category;
   categories: readonly StreamCategory[];
   streams: Stream[];
@@ -76,6 +77,7 @@ export default function Menu(props: {
       <Guide />
       <Options
         roomControls={props.roomControls}
+        viewingControls={props.viewingControls}
         category={props.category}
         categories={props.categories}
         displayLogs={props.displayLogs}

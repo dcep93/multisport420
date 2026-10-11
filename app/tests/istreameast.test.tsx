@@ -76,12 +76,28 @@ describe("StreamEast source compatibility", () => {
       document.dispatchEvent(new window.Event("DOMContentLoaded"));
       const frame = document.querySelector("iframe")!;
       const buttons = document.querySelectorAll("button");
+      const selector = document.querySelector<HTMLElement>(".stream-options")!;
+      expect(window.getComputedStyle(selector).display).toBe("none");
+      expect(frame.style.height).toBe("100%");
+      const showSelector = (visible: boolean, source: Window | null = window.parent as unknown as Window) => {
+        window.dispatchEvent(new window.MessageEvent("message", {
+          source, data: { source: "multisport420-app", type: "multisport420:set-stream-selector", visible },
+        }));
+      };
+      showSelector(true, null);
+      expect(window.getComputedStyle(selector).display).toBe("none");
+      showSelector(true);
+      expect(window.getComputedStyle(selector).display).toBe("flex");
       buttons[1].click();
       expect(frame.src).toBe(second);
       expect(buttons[1].getAttribute("aria-pressed")).toBe("true");
       expect(buttons[0].getAttribute("aria-pressed")).toBe("false");
       const preferenceKey = "multisport420:stream:https://streamseaste.cx/game";
       expect(window.localStorage.getItem(preferenceKey)).toBe(second);
+      showSelector(false);
+      expect(window.getComputedStyle(selector).display).toBe("none");
+      expect(document.querySelector("iframe")).toBe(frame);
+      expect(frame.src).toBe(second);
       const postMessage = vi.spyOn(frame.contentWindow!, "postMessage");
       const message = { source: "multisport420-app", type: "multisport420:set-muted", muted: true };
       window.dispatchEvent(new window.MessageEvent("message", { data: message }));
