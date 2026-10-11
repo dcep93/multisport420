@@ -12,14 +12,16 @@ export default function Autoscroller({ children, paused, resetKey }: {
 }) {
   const stripRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(paused);
-  pausedRef.current = paused;
+  useLayoutEffect(() => { pausedRef.current = paused; }, [paused]);
 
   useLayoutEffect(() => {
     const strip = stripRef.current!;
     const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let reducedMotion = media?.matches ?? false;
     let hovered = strip.matches(":hover");
-    let focused = strip.contains(document.activeElement);
+    // Mouse clicks also focus scrollable regions. Only keyboard focus should
+    // pause indefinitely; otherwise moving the pointer away never resumes.
+    let focused = strip.contains(document.activeElement) && Boolean(document.activeElement?.matches(":focus-visible"));
     let dragging = false;
     let position = 0;
     let lastWritten = 0;
@@ -46,14 +48,17 @@ export default function Autoscroller({ children, paused, resetKey }: {
     };
     const onEnter = () => { hovered = true; };
     const onLeave = () => { hovered = false; interact(); };
-    const onFocus = () => { focused = true; };
+    const onFocus = () => {
+      focused = strip.contains(document.activeElement) && Boolean(document.activeElement?.matches(":focus-visible"));
+    };
     const onBlur = (event: FocusEvent) => {
       if (!strip.contains(event.relatedTarget as Node | null)) {
         focused = false;
         interact();
       }
     };
-    const onPointerDown = () => { dragging = true; interact(); };
+    const onPointerDown = () => { focused = false; dragging = true; interact(); };
+    const onKeyDown = () => { focused = strip.contains(document.activeElement); interact(); };
     const onPointerUp = () => {
       if (dragging) { dragging = false; interact(); }
     };
@@ -106,7 +111,7 @@ export default function Autoscroller({ children, paused, resetKey }: {
     strip.addEventListener("focusout", onBlur);
     strip.addEventListener("wheel", interact, { passive: true });
     strip.addEventListener("touchmove", interact, { passive: true });
-    strip.addEventListener("keydown", interact);
+    strip.addEventListener("keydown", onKeyDown);
     strip.addEventListener("pointerdown", onPointerDown);
     strip.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pointerup", onPointerUp);
@@ -124,7 +129,7 @@ export default function Autoscroller({ children, paused, resetKey }: {
       strip.removeEventListener("focusout", onBlur);
       strip.removeEventListener("wheel", interact);
       strip.removeEventListener("touchmove", interact);
-      strip.removeEventListener("keydown", interact);
+      strip.removeEventListener("keydown", onKeyDown);
       strip.removeEventListener("pointerdown", onPointerDown);
       strip.removeEventListener("scroll", onScroll);
       window.removeEventListener("pointerup", onPointerUp);

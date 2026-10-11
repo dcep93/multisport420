@@ -36,7 +36,7 @@ export default function ScreenTitleBar(props: {
     let previousTime: number | undefined;
     let holdUntil: number | undefined;
     let hovered = shell.matches(":hover");
-    let focused = shell.contains(document.activeElement);
+    let focused = shell.contains(document.activeElement) && Boolean(document.activeElement?.matches(":focus-visible"));
 
     const stop = () => {
       if (frame !== undefined) cancelAnimationFrame(frame);
@@ -77,7 +77,13 @@ export default function ScreenTitleBar(props: {
     };
     const enter = () => { hovered = true; stop(); };
     const leave = () => { hovered = false; start(); };
-    const focus = () => { focused = true; stop(); };
+    const focus = () => {
+      focused = shell.contains(document.activeElement) && Boolean(document.activeElement?.matches(":focus-visible"));
+      if (focused) stop();
+      else start();
+    };
+    const pointerDown = () => { focused = false; start(); };
+    const keyDown = () => { focused = shell.contains(document.activeElement); if (focused) stop(); };
     const blur = (event: FocusEvent) => {
       focused = event.relatedTarget instanceof Node && shell.contains(event.relatedTarget);
       if (!focused) start();
@@ -90,6 +96,8 @@ export default function ScreenTitleBar(props: {
     shell.addEventListener("pointerleave", leave);
     shell.addEventListener("focusin", focus);
     shell.addEventListener("focusout", blur);
+    shell.addEventListener("pointerdown", pointerDown);
+    shell.addEventListener("keydown", keyDown);
     window.addEventListener("resize", measure);
     reducedMotion?.addEventListener("change", motionChange);
     measure();
@@ -100,6 +108,8 @@ export default function ScreenTitleBar(props: {
       shell.removeEventListener("pointerleave", leave);
       shell.removeEventListener("focusin", focus);
       shell.removeEventListener("focusout", blur);
+      shell.removeEventListener("pointerdown", pointerDown);
+      shell.removeEventListener("keydown", keyDown);
       window.removeEventListener("resize", measure);
       reducedMotion?.removeEventListener("change", motionChange);
     };

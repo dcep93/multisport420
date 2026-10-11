@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import ScreenTitleBar from "../src/app_x/components/ScreenTitleBar";
 
 let notifyResize: () => void;
@@ -26,7 +26,7 @@ beforeEach(() => {
   vi.stubGlobal("matchMedia", vi.fn(() => motion));
 });
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 function overflow(container: HTMLElement) {
   const viewport = container.querySelector<HTMLDivElement>(".screen-title-viewport")!;
@@ -143,9 +143,30 @@ describe("Screen title bar", () => {
     motion.matches = false;
     notifyResize();
     expect(frames.size).toBe(1);
-    fireEvent.focusIn(viewport);
+    vi.spyOn(viewport, "matches").mockImplementation(selector => selector === ":focus-visible");
+    act(() => viewport.focus());
     expect(frames.size).toBe(0);
   });
+});
+
+it("resumes after pointer focus, including a focused refresh button, but pauses for keyboard use", () => {
+  const { container } = render(<ScreenTitleBar className="" label="A long game title" onRefresh={async () => {}} />);
+  const viewport = overflow(container);
+  const shell = container.firstElementChild!;
+  const refresh = screen.getByRole("button", { name: "Refresh screen A long game title" });
+  vi.spyOn(refresh, "matches").mockReturnValue(false);
+  fireEvent.pointerEnter(shell);
+  fireEvent.pointerDown(refresh);
+  act(() => refresh.focus());
+  fireEvent.pointerLeave(shell);
+  expect(document.activeElement).toBe(refresh);
+  tick(0);
+  for (let time = 1800; time <= 2800; time += 50) tick(time);
+  expect(viewport.scrollLeft).toBeGreaterThan(15);
+  fireEvent.keyDown(refresh, { key: "ArrowRight" });
+  expect(frames.size).toBe(0);
+  fireEvent.pointerDown(refresh);
+  expect(frames.size).toBe(1);
 });
 
 it("stays paused when possession changes while the title is hovered", () => {

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
+import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import Autoscroller from "../../src/app_x/scoreboard/Autoscroller";
@@ -133,12 +133,33 @@ it("pauses for hover and focus, then leaves time to read before resuming", () =>
   advance(2500);
   expect(strip.scrollLeft).toBeCloseTo(100);
   advance(1000);
-  fireEvent.focusIn(strip);
+  vi.spyOn(strip, "matches").mockImplementation(selector => selector === ":focus-visible");
+  act(() => strip.focus());
   advance(10000);
   expect(strip.scrollLeft).toBeCloseTo(200);
-  fireEvent.focusOut(strip);
+  act(() => strip.blur());
   advance(3500);
   expect(strip.scrollLeft).toBeCloseTo(300);
+});
+
+it("resumes after a mouse click leaves focus behind, while keyboard navigation still pauses", () => {
+  const { strip } = mount();
+  vi.spyOn(strip, "matches").mockReturnValue(false); // Pointer focus is not :focus-visible.
+  fireEvent.mouseEnter(strip);
+  fireEvent.pointerDown(strip);
+  act(() => strip.focus());
+  fireEvent.pointerUp(window);
+  fireEvent.mouseLeave(strip);
+  expect(document.activeElement).toBe(strip);
+  advance(6000);
+  expect(strip.scrollLeft).toBeCloseTo(100);
+  fireEvent.keyDown(strip, { key: "ArrowRight" });
+  advance(10000);
+  expect(strip.scrollLeft).toBeCloseTo(100);
+  fireEvent.pointerDown(strip);
+  fireEvent.pointerUp(window);
+  advance(3500);
+  expect(strip.scrollLeft).toBeCloseTo(200);
 });
 
 it.each(["wheel", "keydown", "touchmove", "scroll"])("respects manual %s with a fresh reading hold", (eventName) => {
