@@ -1,0 +1,472 @@
+{
+  "header": {
+    "competitions": [
+      {
+        "competitors": [
+          {
+            "homeAway": "home",
+            "team": {
+              "id": "8",
+              "name": "Brewers"
+            }
+          },
+          {
+            "homeAway": "away",
+            "team": {
+              "id": "19",
+              "name": "Dodgers"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "plays": [
+    {
+      "id": "4019080310906001157",
+      "type": {
+        "id": "57",
+        "text": "Play Result",
+        "type": "play-result"
+      },
+      "text": "Stewart relieved Bubic",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 0,
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:09:35Z"
+    },
+    {
+      "id": "4019080310906010001",
+      "type": {
+        "id": "1",
+        "text": "Start Batter/Pitcher",
+        "alternativeText": "Now at bat",
+        "type": "start-batterpitcher"
+      },
+      "text": "Brock Stewart pitches to Cooper Pratt",
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 2,
+      "onFirst": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:09:35Z"
+    },
+    {
+      "id": "4019080310906020005",
+      "type": {
+        "id": "5",
+        "text": "Ball",
+        "abbreviation": "B",
+        "alternativeText": "Walk",
+        "type": "ball"
+      },
+      "text": "Pitch 1 : Ball 1",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 2,
+      "onFirst": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:09:35Z"
+    },
+    {
+      "id": "4019080310906030002",
+      "type": {
+        "id": "2",
+        "text": "Single",
+        "abbreviation": "1B",
+        "alternativeText": "Single",
+        "type": "single"
+      },
+      "text": "Pitch 2 : Ball In Play",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 2,
+      "onFirst": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:10:15Z"
+    },
+    {
+      "id": "4019080310906990057",
+      "type": {
+        "id": "57",
+        "text": "Play Result",
+        "type": "play-result"
+      },
+      "text": "Pratt reached on infield single to second, Mitchell to second, Yelich to third.",
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 2,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:10:15Z"
+    },
+    {
+      "id": "4019080310906990099",
+      "type": {
+        "id": "99",
+        "text": "End Batter/Pitcher",
+        "type": "end-batterpitcher"
+      },
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310906",
+      "outs": 2,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:10:15Z"
+    },
+    {
+      "id": "4019080310907010001",
+      "type": {
+        "id": "1",
+        "text": "Start Batter/Pitcher",
+        "alternativeText": "Now at bat",
+        "type": "start-batterpitcher"
+      },
+      "text": "Brock Stewart pitches to Sal Frelick",
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:10:49Z"
+    },
+    {
+      "id": "4019080310907020036",
+      "type": {
+        "id": "36",
+        "text": "Strike Looking",
+        "abbreviation": "SL",
+        "alternativeText": "Strikeout",
+        "type": "strike-looking"
+      },
+      "text": "Pitch 1 : Strike 1 Looking",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:10:49Z"
+    },
+    {
+      "id": "4019080310907030037",
+      "type": {
+        "id": "37",
+        "text": "Strike Swinging",
+        "abbreviation": "SS",
+        "alternativeText": "Strikeout",
+        "type": "strike-swinging"
+      },
+      "text": "Pitch 2 : Strike 2 Swinging",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:11:09Z"
+    },
+    {
+      "id": "4019080310907040036",
+      "type": {
+        "id": "36",
+        "text": "Strike Looking",
+        "abbreviation": "SL",
+        "alternativeText": "Strikeout",
+        "type": "strike-looking"
+      },
+      "text": "Pitch 3 : Strike 3 Looking",
+      "team": {
+        "id": "19"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:11:36Z"
+    },
+    {
+      "id": "4019080310907990057",
+      "type": {
+        "id": "57",
+        "text": "Play Result",
+        "type": "play-result"
+      },
+      "text": "Frelick struck out looking.",
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:11:36Z"
+    },
+    {
+      "id": "4019080310907990099",
+      "type": {
+        "id": "99",
+        "text": "End Batter/Pitcher",
+        "type": "end-batterpitcher"
+      },
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "Bottom",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 3,
+      "onFirst": {
+        "athlete": {
+          "id": "5149101"
+        }
+      },
+      "onSecond": {
+        "athlete": {
+          "id": "4313442"
+        }
+      },
+      "onThird": {
+        "athlete": {
+          "id": "31283"
+        }
+      },
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:11:36Z"
+    },
+    {
+      "id": "4019080310999990058",
+      "type": {
+        "id": "58",
+        "text": "End Inning",
+        "type": "end-inning"
+      },
+      "text": "End of the 5th inning",
+      "team": {
+        "id": "8"
+      },
+      "period": {
+        "type": "End",
+        "number": 5,
+        "displayValue": "5th Inning"
+      },
+      "atBatId": "4019080310907",
+      "outs": 0,
+      "awayScore": 4,
+      "homeScore": 4,
+      "wallclock": "2026-10-12T23:11:36Z"
+    }
+  ]
+}

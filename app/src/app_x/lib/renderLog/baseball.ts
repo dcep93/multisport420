@@ -34,28 +34,38 @@ export async function getBaseballLog(
     ) || Date.now();
 
   const teamsById = buildBaseballTeamsById(summaryObj);
+  const battingTeams = Object.fromEntries(
+    ((summaryObj as any).header?.competitions?.[0]?.competitors ?? []).map((competitor: any) => [
+      competitor.homeAway === "away" ? "top" : "bottom",
+      teamsById[competitor.team?.id],
+    ]),
+  );
 
   return {
     timestamp,
     teams: buildTeamSummaries(summaryObj, stream.title),
     winProbability: buildWinProbability(summaryObj),
-    playByPlay: buildBaseballPlayByPlay(plays, teamsById),
+    playByPlay: buildBaseballPlayByPlay(plays, teamsById, battingTeams),
     boxScore: buildBaseballBoxScore((summaryObj as any).boxscore?.players ?? [], config.boxScoreKeys),
   };
 }
 
-function buildBaseballPlayByPlay(plays: any[], teamsById: Record<string, string>) {
+function buildBaseballPlayByPlay(
+  plays: any[], teamsById: Record<string, string>, battingTeams: Record<string, string>,
+) {
   const normalizedPlays = plays
-    .map((play) => normalizeBaseballPlay(play, teamsById))
-    .filter((play) => play.atBatId && play.text);
+    .map((play) => normalizeBaseballPlay(play, teamsById, battingTeams))
+    .filter((play) => play.text);
 
   const groups = new Map<string, typeof normalizedPlays>();
-  normalizedPlays.forEach((play) => {
-    const atBatId = play.atBatId;
-    if (!atBatId) return;
-    const currentGroup = groups.get(atBatId) ?? [];
+  normalizedPlays.forEach((play, index) => {
+    // Inning markers reuse the last/next at-bat ID. Keep them independent so
+    // their reset counts cannot replace an at-bat's result or disappear.
+    const groupId = isBaseballInningMarker(play.playType) || !play.atBatId
+      ? `event-${index}` : play.atBatId;
+    const currentGroup = groups.get(groupId) ?? [];
     currentGroup.push(play);
-    groups.set(atBatId, currentGroup);
+    groups.set(groupId, currentGroup);
   });
 
   return Array.from(groups.values())
@@ -75,7 +85,7 @@ function buildBaseballGroup(plays: BaseballRenderedPlay[]): DriveType | null {
   const latestPlay = renderedOrderPlays[0];
 
   return {
-    team: plays[0]?.team || summaryPlay.team || latestPlay.team,
+    team: plays.find((play) => play.playType === "start-batterpitcher")?.team || summaryPlay.team || latestPlay.team,
     meta: latestPlay.meta || plays[0]?.meta || undefined,
     plays: visiblePlays.map((play) => ({
       down: "",
@@ -87,7 +97,9 @@ function buildBaseballGroup(plays: BaseballRenderedPlay[]): DriveType | null {
   } satisfies DriveType;
 }
 
-function normalizeBaseballPlay(play: any, teamsById: Record<string, string>): BaseballRenderedPlay {
+function normalizeBaseballPlay(
+  play: any, teamsById: Record<string, string>, battingTeams: Record<string, string>,
+): BaseballRenderedPlay {
   const awayScore = play.awayScore ?? play.scoreValue?.away;
   const homeScore = play.homeScore ?? play.scoreValue?.home;
 
@@ -95,6 +107,7 @@ function normalizeBaseballPlay(play: any, teamsById: Record<string, string>): Ba
     atBatId: String(play.atBatId ?? ""),
     playType: play.type?.type || "",
     team:
+      battingTeams[String(play.period?.type || "").toLowerCase()] ||
       teamsById[play.team?.id] ||
       play.team?.shortDisplayName ||
       play.team?.displayName ||
@@ -140,11 +153,16 @@ function isPrimaryBaseballSummaryPlay(playType: string) {
 }
 
 function isAdministrativeBaseballPlay(playType: string) {
-  return ["end-batterpitcher", "start-inning"].includes(playType.toLowerCase());
+  return playType.toLowerCase() === "end-batterpitcher";
+}
+
+function isBaseballInningMarker(playType: string) {
+  return ["start-inning", "end-inning"].includes(playType.toLowerCase());
 }
 
 function formatBaseballStateMeta(play: any) {
   const inning = formatBaseballInning(play);
+  if (isBaseballInningMarker(play.type?.type || "")) return inning;
   const bases = formatBaseballBases(play);
   const outs = formatBaseballOuts(play);
   return [inning, bases, outs].filter(Boolean).join(" | ");
@@ -164,7 +182,8 @@ function formatBaseballInning(play: any) {
       ? "Top"
       : normalizedHalfInning === "bottom" || normalizedHalfInning === "bottom of the inning"
         ? "Bot"
-        : normalizedHalfInning;
+        : normalizedHalfInning === "mid" ? "Mid"
+          : normalizedHalfInning === "end" ? "End" : normalizedHalfInning;
 
   return [inningLabel, inning ? String(inning) : ""].filter(Boolean).join(" ").trim();
 }
