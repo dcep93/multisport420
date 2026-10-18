@@ -352,6 +352,20 @@ function ScreenContent<T>(props: {
     resolvedStream.title,
   ]);
 
+  // A refreshed document can miss the initial command before its listener exists.
+  // Reply to readiness from this frame only, using the latest committed state.
+  useLayoutEffect(() => {
+    const onAudioReady = (event: MessageEvent) => {
+      const player = iframeElement?.contentWindow;
+      if (!player || event.source !== player || event.data?.source !== "multisport420-app"
+        || event.data?.type !== "multisport420:audio-ready") return;
+      player.postMessage({ source: "multisport420-app", type: "multisport420:set-muted", muted: isMuted }, "*");
+      player.postMessage({ source: "multisport420-app", type: "multisport420:set-stream-selector", visible: props.showStreamSelector }, "*");
+    };
+    window.addEventListener("message", onAudioReady);
+    return () => window.removeEventListener("message", onAudioReady);
+  }, [iframeElement, isMuted, props.showStreamSelector]);
+
   // Mute the previous player before any passive effect unmutes the next one,
   // independent of tile order or which layout is currently visible.
   useLayoutEffect(() => {

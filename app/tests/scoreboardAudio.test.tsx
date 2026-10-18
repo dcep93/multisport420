@@ -190,3 +190,30 @@ it.each(VIEWING_LAYOUTS)("mutes before transferring audio in $label, including r
     if (layout !== "spotlight") expect(container.querySelector(".log-panel")).toBeNull();
   }
 });
+
+it("answers ready from only the current frame with the latest audio and selector state", async () => {
+  const { rerender, frameA, frameB, audioA, audioB } = await setup();
+  const ready = (source: Window | null) => fireEvent(window, new MessageEvent("message", {
+    source, data: { source: "multisport420-app", type: "multisport420:audio-ready" },
+  }));
+  audioA.mockClear(); audioB.mockClear();
+  ready(null);
+  expect(audioA).not.toHaveBeenCalled();
+  expect(audioB).not.toHaveBeenCalled();
+  ready(frameA.contentWindow);
+  expect(audioA).toHaveBeenCalledWith(...muteMessage(false));
+  expect(audioB).not.toHaveBeenCalled();
+  rerender(<Multiscreen {...base} focusedSlug={b.slug} showStreamSelector />);
+  audioA.mockClear(); audioB.mockClear();
+  ready(frameB.contentWindow);
+  expect(audioA).not.toHaveBeenCalled();
+  expect(audioB).toHaveBeenCalledWith(...muteMessage(false));
+  expect(audioB).toHaveBeenCalledWith({ source: "multisport420-app", type: "multisport420:set-stream-selector", visible: true }, "*");
+  rerender(<Multiscreen {...base} focusedSlug={b.slug} muteToggleSlug={b.slug} muteToggleRequestId={1} />);
+  audioB.mockClear();
+  ready(frameB.contentWindow);
+  expect(audioB).toHaveBeenCalledWith(...muteMessage(true));
+  audioA.mockClear();
+  ready(frameA.contentWindow);
+  expect(audioA).toHaveBeenCalledWith(...muteMessage(true));
+});

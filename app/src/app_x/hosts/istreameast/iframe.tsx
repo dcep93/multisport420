@@ -65,8 +65,9 @@ function scrollLockScriptRunner() {
       }
       // document_idle controllers may start after the promotion/load command.
       if (event.data?.source === APP_MESSAGE_SOURCE && event.data?.type === AUDIO_READY) {
-        if (playerFrame instanceof HTMLIFrameElement && event.source === playerFrame.contentWindow && lastSetMutedMessage) {
-          forwardMessage(lastSetMutedMessage);
+        if (playerFrame instanceof HTMLIFrameElement && event.source === playerFrame.contentWindow) {
+          if (lastSetMutedMessage) forwardMessage(lastSetMutedMessage);
+          else window.parent.postMessage({ source: APP_MESSAGE_SOURCE, type: AUDIO_READY }, "*");
         }
         return;
       }
@@ -93,6 +94,7 @@ function scrollLockScriptRunner() {
       },
     );
     playerFrame.addEventListener("load", lockCurrentScrollPosition, { once: true });
+    window.parent.postMessage({ source: APP_MESSAGE_SOURCE, type: AUDIO_READY }, "*");
   };
 
   if (document.readyState === "loading") {

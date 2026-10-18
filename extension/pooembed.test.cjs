@@ -10,7 +10,7 @@ const TOGGLE_MUTE = "multisport420:toggle-mute";
 
 function harness(options = {}) {
   const listeners = new Map();
-  const animationFrames = [];
+  let onMutation = () => {};
   const logs = [];
   const parentMessages = [];
   class Video {
@@ -35,6 +35,7 @@ function harness(options = {}) {
   vm.runInNewContext(controller, {
     URL,
     HTMLVideoElement: Video,
+    MutationObserver: class { constructor(callback) { onMutation = callback; } observe() {} },
     console: { log(...args) { logs.push(args); } },
     document: { querySelector(selector) { assert.equal(selector, "video"); return attachedVideo; } },
     window: {
@@ -44,11 +45,17 @@ function harness(options = {}) {
         if (!listeners.has(type)) listeners.set(type, []);
         listeners.get(type).push(listener);
       },
-      requestAnimationFrame(callback) { animationFrames.push(callback); },
     },
   });
   return {
     video, logs, parentMessages,
+    mutate: () => onMutation(),
+    replaceVideo(deliverMutation = true) {
+      attachedVideo = new Video();
+      if (deliverMutation) onMutation();
+      return attachedVideo;
+    },
+    removeVideo() { attachedVideo = null; onMutation(); },
     send(type, muted, source = SOURCE) {
       for (const listener of listeners.get("message") ?? []) {
         listener({ data: { source, type, muted } });
@@ -56,7 +63,7 @@ function harness(options = {}) {
     },
     attachVideo() {
       attachedVideo = video;
-      for (const callback of animationFrames.splice(0)) callback();
+      onMutation();
     },
   };
 }
@@ -155,4 +162,60 @@ test("autoplay rejection is handled without preventing later audio commands", as
   assert.deepEqual(h.logs, [["multisport:pooembed:play-error", error]]);
   h.send(SET_MUTED, false);
   assert.equal(h.video.muted, false);
+});
+
+test("replacement video inherits audio state and the detached video is silenced", () => {
+  for (const muted of [true, false]) {
+    const h = harness({ initialMuted: !muted });
+    h.send(SET_MUTED, muted);
+    const replacement = h.replaceVideo();
+    assert.equal(replacement.muted, muted);
+    assert.equal(replacement.playCalls, 1);
+    assert.equal(h.video.muted, true);
+    replacement.manuallyMute(!muted);
+    h.mutate();
+    assert.equal(replacement.muted, !muted, "unrelated DOM changes preserve native mute");
+    h.send(SET_MUTED, muted);
+    assert.equal(replacement.muted, muted);
+  }
+});
+
+test("commands reach replacements even before observer delivery, including removal gaps", () => {
+  const h = harness();
+  h.send(SET_MUTED, false);
+  const replacement = h.replaceVideo(false);
+  h.send(SET_MUTED, false);
+  assert.equal(replacement.muted, false);
+  h.mutate();
+  assert.equal(replacement.playCalls, 1);
+  h.removeVideo();
+  h.send(SET_MUTED, true);
+  const next = h.replaceVideo();
+  assert.equal(next.muted, true);
+  assert.equal(replacement.muted, true);
+});
+
+test("real DOM replacement restores spotlight audio without another command", async () => {
+  const { JSDOM } = require("../app/node_modules/jsdom");
+  const dom = new JSDOM("<video muted></video>", { runScripts: "outside-only" });
+  const observers = [];
+  const NativeObserver = dom.window.MutationObserver;
+  dom.window.MutationObserver = class extends NativeObserver {
+    constructor(callback) { super(callback); observers.push(this); }
+  };
+  try {
+    const { window } = dom;
+    Object.defineProperty(window.location, "ancestorOrigins", { value: ["https://multisport420.web.app"] });
+    window.HTMLMediaElement.prototype.play = () => Promise.resolve();
+    window.eval(controller);
+    window.dispatchEvent(new window.MessageEvent("message", { data: { source: SOURCE, type: SET_MUTED, muted: false } }));
+    const original = window.document.querySelector("video");
+    assert.equal(original.muted, false);
+    const replacement = window.document.createElement("video");
+    replacement.muted = true;
+    original.replaceWith(replacement);
+    await Promise.resolve();
+    assert.equal(replacement.muted, false);
+    assert.equal(original.muted, true);
+  } finally { observers.forEach(observer => observer.disconnect()); dom.window.close(); }
 });

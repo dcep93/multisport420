@@ -193,7 +193,8 @@ export default function MultisportApp() {
   async function handleRefreshStream(streamSlug: StreamSlug) {
     const fetchedStreams = await HOST.getStreams();
     const refreshedStream = fetchedStreams.find((stream) => stream.slug === streamSlug) ?? null;
-    setAllStreams(fetchedStreams);
+    // Refresh only this player. A partial catalogue must not prune other open
+    // streams or invalidate the current audio selection.
 
     if (refreshedStream) {
       replaceSelectedStream(refreshedStream);

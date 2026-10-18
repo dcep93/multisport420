@@ -113,3 +113,29 @@ describe("StreamEast source compatibility", () => {
     } finally { dom.window.close(); }
   });
 });
+
+it("requests missing audio state after the wrapper listener is installed, before load", () => {
+  const html = renderToStaticMarkup(renderIstreameastPlayerDocument({
+    _0_fetchedAtMs: 0, _1_rawUrl: "https://streamseaste.cx/game", _2_embedPageUrl: "https://embed.st/embed/game",
+  }));
+  const dom = new JSDOM(html, { url: "https://multisport420.web.app/", runScripts: "outside-only" });
+  try {
+    const { window } = dom;
+    const frame = window.document.querySelector("iframe")!;
+    const child = vi.spyOn(frame.contentWindow!, "postMessage");
+    const upstream = vi.spyOn(window.parent, "postMessage").mockImplementation(() => {});
+    window.eval(window.document.querySelector("script")!.textContent!);
+    // A command sent before DOMContentLoaded has no listener yet.
+    const message = { source: "multisport420-app", type: "multisport420:set-muted", muted: false };
+    window.dispatchEvent(new window.MessageEvent("message", { data: message }));
+    window.document.dispatchEvent(new window.Event("DOMContentLoaded"));
+    expect(upstream).toHaveBeenCalledWith({ source: "multisport420-app", type: "multisport420:audio-ready" }, "*");
+    upstream.mockClear();
+    window.dispatchEvent(new window.MessageEvent("message", { source: frame.contentWindow,
+      data: { source: "multisport420-app", type: "multisport420:audio-ready" } }));
+    expect(upstream).toHaveBeenCalledOnce();
+    // The app's reply is forwarded immediately, without waiting for load.
+    window.dispatchEvent(new window.MessageEvent("message", { data: message }));
+    expect(child).toHaveBeenLastCalledWith(message, "*");
+  } finally { dom.window.close(); }
+});

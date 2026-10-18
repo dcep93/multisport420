@@ -19,6 +19,14 @@ After updating an existing unpacked installation, click **Reload** on the
 extension card and refresh the viewing page. Deploying the website does not
 update your locally installed extension. The phone remote needs no extension.
 
+## Refresh audio recovery (0.3.9)
+
+Version **0.3.9** follows replacement video elements and restores the latest app
+mute state when players become ready during refresh. A single-player refresh
+also keeps the other open streams and their audio selection intact.
+Reload the extension and refresh the Multisport420 viewing page to apply both
+parts of this fix. Deploying the website alone does not update the extension.
+
 ## Mute and spotlight controls (0.3.2 or later)
 
 Mute controls work on every supported screen without first clicking inside its

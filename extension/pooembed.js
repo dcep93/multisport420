@@ -21,6 +21,7 @@
 
     if (event.data?.type === SET_MUTED) {
       requestedMutedState = event.data.muted !== false;
+      syncVideoElement();
       applyRequestedMutedState();
       return;
     }
@@ -29,6 +30,7 @@
       return;
     }
 
+    syncVideoElement();
     if (!(currentVideo instanceof HTMLVideoElement)) {
       return;
     }
@@ -37,30 +39,19 @@
     applyRequestedMutedState();
   });
 
-  waitForVideoElement();
+  // Providers may replace the video after initial playback or during recovery.
+  new MutationObserver(syncVideoElement).observe(document, { childList: true, subtree: true });
+  syncVideoElement();
   // Ask for the current state after our listener exists, even if load already fired.
   window.parent.postMessage({ source: APP_MESSAGE_SOURCE, type: "multisport420:audio-ready" }, "*");
 
-  function waitForVideoElement() {
-    let stopped = false;
-
-    const checkForVideo = () => {
-      if (stopped) {
-        return;
-      }
-
-      const video = document.querySelector("video");
-
-      if (video instanceof HTMLVideoElement) {
-        stopped = true;
-        init(video);
-        return;
-      }
-
-      window.requestAnimationFrame(checkForVideo);
-    };
-
-    checkForVideo();
+  function syncVideoElement() {
+    const element = document.querySelector("video");
+    const video = element instanceof HTMLVideoElement ? element : null;
+    if (video === currentVideo) return;
+    if (currentVideo) currentVideo.muted = true;
+    currentVideo = video;
+    if (video) init(video);
   }
 
   function init(video) {

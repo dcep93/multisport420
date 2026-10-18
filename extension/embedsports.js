@@ -16,7 +16,10 @@
       // Only reply to the child that became ready; don't reset other players.
       const child = Array.from(document.querySelectorAll("iframe"))
         .find(iframe => iframe.contentWindow === event.source);
-      if (child && lastSetMutedMessage) child.contentWindow.postMessage(lastSetMutedMessage, "*");
+      if (child) {
+        if (lastSetMutedMessage) child.contentWindow.postMessage(lastSetMutedMessage, "*");
+        else window.parent.postMessage({ source: APP_MESSAGE_SOURCE, type: AUDIO_READY }, "*");
+      }
       return;
     }
     if (
