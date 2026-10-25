@@ -18,7 +18,7 @@ export function parseScoreboard(data: any, year: number, fetchedAt: number): Sna
   const period = data.status?.currentMatchupPeriod ?? data.scoringPeriodId;
   const details = playerDetails(data, year);
   const names = new Map<number, string>(data.teams.map((team: any) => [team.id,
-    team.name || [team.location, team.nickname].filter(Boolean).join(" ") || `Team ${team.id}`]));
+    (team.name || [team.location, team.nickname].filter(Boolean).join(" ") || `Team ${team.id}`).replace(/Monday Night/gi, "*")]));
   const logos = new Map<number, string | undefined>(data.teams.map((team: any) => {
     const authenticatedLogo = data.scoreboardDetails?.teamLogos?.[team.id];
     return [team.id, typeof authenticatedLogo === "string" && /^data:image\/(png|jpeg|gif|webp|avif);base64,/.test(authenticatedLogo)
