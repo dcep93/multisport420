@@ -28,9 +28,11 @@ export function useLiveScoreboard(snapshot: Snapshot | null) {
         const teams = parseLiveTeams(data, year, week);
         if (active) setLive({ key, teams });
       } catch {
-        // Do not retain stale possession or red-zone colors after a failed poll.
+        // Game identities and final results stay valid for this week during an
+        // outage; possession and red-zone colors do not.
         if (active) setLive(previous => ({ key,
-          teams: new Map(previous?.key === key ? [...previous.teams].filter(([, team]) => team.completed) : []),
+          teams: new Map(previous?.key === key ? [...previous.teams].map(([id, team]) =>
+            [id, { completed: team.completed, ...(team.gameId ? { gameId: team.gameId } : {}) }]) : []),
           error: "Live player status unavailable",
         }));
       } finally {

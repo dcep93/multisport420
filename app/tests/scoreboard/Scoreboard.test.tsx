@@ -250,9 +250,9 @@ it("pairs roster players by position in score/name/position/name/score order, re
   expect(rows[1].children[4]).toHaveClass("scoreboard-player-red-zone");
 });
 
-it("links starters, reserves, and both leaderboards to player stats in a separate tab", () => {
+it("links starters, reserves, and both leaderboards to their NFL game boxscore in a separate tab", () => {
   const player: RosterPlayer = { id: 1, name: "Ja'Marr Chase", position: "WR", slot: "Bench", slotId: 20,
-    score: 12, projected: 20, seasonScore: 50, completed: false };
+    score: 12, projected: 20, seasonScore: 50, completed: false, gameId: "401873015" };
   const team = { id: 1, name: "Alpha", score: 12, projected: 20, players: [player] };
   render(<>
     <MatchupRoster left={team} right={{ ...team, id: 2, name: "Bravo" }} />
@@ -264,8 +264,16 @@ it("links starters, reserves, and both leaderboards to player stats in a separat
   const links = screen.getAllByRole("link", { name: /Ja'Marr Chase/ });
   expect(links).toHaveLength(5);
   for (const link of links) {
-    expect(link).toHaveAttribute("href", "https://fantasy420.web.app/#PlayerStats?nameFilter=Ja%27Marr_Chase");
+    expect(link).toHaveAttribute("href", "https://www.espn.com/nfl/boxscore/_/gameId/401873015");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   }
+});
+
+it("keeps players without a known NFL game readable without inventing a boxscore link", () => {
+  const player: RosterPlayer = { id: 1, name: "Bye week player", position: "WR", slot: "WR", slotId: 4,
+    score: 0, projected: 0, seasonScore: 50, completed: false };
+  render(<Roster team={{ id: 1, name: "Alpha", score: 0, projected: 0, players: [player] }} />);
+  expect(screen.getByText("Bye week player")).toBeVisible();
+  expect(screen.queryByRole("link")).not.toBeInTheDocument();
 });

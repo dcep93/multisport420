@@ -4,7 +4,7 @@ import type { PlayerActivity } from "./liveGames";
 export type PlayerScore = {
   id: number; name: string; position: string; score: number | null;
   seasonScore: number | null; projected: number | null; completed: boolean;
-  proTeamId?: number; activity?: PlayerActivity;
+  proTeamId?: number; activity?: PlayerActivity; gameId?: string;
 };
 export type RosterPlayer = PlayerScore & { slot: string; slotId: number; optimizedSlot?: string };
 export type Leaders = { positions: { position: string; players: PlayerScore[] }[]; unowned: PlayerScore[] };

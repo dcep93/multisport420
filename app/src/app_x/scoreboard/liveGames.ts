@@ -2,10 +2,11 @@ import type { Snapshot } from "./data";
 import type { PlayerScore } from "./players";
 
 export type PlayerActivity = "playing" | "possession" | "red-zone";
-export type LiveTeam = { completed: boolean; activity?: PlayerActivity };
+export type LiveTeam = { completed: boolean; activity?: PlayerActivity; gameId?: string };
 export type NflScoreboard = {
   season?: { year?: number; type?: number }; week?: { number?: number };
   events?: Array<{
+    id?: string | number;
     season?: { year?: number; type?: number }; week?: { number?: number };
     competitions?: Array<{
       status?: { type?: { state?: string; completed?: boolean; name?: string } };
@@ -21,6 +22,7 @@ export function parseLiveTeams(data: NflScoreboard, year: number, week: number):
     if ((event.season?.year ?? data.season?.year) !== year
       || (event.week?.number ?? data.week?.number) !== week
       || (event.season?.type ?? data.season?.type) !== 2) continue;
+    const gameId = /^[1-9]\d*$/.test(String(event.id)) ? String(event.id) : undefined;
     for (const competition of event.competitions ?? []) {
       const status = competition.status?.type;
       const completed = status?.completed === true || status?.state === "post";
@@ -32,7 +34,7 @@ export function parseLiveTeams(data: NflScoreboard, year: number, week: number):
         const possession = playing && !atBreak && String(competition.situation?.possession) === String(id);
         const activity = !playing ? undefined : possession
           ? competition.situation?.isRedZone === true ? "red-zone" : "possession" : "playing";
-        teams.set(id, { completed, ...(activity ? { activity } : {}) });
+        teams.set(id, { completed, ...(activity ? { activity } : {}), ...(gameId ? { gameId } : {}) });
       }
     }
   }
@@ -43,7 +45,7 @@ export function withLivePlayers(snapshot: Snapshot, teams: Map<number, LiveTeam>
   const update = <T extends PlayerScore>(player: T): T => {
     const team = player.proTeamId === undefined ? undefined : teams.get(player.proTeamId);
     const completed = player.completed || team?.completed === true;
-    return { ...player, completed, activity: completed ? undefined : team?.activity };
+    return { ...player, completed, activity: completed ? undefined : team?.activity, gameId: team?.gameId };
   };
   return { ...snapshot,
     matchups: snapshot.matchups.map(matchup => matchup.map(team => ({ ...team,

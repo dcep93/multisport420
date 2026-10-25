@@ -56,6 +56,15 @@ highlight. Possession colors clear at halftime. Public NFL status refreshes
 every 15 seconds with an eight-second timeout; failed polls clear old colors
 and display a status notice. This needs no additional extension update.
 
+Player names in rosters and leaderboards open the ESPN NFL boxscore for their
+team's game in the displayed fantasy week, using
+`https://www.espn.com/nfl/boxscore/_/gameId/{eventId}`. The web app resolves game
+IDs from the same public NFL scoreboard feed used for live highlights, including
+scheduled and completed games. Known links survive a temporary status outage
+within that week; players on bye or without a known game remain plain text.
+Link construction and scoreboard presentation live in the web app, not the
+extension, so changing these links requires only a site deployment.
+
 The spotlight sidebar shows the week's top five scorers at every position plus
 the top five unowned players across positions, with **week score (season score)**
 using the league's scoring settings. Rankings use actual weekly points, not

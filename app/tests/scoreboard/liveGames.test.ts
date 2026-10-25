@@ -39,10 +39,33 @@ it("applies the same live status to bench players and leaders and preserves comp
     matchups: [[{ id: 1, name: "Team", score: 10, projected: 20, players }]],
     leaders: { positions: [{ position: "QB", players }], unowned: players },
   };
-  const live = withLivePlayers(snapshot, parseLiveTeams(feed("in", true), 2026, 4));
+  const data = feed("in", true);
+  data.events![0].id = "401873015";
+  const live = withLivePlayers(snapshot, parseLiveTeams(data, 2026, 4));
   expect(live.matchups[0][0].players?.map(p => p.activity)).toEqual(["red-zone", undefined, undefined]);
   expect(live.leaders?.unowned.map(p => p.activity)).toEqual(["red-zone", undefined, undefined]);
+  expect(live.matchups[0][0].players?.map(p => p.gameId)).toEqual(["401873015", "401873015", undefined]);
+  expect(live.leaders?.unowned.map(p => p.gameId)).toEqual(["401873015", "401873015", undefined]);
+  expect(live.leaders?.positions[0].players.map(p => p.gameId)).toEqual(["401873015", "401873015", undefined]);
   expect(snapshot.matchups[0][0].players?.[0]).not.toHaveProperty("activity");
   const finished = withLivePlayers(snapshot, parseLiveTeams(feed("post"), 2026, 4));
   expect(finished.matchups[0][0].players?.[0]).toMatchObject({ completed: true, activity: undefined });
+});
+
+it("maps both NFL teams to the current week's game before, during, and after play", () => {
+  for (const state of ["pre", "in", "post"]) {
+    const data = feed(state);
+    data.events![0].id = "401873015";
+    expect([...parseLiveTeams(data, 2026, 4).values()].map(team => team.gameId))
+      .toEqual(["401873015", "401873015"]);
+    expect(parseLiveTeams(data, 2026, 5).size).toBe(0);
+  }
+});
+
+it("does not create game links from missing or malformed event IDs", () => {
+  for (const id of [undefined, "", "0", "../other", "401873015?redirect=other"]) {
+    const data = feed();
+    data.events![0].id = id;
+    expect([...parseLiveTeams(data, 2026, 4).values()].every(team => team.gameId === undefined)).toBe(true);
+  }
 });

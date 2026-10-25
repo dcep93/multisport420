@@ -24,7 +24,7 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     await context.route("https://site.api.espn.com/**", route => {
       if (!new URL(route.request().url()).searchParams.has("week")) return route.fulfill({ json: { events: [] } });
       return route.fulfill({ json: { season: { year: 2026, type: 2 }, week: { number: 1 }, events: [
-        { competitions: [{ status: { type: { state: "in" } }, situation: { possession: "1", isRedZone: false },
+        { id: "401873015", competitions: [{ status: { type: { state: "in" } }, situation: { possession: "1", isRedZone: false },
           competitors: [{ team: { id: "1" } }, { team: { id: "3" } }] }] },
         { competitions: [{ status: { type: { state: "in" } }, situation: { possession: "4", isRedZone: true },
           competitors: [{ team: { id: "4" } }, { team: { id: "5" } }] }] },
@@ -192,8 +192,8 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
     expect(fetches).toBe(2);
     await page.getByRole("button", { name: "Pause scrolling", exact: true }).click();
     await expect(page.getByRole("button", { name: "Resume scrolling", exact: true })).toBeVisible();
-    await context.route("https://fantasy420.web.app/**", route => route.fulfill({
-      contentType: "text/html", body: "<h1>Player stats destination</h1>",
+    await context.route("https://www.espn.com/nfl/boxscore/**", route => route.fulfill({
+      contentType: "text/html", body: "<h1>NFL boxscore destination</h1>",
     }));
     const originalUrl = page.url();
     const [playerPage] = await Promise.all([
@@ -201,12 +201,12 @@ test("native scoreboard uses the Multisport extension and fits a compact panel",
       page.getByRole("link", { name: "Jalen Hurts", exact: true }).first().click(),
     ]);
     await playerPage.waitForLoadState();
-    expect(playerPage.url()).toBe("https://fantasy420.web.app/#PlayerStats?nameFilter=Jalen_Hurts");
+    expect(playerPage.url()).toBe("https://www.espn.com/nfl/boxscore/_/gameId/401873015");
     expect(page.url()).toBe(originalUrl);
     await playerPage.close();
     // Verify the actual polling cadence through the installed extension bridge.
     await expect.poll(() => fetches, { timeout: 32_000 }).toBeGreaterThanOrEqual(3);
-    expect(requests.some(url => url.includes("fantasy420.web.app"))).toBe(true);
+    expect(requests.some(url => url.includes("fantasy420.web.app"))).toBe(false);
     expect(errors).toEqual([]);
   } finally {
     await context.close();

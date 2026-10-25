@@ -10,7 +10,7 @@ const snapshot: Snapshot = { leagueId: "123", leagueName: "Test", year: 2026, we
     score: 5, projected: 20, completed: false, seasonScore: 50, slotId: 0, slot: "QB" }] }]],
 };
 const response = () => ({ ok: true, json: async () => ({ season: { year: 2026, type: 2 }, week: { number: 4 },
-  events: [{ competitions: [{ status: { type: { state: "in" } }, competitors: [{ team: { id: "1" } }],
+  events: [{ id: "401873015", competitions: [{ status: { type: { state: "in" } }, competitors: [{ team: { id: "1" } }],
     situation: { possession: "1", isRedZone: true } }] }],
 }) });
 
@@ -21,15 +21,27 @@ it("refreshes live colors every 15 seconds, clears stale status on failure, and 
   const hook = renderHook(() => useLiveScoreboard(snapshot));
   await act(async () => {});
   expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].activity).toBe("red-zone");
+  expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].gameId).toBe("401873015");
   const url = new URL(String(fetch.mock.calls[0][0]));
   expect(Object.fromEntries(url.searchParams)).toEqual({ dates: "2026", week: "4", seasontype: "2", limit: "100" });
   await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
   expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].activity).toBeUndefined();
+  expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].gameId).toBe("401873015");
   expect(hook.result.current.error).toBe("Live player status unavailable");
   hook.unmount();
   await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
   expect(fetch).toHaveBeenCalledTimes(2);
   expect(vi.getTimerCount()).toBe(0);
+});
+
+it("does not carry boxscore links into a new fantasy week when its NFL fetch fails", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(response()).mockRejectedValueOnce(new Error("offline")));
+  const hook = renderHook(({ data }) => useLiveScoreboard(data), { initialProps: { data: snapshot } });
+  await act(async () => {});
+  expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].gameId).toBe("401873015");
+  hook.rerender({ data: { ...snapshot, week: 5 } });
+  await act(async () => {});
+  expect(hook.result.current.snapshot?.matchups[0][0].players?.[0].gameId).toBeUndefined();
 });
 
 it("does not fetch before league data is available, and aborts an outstanding request on cleanup", async () => {

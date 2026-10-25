@@ -7,9 +7,11 @@ import type { ReactNode } from "react";
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
 
 function PlayerLink({ player, className, children }: { player: PlayerScore; className: string; children?: ReactNode }) {
-  const query = new URLSearchParams({ nameFilter: player.name.replace(/\s+/g, "_") });
-  return <a className={`${className} scoreboard-player-link`} href={`https://fantasy420.web.app/#PlayerStats?${query}`}
-    target="_blank" rel="noopener noreferrer" title={`${player.name} stats (opens in a new tab)`}>
+  if (!player.gameId || !/^[1-9]\d*$/.test(player.gameId)) {
+    return <span className={className}>{children ?? player.name}</span>;
+  }
+  return <a className={`${className} scoreboard-player-link`} href={`https://www.espn.com/nfl/boxscore/_/gameId/${player.gameId}`}
+    target="_blank" rel="noopener noreferrer" title={`${player.name} game boxscore (opens in a new tab)`}>
     {children ?? player.name}
   </a>;
 }
