@@ -21,7 +21,10 @@ cd app
 
 export GOOGLE_APPLICATION_CREDENTIALS="gac.json"
 echo "$SA_KEY" >"$GOOGLE_APPLICATION_CREDENTIALS"
-npm install -g firebase-tools
+# Keep CI on the CLI release used by the last successful deployment.
+# 15.34.1 adds a Service Usage permission requirement for Hosting deploys.
+npm install -g firebase-tools@15.34.0
+firebase --version
 gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
 project_id="$(cat $GOOGLE_APPLICATION_CREDENTIALS | jq -r .project_id)"
 
@@ -46,4 +49,4 @@ cat <<EOF >.firebaserc
 }
 EOF
 
-firebase deploy --project "$project_id"
+firebase deploy --only hosting --non-interactive --project "$project_id"
