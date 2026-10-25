@@ -205,6 +205,36 @@ test("joining an existing named room replaces its lineup; other rooms stay indep
   await expect(phone.getByRole("button", { name: "Refresh spotlight log" })).toBeDisabled();
 });
 
+test("phone selects loaded streams from the viewer catalog without fetching players", async ({ context, page }) => {
+  await mockStreams(context);
+  await page.goto("/");
+  await page.getByLabel("categories", { exact: true }).selectOption("MLB");
+  await expect(page.locator(".stream-toggle")).toHaveCount(3);
+  await page.getByRole("button", { name: "Join", exact: true }).click();
+  await expect(page.getByText("Live", { exact: true })).toBeVisible();
+  const phone = await context.newPage();
+  await phone.setViewportSize({ width: 390, height: 844 });
+  const mediaRequests: string[] = [];
+  phone.on("request", request => { if (/proxy420|espn.com|player.example/.test(request.url())) mediaRequests.push(request.url()); });
+  await phone.goto("/remote");
+  await expect(phone.getByText("Viewer connected", { exact: true })).toBeVisible();
+  const choices = phone.locator(".remote-catalog-choice input");
+  await expect(choices).toHaveCount(3);
+  await choices.nth(0).check();
+  await expect(page.locator(".screen-card")).toHaveCount(1);
+  await expect(choices.nth(0)).toBeChecked();
+  await choices.nth(2).check();
+  await expect(page.locator(".screen-card")).toHaveCount(2);
+  await choices.nth(0).uncheck();
+  await expect(page.locator(".screen-card")).toHaveCount(1);
+  await expect(page.locator(".screen-card")).toContainText("Phillies");
+  await expect(choices.nth(2)).toBeChecked();
+  await expect(phone.locator("iframe")).toHaveCount(0);
+  expect(mediaRequests).toEqual([]);
+  expect(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await phone.screenshot({ path: "test-results/remote-stream-picker.png", fullPage: true });
+});
+
 test("an empty room waits for a viewer, and failed Join leaves local controls usable", async ({ context, page, request }) => {
   await mockStreams(context);
   await page.setViewportSize({ width: 320, height: 740 });

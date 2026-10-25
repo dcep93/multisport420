@@ -10,6 +10,7 @@ vi.mock("../src/app_x/hooks/useRoom", () => ({ default: () => connection }));
 const a = { slug: "a", title: "Game A", category: "NFL", espn_id: -1, raw_url: "https://example.com/a" };
 const b = { ...a, slug: "b", title: "Game B" };
 const c = { ...a, slug: "c", title: "Game C" };
+const d = { ...a, slug: "d", title: "Game D" };
 beforeEach(() => {
   connection.viewerCount = 1;
   connection.status = "connected";
@@ -17,6 +18,24 @@ beforeEach(() => {
   connection.send.mockImplementation(async (action) => { connection.room = reduceRoom(connection.room!, action, "command"); return true; });
 });
 afterEach(() => { cleanup(); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+
+it("loads and removes games using the viewer catalog without changing other streams", async () => {
+  connection.room!.availableStreams = [a, b, c, d];
+  const view = render(<Remote roomId="test" />);
+  fireEvent.click(view.getByRole("checkbox", { name: "Game D NFL" }));
+  await waitFor(() => expect(connection.room!.streams.map((stream) => stream.slug)).toEqual(["a", "b", "c", FANTASY_SCOREBOARD.slug, "d"]));
+  expect(connection.send).toHaveBeenLastCalledWith({ type: "set-stream-loaded", slug: "d", loaded: true });
+  expect(connection.room).toMatchObject({ focusedSlug: "a", audioSlug: "a" });
+  fireEvent.click(view.getByRole("checkbox", { name: "Game B NFL" }));
+  await waitFor(() => expect(connection.room!.streams.some((stream) => stream.slug === "b")).toBe(false));
+  fireEvent.change(view.getByRole("searchbox", { name: "Find a stream" }), { target: { value: "Game D" } });
+  expect(view.queryByRole("checkbox", { name: "Game A NFL" })).toBeNull();
+  expect((view.getByRole("checkbox", { name: "Game D NFL" }) as HTMLInputElement).checked).toBe(true);
+  connection.viewerCount = 0;
+  view.rerender(<Remote roomId="test" />);
+  expect(view.getByRole("checkbox", { name: "Game D NFL" }).closest("fieldset")?.disabled).toBe(true);
+  expect(view.container.querySelector("iframe")).toBeNull();
+});
 
 it("controls layout, both positions, sound, and mute through shared room state", async () => {
   const view = render(<Remote roomId="test" />);

@@ -77,6 +77,23 @@ describe("shared layout, placement, and audio", () => {
 });
 
 describe("shared keyboard and remote actions", () => {
+  it("shares a validated catalog and applies desired load state idempotently across concurrent edits", () => {
+    const c = { ...a, slug: "c" };
+    const catalog = reduceRoom(initial, { type: "catalog", streams: [a, b, c, c] }, "catalog");
+    expect(catalog.availableStreams).toEqual([a, b, c]);
+    expect(catalog.streams).toBe(initial.streams);
+    expect(readRoom({ ...catalog, availableStreams: [a, null, c, c] })?.availableStreams).toEqual([a, c]);
+    const add = { type: "set-stream-loaded", slug: "c", loaded: true } as const;
+    const loaded = reduceRoom(catalog, add, "add");
+    expect(loaded.streams.map(s => s.slug)).toEqual(["a", "b", "c"]);
+    expect(reduceRoom(loaded, add, "retry")).toBe(loaded);
+    const concurrent = reduceRoom(loaded, { type: "layout", layout: "grid" }, "layout");
+    const removed = reduceRoom(concurrent, { type: "set-stream-loaded", slug: "b", loaded: false }, "remove");
+    expect(removed.streams.map(s => s.slug)).toEqual(["a", "c"]);
+    expect(removed.layout).toBe("grid");
+    expect(reduceRoom(removed, { type: "set-stream-loaded", slug: "unknown", loaded: true }, "stale")).toBe(removed);
+    expect(reduceRoom(removed, { type: "set-stream-loaded", slug: "b", loaded: false }, "retry")).toBe(removed);
+  });
   it("mutes the audible grid game after reordering even when spotlight focus belongs to another game", () => {
     const grid: RoomState = { ...initial, layout: "grid", audioSlug: "b", audioMuted: false };
     const moved = reduceRoom(grid, { type: "reorder", slug: "b", targetSlug: "a" }, "reorder");

@@ -14,6 +14,7 @@ export type Presentation = {
 export type RoomCommand = { id: string; type: "mute" | "refresh-log"; slug: string };
 export type RoomState = Partial<Presentation> & {
   streams: Stream[];
+  availableStreams?: Stream[];
   focusedSlug: string;
   displayLogs: boolean;
   command: RoomCommand | null;
@@ -22,6 +23,8 @@ export type RoomState = Partial<Presentation> & {
 export type RoomAction =
   | { type: "select" | "focus" | "remove"; slug: string }
   | { type: "toggle-stream" | "replace-stream"; stream: Stream }
+  | { type: "catalog"; streams: Stream[] }
+  | { type: "set-stream-loaded"; slug: string; loaded: boolean }
   | { type: "refresh-log" }
   | { type: "display-logs"; value: boolean }
   | { type: "layout"; layout: ViewingLayout }
@@ -69,6 +72,7 @@ export function readRoom(value: unknown): RoomState | null {
   const room: RoomState = {
     ...presentationOf({ ...data, streams: uniqueStreams, focusedSlug, displayLogs: data.displayLogs !== false, command: null }),
     streams: uniqueStreams,
+    availableStreams: uniqueValidStreams(data.availableStreams),
     focusedSlug,
     displayLogs: data.displayLogs !== false,
     command: command && typeof command.id === "string" && typeof command.slug === "string"
@@ -85,11 +89,26 @@ function isStream(value: unknown): value is Stream {
     && typeof stream.category === "string" && typeof stream.espn_id === "number";
 }
 
+function uniqueValidStreams(value: unknown): Stream[] {
+  if (!Array.isArray(value)) return [];
+  const streams = value.filter(isStream);
+  return streams.filter((stream, index) => streams.findIndex((other) => other.slug === stream.slug) === index);
+}
+
 // The caller creates one command ID per gesture, outside Firebase's retry loop.
 export function reduceRoom(room: RoomState, action: RoomAction, commandId: string): RoomState {
   const presentation = presentationOf(room);
   const video = (slug: string) => room.streams.some((stream) => stream.slug === slug && !isFantasyScoreboard(stream));
   switch (action.type) {
+    case "catalog":
+      return { ...room, availableStreams: uniqueValidStreams(action.streams) };
+    case "set-stream-loaded": {
+      const loaded = room.streams.some((stream) => stream.slug === action.slug);
+      if (loaded === action.loaded) return room;
+      if (!action.loaded) return removeStream(room, action.slug);
+      const stream = room.availableStreams?.find((stream) => stream.slug === action.slug);
+      return stream ? reduceRoom(room, { type: "toggle-stream", stream }, commandId) : room;
+    }
     case "reorder": {
       if (presentation.layout !== "grid") return room;
       const from = room.streams.findIndex((stream) => stream.slug === action.slug);

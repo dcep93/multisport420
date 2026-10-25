@@ -12,7 +12,7 @@ import RoomControls from "./RoomControls";
 import ViewingControls from "./ViewingControls";
 import { useViewingPreferences } from "../hooks/useViewingPreferences";
 import { presentationOf, reduceRoom, type Presentation, type RoomAction } from "../lib/roomState";
-import { hasMultisport420Extension, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
+import { hasMultisport420Extension, isFantasyScoreboard, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -43,6 +43,18 @@ export default function MultisportApp() {
     }
   });
   const { send: sendRoomAction } = room;
+  const catalog = useMemo(() => (allStreams ?? []).filter((stream) => !isFantasyScoreboard(stream) || multisport420Installed), [allStreams, multisport420Installed]);
+  const catalogVersion = JSON.stringify(catalog);
+  const publishedCatalog = useRef("");
+  useEffect(() => {
+    if (room.roomId === null || room.status !== "connected" || hostStreams === null || streamError) return;
+    const version = JSON.stringify([room.roomId, catalogVersion]);
+    // Publish only when this viewer's catalog changes, not in response to another
+    // viewer's catalog update. Room transactions preserve concurrent selections.
+    if (publishedCatalog.current === version) return;
+    publishedCatalog.current = version;
+    void sendRoomAction({ type: "catalog", streams: catalog });
+  }, [room.roomId, room.status, hostStreams, streamError, catalogVersion, catalog, sendRoomAction]);
   useEffect(() => {
     if (!room.room) return;
     const shared = presentationOf(room.room);
@@ -248,7 +260,8 @@ export default function MultisportApp() {
             setFocusedSlug(resolvedFocusedSlug ?? "");
             setDisplayLogs(displayLogs);
             keepPresentation(presentation);
-            void room.connect(id, { ...currentRoom, ...presentation });
+            publishedCatalog.current = "";
+            void room.connect(id, { ...currentRoom, ...presentation, availableStreams: catalog });
           }}
           onLeave={() => {
             restoreSelection(selectedStreams);

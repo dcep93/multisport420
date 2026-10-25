@@ -10,12 +10,16 @@ export default function Remote({ roomId }: { roomId: string }) {
   const { connect, leave } = room;
   const [pending, setPending] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [streamSearch, setStreamSearch] = useState("");
   useEffect(() => {
     void connect(roomId);
     return leave;
   }, [connect, leave, roomId]);
 
   const streams = room.room?.streams ?? [];
+  const catalog = room.room?.availableStreams ?? [];
+  const choices = [...catalog, ...streams.filter((stream) => !catalog.some((entry) => entry.slug === stream.slug))];
+  const matchingChoices = choices.filter((stream) => `${stream.title} ${stream.category}`.toLowerCase().includes(streamSearch.trim().toLowerCase()));
   const focused = room.room?.focusedSlug;
   const viewing = presentationOf(room.room ?? { streams: [], focusedSlug: "", displayLogs: true, command: null });
   const dual = viewing.layout === "dual";
@@ -60,8 +64,25 @@ export default function Remote({ roomId }: { roomId: string }) {
           </div>
         ) : null}
         {online && room.viewerCount > 0 && streams.length === 0 && (
-          <div className="remote-notice"><p>No streams yet.</p><span>Add a stream on your viewing screen to get started.</span></div>
+          <div className="remote-notice"><p>No streams yet.</p><span>Choose streams below to load them on your viewing screen.</span></div>
         )}
+        <fieldset className="remote-settings remote-catalog" disabled={!ready || pending}>
+          <legend>Loaded streams</legend>
+          <label className="remote-layout-label">Find a stream
+            <input type="search" value={streamSearch} onChange={(event) => setStreamSearch(event.target.value)} placeholder="Team, matchup, or league" />
+          </label>
+          <p className="remote-catalog-hint">Check to load on the viewer. Uncheck to remove.</p>
+          {catalog.length === 0 && <p role="status">Refresh streams on the viewing screen to share its available games here.</p>}
+          <div className="remote-catalog-list">
+            {matchingChoices.map((stream) => <label className="remote-catalog-choice" key={stream.slug}>
+              <input type="checkbox" checked={streams.some((loaded) => loaded.slug === stream.slug)}
+                onChange={(event) => void send({ type: "set-stream-loaded", slug: stream.slug, loaded: event.target.checked },
+                  event.target.checked ? `Loaded ${stream.title}` : `Removed ${stream.title}`)} />
+              <span>{stream.title}{" "}<small>{stream.category}</small></span>
+            </label>)}
+          </div>
+          {choices.length > 0 && matchingChoices.length === 0 && <p role="status">No matching streams.</p>}
+        </fieldset>
         <fieldset className="remote-settings" disabled={!ready || pending}>
           <legend>Viewing controls</legend>
           <label className="remote-layout-label">Layout

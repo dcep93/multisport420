@@ -6,7 +6,15 @@ publishes the viewer's current lineup and spotlight, replacing any existing room
 state. **Open remote** and **Share link** provide the phone URL.
 
 `/remote` connects to the default room; `/remote/:roomId` connects to a named room.
-The phone loads only the controls, not the stream catalog, players, or game logs.
+The phone loads controls and the viewer's shared stream catalog from Firebase,
+not stream-provider pages, players, or game logs. **Loaded streams** lets you
+search by team, matchup, or league and check/uncheck streams to add/remove them
+on every viewer in the room. The viewer shares all available categories on Join
+and updates the catalog when its stream list refreshes. Loaded streams remain
+removable even if they disappear from the catalog. An older viewer without a
+shared catalog needs to reload the app and rejoin before the phone can add games.
+Selection uses explicit load/unload transactions, so retrying a selection cannot
+accidentally toggle it off or replace other simultaneous lineup changes.
 Tap a bubble to spotlight its stream; tap the spotlight again to toggle mute.
 **Refresh spotlight log** matches the viewer's `0` shortcut. Mute uses the same
 existing player/extension integration as the keyboard; the remote reports a

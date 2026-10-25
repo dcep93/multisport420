@@ -29,6 +29,7 @@ it("publishes layout, explicit sides and actual audio choice on joining, then re
   fireEvent.change(view.getByRole("textbox", { name: "Room ID (optional)" }), { target: { value: "layout-test" } });
   fireEvent.click(view.getByRole("button", { name: "Join", exact: true }));
   const published = fixture.connection.connect.mock.calls[0][1] as RoomState;
+  expect(published.availableStreams).toEqual(fixture.streams);
   expect(published).toMatchObject({ layout: "dual", leftSlug: "A", rightSlug: "C", audioSlug: "C", audioMuted: false });
   fixture.connection.roomId = "layout-test";
   fixture.connection.status = "connected";
