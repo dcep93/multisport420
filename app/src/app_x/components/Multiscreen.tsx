@@ -33,6 +33,7 @@ export default function Multiscreen<T>(props: {
 }) {
   const { containerRef, focusedSlug, host, onFocus, onRemove, streams, layout = "spotlight" } = props;
   const displayLogs = props.displayLogs && layout === "spotlight";
+  const effectiveDelayMs = streams.some((stream) => !isFantasyScoreboard(stream)) ? props.logDelayMs : 0;
   const focusedStream =
     streams.find((stream) => stream.slug === focusedSlug) ?? streams[0];
   const [lastAudioSlug, setLastAudioSlug] = useState<StreamSlug>();
@@ -85,7 +86,7 @@ export default function Multiscreen<T>(props: {
             audioMuted={props.presentation?.audioMuted}
             showStreamSelector={props.showStreamSelector ?? false}
             displayLogs={displayLogs}
-            logDelayMs={props.logDelayMs}
+            logDelayMs={effectiveDelayMs}
             isFocused={stream.slug === (layout === "grid" ? audioSlug : focusedStream?.slug)}
             isAudioFocused={stream.slug === audioSlug}
             shouldRefreshLog={stream.slug === props.logRefreshSlug}

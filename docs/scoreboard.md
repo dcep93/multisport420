@@ -22,7 +22,12 @@ this historical identifier is retained for saved links and rooms only.
 ## Display and refresh
 
 The scoreboard uses the same **log / scoreboard delay ms** setting as play-by-play
-(30 seconds by default), even when logs are hidden. Each received update waits
+(30 seconds by default) while any non-scoreboard stream is open, even when logs
+are hidden or the scoreboard is focused. With only the scoreboard open, updates
+appear immediately. Closing the last video immediately shows the latest received
+data and clears queued updates. Opening a video restores the configured delay
+and starts a fresh wait; the delay setting itself is preserved.
+While a video is open, each received update waits
 that duration before appearing, including initial scores, projections, rankings,
 probabilities and NFL activity highlights. Polling continues normally; manual
 refresh also respects the scoreboard delay. The Updated time belongs to the

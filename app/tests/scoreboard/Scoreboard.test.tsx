@@ -4,18 +4,68 @@ import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { StrictMode } from "react";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import Scoreboard from "../../src/app_x/scoreboard/Scoreboard";
+import Multiscreen from "../../src/app_x/components/Multiscreen";
+import { FANTASY_SCOREBOARD } from "../../src/app_x/lib/fantasyScoreboard";
+import type { Stream } from "../../src/app_x/config/types";
 import { extensionHelper } from "../../src/app_x/scoreboard/extension";
 import { Leaderboards, MatchupRoster, Roster } from "../../src/app_x/scoreboard/PlayerDetails";
 import type { RosterPlayer } from "../../src/app_x/scoreboard/players";
 
 vi.mock("../../src/app_x/scoreboard/extension", () => ({ extensionHelper: vi.fn() }));
 vi.mock("../../src/app_x/scoreboard/useLiveScoreboard", () => ({ useLiveScoreboard: (snapshot: unknown) => ({ snapshot }) }));
+vi.mock("../../src/app_x/hooks/useStreamLog", () => ({ useStreamLog: () => ({}) }));
 const send = vi.mocked(extensionHelper);
 const originalParent = window.parent;
 const response = () => ({ fetched: 1, year: 2026, fetchedAt: Date.now(), data: {
   id: 367176096, scoringPeriodId: 1, teams: [{ id: 1, name: "Alpha" }, { id: 2, name: "Bravo" }],
   schedule: [{ matchupPeriodId: 1, home: { teamId: 1, totalPointsLive: 80, totalProjectedPointsLive: 120 }, away: { teamId: 2, totalPointsLive: 75, totalProjectedPointsLive: 110 } }],
 } });
+
+it("bypasses delay only while no video streams are open and restores the configured delay", async () => {
+  vi.useFakeTimers();
+  const a = { slug: "a", title: "Video A", category: "NFL", espn_id: -1, raw_url: "https://example.com/a" };
+  const b = { ...a, slug: "b", title: "Video B" };
+  const host = { getLeagueCategories: () => ["NFL"], getStreams: async () => [a, b],
+    getIframeParams: async () => ({}), getIframeDocStrElement: () => <html><body>Video</body></html> };
+  const show = (streams: Stream[]) => <Multiscreen host={host} streams={streams}
+    displayLogs={false} logDelayMs={30_000} focusedSlug={FANTASY_SCOREBOARD.slug}
+    logRefreshRequestId={0} muteToggleRequestId={0}
+    onRefreshStream={async () => null} onRemove={vi.fn()} onFocus={vi.fn()} />;
+  const view = render(show([FANTASY_SCOREBOARD]));
+  await act(async () => {});
+  expect(screen.getByText("80.00")).toBeInTheDocument();
+  expect(screen.queryByText("Waiting for scoreboard delay…")).not.toBeInTheDocument();
+
+  view.rerender(show([FANTASY_SCOREBOARD, a, b]));
+  await act(async () => {});
+  expect(screen.getByText("Waiting for scoreboard delay…")).toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+  expect(screen.getByText("80.00")).toBeInTheDocument();
+  const updated = response();
+  updated.data.schedule[0].home.totalPointsLive = 82;
+  send.mockResolvedValue(updated);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Refresh" })); });
+  expect(screen.queryByText("82.00")).not.toBeInTheDocument();
+
+  view.rerender(show([FANTASY_SCOREBOARD, b]));
+  expect(screen.queryByText("82.00")).not.toBeInTheDocument();
+  view.rerender(show([FANTASY_SCOREBOARD]));
+  expect(screen.getByText("82.00")).toBeInTheDocument();
+  const latest = response();
+  latest.data.schedule[0].home.totalPointsLive = 84;
+  send.mockResolvedValue(latest);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Refresh" })); });
+  expect(screen.getByText("84.00")).toBeInTheDocument();
+
+  view.rerender(show([FANTASY_SCOREBOARD, a]));
+  await act(async () => {});
+  expect(screen.getByText("Waiting for scoreboard delay…")).toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+  expect(screen.queryByText("84.00")).not.toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(screen.getByText("84.00")).toBeInTheDocument();
+  expect(screen.queryByText("82.00")).not.toBeInTheDocument();
+});
 
 it("holds initial and manually refreshed scores for the configured delay", async () => {
   vi.useFakeTimers();
