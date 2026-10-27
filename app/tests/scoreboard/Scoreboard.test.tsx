@@ -16,6 +16,26 @@ const response = () => ({ fetched: 1, year: 2026, fetchedAt: Date.now(), data: {
   id: 367176096, scoringPeriodId: 1, teams: [{ id: 1, name: "Alpha" }, { id: 2, name: "Bravo" }],
   schedule: [{ matchupPeriodId: 1, home: { teamId: 1, totalPointsLive: 80, totalProjectedPointsLive: 120 }, away: { teamId: 2, totalPointsLive: 75, totalProjectedPointsLive: 110 } }],
 } });
+
+it("holds initial and manually refreshed scores for the configured delay", async () => {
+  vi.useFakeTimers();
+  const ready = vi.fn();
+  render(<Scoreboard delayMs={30_000} onRefreshReady={ready} />);
+  await act(async () => {});
+  expect(screen.getByText("Waiting for scoreboard delay…")).toBeInTheDocument();
+  expect(screen.queryByText("80.00")).not.toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+  expect(screen.getByText("80.00")).toBeInTheDocument();
+  const refreshed = response();
+  refreshed.data.schedule[0].home.totalPointsLive = 82;
+  send.mockResolvedValue(refreshed);
+  await act(async () => { await ready.mock.lastCall![0](); });
+  expect(screen.queryByText("82.00")).not.toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(29_999); });
+  expect(screen.queryByText("82.00")).not.toBeInTheDocument();
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(screen.getByText("82.00")).toBeInTheDocument();
+});
 beforeEach(() => { send.mockReset(); send.mockResolvedValue(response()); window.history.replaceState({}, "", "/scoreboard"); });
 afterEach(() => {
   cleanup();

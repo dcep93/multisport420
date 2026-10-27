@@ -4,6 +4,7 @@ import { guillotine, headToHead, type Mode, type Team } from "./data";
 import Autoscroller from "./Autoscroller";
 import { Leaderboards, MatchupRoster, Roster } from "./PlayerDetails";
 import { useLiveScoreboard } from "./useLiveScoreboard";
+import { useDelayedScoreboard } from "./useDelayedScoreboard";
 import "./scoreboard.css";
 
 const points = (value: number | null) => value === null ? "—" : value.toFixed(2);
@@ -78,13 +79,14 @@ function CompactMatchup({ teams, probability }: { teams: Team[]; probability: nu
 }
 
 export type ScoreboardProps = {
+  delayMs?: number;
   spotlight?: boolean;
   onRefreshReady?: (refresh: () => Promise<void>) => void;
   refreshRequestId?: number;
   shouldRefresh?: boolean;
 };
 
-export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRequestId = 0, shouldRefresh = false }: ScoreboardProps) {
+export default function Scoreboard({ delayMs = 0, spotlight = true, onRefreshReady, refreshRequestId = 0, shouldRefresh = false }: ScoreboardProps) {
   const [query] = useState(() => new URLSearchParams(window.location.search));
   const [controller] = useState(() => createScoreboardController({
     ...(query.has("leagueId") ? { leagueId: query.get("leagueId")! } : {}),
@@ -92,7 +94,7 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
   }));
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const live = useLiveScoreboard(state.snapshot);
-  const snapshot = live.snapshot;
+  const snapshot = useDelayedScoreboard(live.snapshot, delayMs);
   const [selectedMode, setSelectedMode] = useState<Mode | null>(() => {
     const mode = query.get("mode");
     return mode === "head-to-head" || mode === "guillotine" ? mode : null;
@@ -138,9 +140,9 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
       </Autoscroller>
       {spotlight && <Leaderboards snapshot={snapshot} />}
     </div>}
-    {!state.snapshot && <section className="scoreboard-empty">
-      <h2>{state.loading ? "Connecting to your league…" : "Scoreboard unavailable"}</h2>
-      {!state.error && <p>Open your ESPN league in Chrome with the Multisport420 extension enabled.</p>}
+    {!snapshot && <section className="scoreboard-empty">
+      <h2>{state.snapshot ? "Waiting for scoreboard delay…" : state.loading ? "Connecting to your league…" : "Scoreboard unavailable"}</h2>
+      {!state.snapshot && !state.error && <p>Open your ESPN league in Chrome with the Multisport420 extension enabled.</p>}
     </section>}
     <footer className="scoreboard-toolbar">
       <div className="scoreboard-context">
@@ -157,7 +159,7 @@ export default function Scoreboard({ spotlight = true, onRefreshReady, refreshRe
         </button>}
       </div>
       <div className="scoreboard-status" aria-live="polite">
-        {state.snapshot && <span>Updated {new Date(state.snapshot.fetchedAt).toLocaleTimeString()}</span>}
+        {snapshot && <span>Updated {new Date(snapshot.fetchedAt).toLocaleTimeString()}</span>}
         {state.error && state.snapshot && <strong>Showing previous data</strong>}
         {live.error && <span>{live.error}</span>}
         {mode === "guillotine" && elimination?.thunderdome && <strong className="scoreboard-thunderdome">THUNDERDOME · {elimination.teams.length} at risk{elimination.hidden ? ` · ${elimination.hidden} below 1%` : ""}</strong>}

@@ -21,6 +21,15 @@ this historical identifier is retained for saved links and rooms only.
 
 ## Display and refresh
 
+The scoreboard uses the same **log / scoreboard delay ms** setting as play-by-play
+(30 seconds by default), even when logs are hidden. Each received update waits
+that duration before appearing, including initial scores, projections, rankings,
+probabilities and NFL activity highlights. Polling continues normally; manual
+refresh also respects the scoreboard delay. The Updated time belongs to the
+displayed scores. Changing the delay, league or week clears pending updates and
+starts a fresh delay; zero displays updates immediately. ESPN and polling latency
+are additional to this intentional delay.
+
 Matchups show names, actual points, projected final points in parentheses, and
 win probability. In expanded head-to-head matchups, the favorite's percentage
 is replaced by one 👑 per consecutive fantasy win they **would have if they won

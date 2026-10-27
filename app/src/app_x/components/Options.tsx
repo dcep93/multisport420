@@ -114,6 +114,7 @@ export default function Options(props: {
           <input
             className="option-input"
             aria-label="log delay ms"
+            title="Delay for play-by-play and fantasy scoreboard updates"
             value={formatNumberWithSeparators(props.logDelayMs)}
             inputMode="numeric"
             onChange={(event) => {
@@ -124,7 +125,7 @@ export default function Options(props: {
           />
         </div>
         <div className="option-row-label">
-          <span>log delay ms</span>
+          <span>log / scoreboard delay ms</span>
           <input
             checked={props.displayLogs}
             type="checkbox"
