@@ -19,6 +19,18 @@ After updating an existing unpacked installation, click **Reload** on the
 extension card and refresh the viewing page. Deploying the website does not
 update your locally installed extension. The phone remote needs no extension.
 
+## Taifood player audio (0.3.10)
+
+Version **0.3.10** adds `https://taifood-blog.asia/embed/*` to the existing
+media controller and popup guard. These players now receive spotlight mute/unmute
+commands instead of all playing audibly at once. Both Stream 1 and Stream 2 paths
+are covered. Audio and popup control remain limited to players embedded inside
+Multisport420 or localhost; standalone player pages are unaffected.
+
+Update or reload the extension, then refresh the Multisport420 viewing page.
+Pushing the repository or deploying the website does not update an installed
+extension. Web Store installations require a published extension update.
+
 ## Refresh audio recovery (0.3.9)
 
 Version **0.3.9** follows replacement video elements and restores the latest app

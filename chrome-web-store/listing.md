@@ -25,7 +25,8 @@ controls and its native fantasy scoreboard.
 
 ### Host-access justification
 
-The extension runs on `embedsports.top`, `embed.st`, and `pooembed.eu` player frames used by
+The extension runs on `embedsports.top`, `embed.st`, `pooembed.eu`, and
+`taifood-blog.asia/embed/*` player frames used by
 Multisport420. Access is required to control playback and mute state, forward
 player commands, and block intrusive popup elements.
 
