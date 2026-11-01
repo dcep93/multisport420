@@ -34,6 +34,11 @@ function player(slug, ancestors = ["https://multisport420.web.app"]) {
         data: { source: "multisport420-app", type: "multisport420:set-muted", muted },
       }));
     },
+    restart(event, providerMuted) {
+      const video = window.document.querySelector("video");
+      video.muted = providerMuted;
+      video.dispatchEvent(new window.Event(event));
+    },
     close() { observers.forEach(observer => observer.disconnect()); window.close(); },
   };
 }
@@ -68,4 +73,31 @@ test("new provider registration leaves standalone player audio unchanged", () =>
     assert.equal(standalone.video.muted, false);
     assert.equal(standalone.messages.length, 0);
   } finally { standalone.close(); }
+});
+
+test("same-element recovery restores the latest audio choice at each playback stage", () => {
+  const stream = player("bal-buf");
+  try {
+    const original = stream.video;
+    for (const muted of [true, false, true]) {
+      stream.mute(muted);
+      for (const event of ["loadstart", "loadedmetadata", "canplay", "play", "playing"]) {
+        stream.restart(event, !muted);
+        assert.equal(stream.video, original);
+        assert.equal(stream.video.muted, muted, `${event} must restore the latest app mute state`);
+      }
+    }
+  } finally { stream.close(); }
+});
+
+test("recovery handling does not override native volume controls between restarts", () => {
+  const stream = player("bal-buf");
+  try {
+    stream.mute(false);
+    stream.restart("volumechange", true);
+    assert.equal(stream.video.muted, true);
+    stream.mute(true);
+    stream.restart("volumechange", false);
+    assert.equal(stream.video.muted, false);
+  } finally { stream.close(); }
 });

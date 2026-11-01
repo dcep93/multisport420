@@ -3,6 +3,7 @@
   const APP_MESSAGE_SOURCE = "multisport420-app";
   const SET_MUTED = "multisport420:set-muted";
   const TOGGLE_MUTE = "multisport420:toggle-mute";
+  const PLAYBACK_EVENTS = ["loadstart", "loadedmetadata", "canplay", "play", "playing"];
   const ancestorOrigins = Array.from(window.location.ancestorOrigins ?? []);
   const isDescendantOfMultisportHost = ancestorOrigins.some((origin) =>
     HOST_HOSTNAMES.has(new URL(origin).hostname),
@@ -49,13 +50,20 @@
     const element = document.querySelector("video");
     const video = element instanceof HTMLVideoElement ? element : null;
     if (video === currentVideo) return;
-    if (currentVideo) currentVideo.muted = true;
+    if (currentVideo) {
+      for (const type of PLAYBACK_EVENTS) currentVideo.removeEventListener(type, applyRequestedMutedState);
+      currentVideo.muted = true;
+    }
     currentVideo = video;
     if (video) init(video);
   }
 
   function init(video) {
     currentVideo = video;
+    // Recovery can reuse the same element and reset its mute property after
+    // initialization. Reapply at playback boundaries without fighting ordinary
+    // native volume changes between restarts.
+    for (const type of PLAYBACK_EVENTS) video.addEventListener(type, applyRequestedMutedState);
     video.autoplay = true;
     video.playsInline = true;
     applyRequestedMutedState();

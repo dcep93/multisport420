@@ -195,6 +195,20 @@ test("commands reach replacements even before observer delivery, including remov
   assert.equal(replacement.muted, true);
 });
 
+test("replacements restore audio after initialization and release listeners when detached", () => {
+  const h = harness();
+  h.send(SET_MUTED, false);
+  assert.ok(h.video.listeners.size > 0);
+  const replacement = h.replaceVideo();
+  assert.equal(h.video.listeners.size, 0);
+  assert.ok(replacement.listeners.size > 0);
+  replacement.manuallyMute(true);
+  replacement.listeners.get("playing")();
+  assert.equal(replacement.muted, false);
+  h.removeVideo();
+  assert.equal(replacement.listeners.size, 0);
+});
+
 test("real DOM replacement restores spotlight audio without another command", async () => {
   const { JSDOM } = require("../app/node_modules/jsdom");
   const dom = new JSDOM("<video muted></video>", { runScripts: "outside-only" });

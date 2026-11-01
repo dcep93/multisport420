@@ -19,6 +19,17 @@ After updating an existing unpacked installation, click **Reload** on the
 extension card and refresh the viewing page. Deploying the website does not
 update your locally installed extension. The phone remote needs no extension.
 
+## Restart audio recovery (0.3.11)
+
+Version **0.3.11** restores the latest app mute state when a player reloads or
+resumes playback using the same video element. Background streams stay muted
+after recovery and the selected stream keeps its audio. This also handles
+providers resetting mute after a replacement video was initially attached.
+Native mute changes remain available between playback restarts; the next
+restart reapplies the latest app selection.
+
+Update or reload the extension, then refresh Multisport420 to activate the fix.
+
 ## Taifood player audio (0.3.10)
 
 Version **0.3.10** adds `https://taifood-blog.asia/embed/*` to the existing
