@@ -154,6 +154,7 @@
   cursor: pointer;
   touch-action: manipulation;
 }
+.remote-catalog-toggle { margin-bottom: 16px; }
 .remote-refresh span { margin-right: 6px; font-size: 1.2rem; }
 .remote-feedback { min-height: 2.5em; color: var(--ww-accent-cyan); text-align: center; font-size: .8rem; line-height: 1.5; }
 .remote-notice { padding: 20px; border: 1px dashed var(--ww-border-strong); border-radius: 20px; margin-bottom: 20px; }
