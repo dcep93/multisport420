@@ -110,7 +110,7 @@
 .scoreboard-player-slot { width: 30px; flex-shrink: 0; font-size: 9px; font-weight: 400; color: var(--scoreboard-muted); }
 .scoreboard-player-projection { font-size: .9em; color: var(--scoreboard-muted); }
 .scoreboard-bench { color: #beab98; }
-.scoreboard-reserve-start > * { border-top: 1px solid rgba(214, 181, 148, .17); padding-top: 15px !important; }
+.scoreboard-reserve-start > * { border-top: 1px solid rgba(214, 181, 148, .17); padding-top: 32px !important; }
 .scoreboard-detail-empty { color: var(--scoreboard-muted); font-size: 11px; line-height: 1.6; }
 .scoreboard-detail-warning { color: #dbb7a3; font-size: 11px; line-height: 1.6; }
 .scoreboard-leaderboards { padding: 24px 18px; overflow-y: auto; min-width: 0; background: #211812; border: 1px solid var(--scoreboard-rule); border-radius: 12px; scrollbar-width: thin; scrollbar-color: #574334 transparent; }
