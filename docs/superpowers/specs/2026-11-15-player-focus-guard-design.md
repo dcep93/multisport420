@@ -49,3 +49,19 @@ Run app tests, TypeScript/build, lint, and the existing player browser tests.
 Scope and requirements checked: website only, no extension changes, no layout or
 room-state redesign, no approval pauses remaining. Preserve the existing unrelated
 extension/screenshot.png change. Work on main, commit task-owned changes, and push.
+
+## Verification results
+
+- Before implementation, the nested cross-origin browser regression failed because
+  the app shell never regained focus. It passes with the guard installed.
+- All 389 app tests pass, including 15 focus-guard lifecycle cases.
+- All four new Chromium browser tests pass: repeated focus grabs and number
+  selection/mute, nested navigation and full player refresh, mouse controls and
+  scroll/input preservation, and switching browser tabs.
+- Production TypeScript/Vite build passes. ESLint passes for every changed code
+  file. Full-repository lint reports 65 errors in unchanged files.
+- The five existing playerControls browser tests fail at closing/promoting a
+  spotlight. Running those same tests with the original MultisportApp restored
+  reproduces all five failures at the same assertions; these are baseline issues.
+- Browser tab reactivation is covered, but native OS Alt-Tab was not automated.
+  Unit tests separately verify hidden/unfocused-document guards and focus events.

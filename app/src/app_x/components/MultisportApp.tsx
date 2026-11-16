@@ -11,6 +11,7 @@ import PasswordGate from "./PasswordGate";
 import RoomControls from "./RoomControls";
 import ViewingControls from "./ViewingControls";
 import { useViewingPreferences } from "../hooks/useViewingPreferences";
+import usePlayerFocusGuard from "../hooks/usePlayerFocusGuard";
 import { presentationOf, reduceRoom, type Presentation, type RoomAction } from "../lib/roomState";
 import { hasMultisport420Extension, isFantasyScoreboard, subscribeMultisport420Extension, withFantasyScoreboard } from "../lib/fantasyScoreboard";
 
@@ -74,6 +75,8 @@ export default function MultisportApp() {
     useSelectedStreamIds(allStreams, room.room?.streams);
   const selectedStreams = room.room?.streams ?? localSelectedStreams;
   const selectedSlugs = room.room ? room.room.streams.map((stream) => stream.slug) : localSelectedSlugs;
+  const shellRef = useRef<HTMLElement | null>(null);
+  usePlayerFocusGuard(shellRef, isAuthorized && selectedStreams.length > 0);
   const multiscreenRef = useRef<HTMLElement | null>(null);
   const hasScrolledFromInitialHashRef = useRef(false);
 
@@ -247,7 +250,7 @@ export default function MultisportApp() {
   }
 
   return (
-    <main className="multisport-shell">
+    <main className="multisport-shell" ref={shellRef} tabIndex={-1}>
       <Menu
         viewingControls={<ViewingControls {...presentation}
           onLayoutChange={(layout) => actOnRoom({ type: "layout", layout })}
