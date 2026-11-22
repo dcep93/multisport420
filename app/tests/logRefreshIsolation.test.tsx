@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-it("clicking a log fetches only its stream and preserves other streams' delayed rendering", async () => {
+it.each(["click", "Enter", " "])("%s on a log fetches only its stream and preserves other streams' delayed rendering", async activation => {
   const { container } = render(<Multiscreen {...base} />);
   await advance(30_000);
   const panels = container.querySelectorAll(".multisport-log");
@@ -50,9 +50,16 @@ it("clicking a log fetches only its stream and preserves other streams' delayed 
   await advance(10_000); // Both streams have newer data queued behind the delay.
   const otherHtml = panels[1].innerHTML;
   fetchLog.mockClear();
-  await act(async () => { fireEvent.click(panels[0]); });
-  expect(fetchLog.mock.calls.map(([stream]) => stream.slug)).toEqual(["a"]);
+  let resolveRefresh!: (value: LogType) => void;
+  fetchLog.mockReturnValueOnce(new Promise(resolve => { resolveRefresh = resolve; }));
+  if (activation === "click") fireEvent.click(panels[0]);
+  else fireEvent.keyDown(panels[0], { key: activation });
   expect(panels[0].textContent).toContain("a play 2");
+  expect(panels[1].innerHTML).toBe(otherHtml);
+  revision = 3;
+  await act(async () => { resolveRefresh(snapshot("a")); });
+  expect(fetchLog.mock.calls.map(([stream]) => stream.slug)).toEqual(["a"]);
+  expect(panels[0].textContent).toContain("a play 3");
   expect(panels[1].innerHTML).toBe(otherHtml);
   await advance(29_999);
   expect(panels[1].textContent).toContain("b play 1");

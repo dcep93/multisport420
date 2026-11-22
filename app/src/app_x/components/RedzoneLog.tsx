@@ -3,8 +3,8 @@ import { useRedzoneLog } from "../hooks/useRedzoneLog";
 
 type Anchor = { key: string; offset: number };
 
-export default function RedzoneLog({ refreshRequestId = 0 }: { refreshRequestId?: number }) {
-  const { rows, loading, activeGameCount, errorMessage } = useRedzoneLog(refreshRequestId);
+export default function RedzoneLog({ delayMs = 0, refreshRequestId = 0 }: { delayMs?: number; refreshRequestId?: number }) {
+  const { rows, loading, waitingForDelay, activeGameCount, errorMessage, refresh } = useRedzoneLog(delayMs, refreshRequestId);
   const region = useRef<HTMLDivElement>(null);
   const anchor = useRef<Anchor | null>(null);
   const scrollTop = useRef(0);
@@ -30,8 +30,11 @@ export default function RedzoneLog({ refreshRequestId = 0 }: { refreshRequestId?
     capture();
   }, [rows, errorMessage, loading, activeGameCount]);
 
-  const emptyMessage = loading ? "Loading live plays…" : activeGameCount === 0 ? "No NFL games are live." : "Waiting for live plays…";
-  return <div ref={region} className="redzone-log" role="region" aria-label="Live NFL RedZone plays" tabIndex={0} onScroll={capture}>
+  const emptyMessage = waitingForDelay ? "Waiting for delayed live plays… Click to show latest." : loading ? "Loading live plays…" : activeGameCount === 0 ? "No NFL games are live." : "Waiting for live plays…";
+  return <div ref={region} className="redzone-log" role="region" aria-label="Live NFL RedZone plays" tabIndex={0} onScroll={capture} onClick={refresh}
+    onKeyDown={event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); refresh(); }
+    }}>
     {rows.map(row => <div className={row.bigPlay ? "redzone-play redzone-play-big" : "redzone-play"} data-play-key={row.key} key={row.key}>
       {row.matchup && <div className="redzone-play-matchup">{row.matchup}</div>}
       <div className="redzone-play-text">{row.text}</div>

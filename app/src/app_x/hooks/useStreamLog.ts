@@ -17,6 +17,8 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
   const redzone = isRedzoneStream(stream);
   const key = JSON.stringify([slug, category, espn_id, delay, redzone]);
   const [state, setState] = useState<LogState>({ key: "", log: null, error: "", bigPlay: false });
+  // Record scope changes even before a response arrives, including A → B → A.
+  if (state.key !== key) setState({ key, log: null, error: "", bigPlay: false });
   const refreshRef = useRef<() => Promise<void>>(async () => {});
   const refresh = useCallback(() => refreshRef.current(), []);
 
@@ -25,6 +27,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
     if (redzone || !config || espn_id <= 0) return;
     let active = true;
     let latestTimestamp = -Infinity;
+    let latestLog: LogType | null = null;
     let requestSequence = 0;
     let acceptedSequence = 0;
     let epoch = 0;
@@ -76,6 +79,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
         if (!active || requestEpoch !== epoch || sequence < acceptedSequence || !log || log.timestamp < latestTimestamp) return;
         acceptedSequence = sequence;
         latestTimestamp = log.timestamp;
+        latestLog = log;
         const plays = log.playByPlay.flatMap(drive => (drive.plays ?? []).map(play => ({ play, team: drive.team })));
         // The spotlight clock follows the latest accepted data, not delayed log/alert timers.
         update({
@@ -117,7 +121,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
         }
         if (immediate) for (const { play, team } of plays) seen.add(getPlayKey(play, team));
         initialized = true;
-        if (immediate) publish(log);
+        if (immediate || delay === 0) publish(log);
         else schedule(() => publish(log), delay);
       } catch (error) {
         if (!active || requestEpoch !== epoch || sequence < acceptedSequence) return;
@@ -131,6 +135,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       refreshing = true;
       clearTimers();
       update({ bigPlay: false });
+      if (latestLog) publish(latestLog);
       try { await fetchLog(true); }
       finally { if (epoch === refreshEpoch) refreshing = false; }
     };

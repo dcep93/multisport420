@@ -205,7 +205,7 @@ function ScreenCard<T>(props: {
             aria-hidden={!showLogPanel}
           >
             <div className={`log-entry${isRedzone ? " log-entry-redzone" : ""}`}>
-              {isRedzone ? (showLogPanel && <RedzoneLog refreshRequestId={props.shouldRefreshLog ? props.logRefreshRequestId : 0} />) : <StreamLog stream={props.stream} displayedLog={log.displayedLog}
+              {isRedzone ? (showLogPanel && <RedzoneLog delayMs={props.logDelayMs} refreshRequestId={props.shouldRefreshLog ? props.logRefreshRequestId : 0} />) : <StreamLog stream={props.stream} displayedLog={log.displayedLog}
                 errorMessage={log.errorMessage} refresh={log.refresh} />}
             </div>
           </div>

@@ -9,7 +9,7 @@ const play = (id: number, game: "a" | "b") => ({ id: String(id), text: id === 80
   homeScore: game === "a" ? 20 : 14, awayScore: game === "a" ? 6 : 10,
   wallclock: new Date(Date.UTC(2026, 10, 22, 19, 0, id)).toISOString(), start: { downDistanceText: game === "a" ? "1st & 10 at MIA 48" : "2nd & 5 at KC 30", team: { id: game === "a" ? "2" : "7" }, yardsToEndzone: game === "a" ? 48 : 30 }, period: { number: 2 }, clock: { displayValue: "0:00" } });
 
-test("immediate three-line live feed supports manual reading and preserves its anchor after polling", async ({ page }) => {
+test("zero-delay three-line live feed supports manual reading and preserves its anchor after polling", async ({ page }) => {
   let cycle = 0;
   await page.clock.install();
   await page.route("**/sports/football/nfl/**", async route => {
@@ -24,7 +24,7 @@ test("immediate three-line live feed supports manual reading and preserves its a
       await route.fulfill({ json: { header: { competitions: [{ competitors: teams[game] }] }, drives: { previous: [{ id: "drive", plays }], current: { id: "drive", plays: plays.slice(-1) } } } });
     }
   });
-  await page.goto("/tests/fixtures/redzone.html");
+  await page.goto("/tests/fixtures/redzone.html?delay=0");
   const log = page.getByRole("region", { name: "Live NFL RedZone plays" });
   await expect(log.locator(".redzone-play")).toHaveCount(80);
   await expect(log.locator(".redzone-play").first()).toHaveText("BUF 20 vs MIA 6(Shotgun) J.Allen pass incomplete short right to T.Shavers.1st & 10 at MIA 48 - Q2 0:00");
@@ -84,4 +84,56 @@ test("immediate three-line live feed supports manual reading and preserves its a
   await expect(log).toBeVisible(); await expect.poll(() => cycle).toBe(5);
   await page.getByRole("button", { name: "Toggle layout" }).click();
   await expect(log).toHaveCount(0); await page.clock.runFor(20_000); expect(cycle).toBe(5);
+});
+
+
+test("configured delay queues initial and automatic rows; clicking publishes cached then fresh rows", async ({ page }) => {
+  await page.clock.install();
+  await page.clock.pauseAt(new Date());
+  let revision = 1;
+  let holdSummary = false;
+  let releaseSummary: (() => void) | undefined;
+  let summaries = 0;
+  await page.route("**/sports/football/nfl/**", async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith("scoreboard")) {
+      await route.fulfill({ json: { events: [{ id: "a", status: { type: { state: "in" } } }] } });
+      return;
+    }
+    const acceptedRevision = revision;
+    summaries++;
+    if (holdSummary) await new Promise<void>(resolve => { releaseSummary = resolve; });
+    await route.fulfill({ json: { drives: { current: { id: "drive", plays: [{ ...play(acceptedRevision, "a"), text: `Revision ${acceptedRevision}` }] } } } });
+  });
+  await page.goto("/tests/fixtures/redzone.html?delay=2000");
+  const log = page.getByRole("region", { name: "Live NFL RedZone plays" });
+  await expect(log).toContainText("Waiting for delayed live plays");
+  await page.clock.runFor(1999);
+  await expect(log.locator(".redzone-play")).toHaveCount(0);
+  await page.clock.runFor(1);
+  await expect(log).toContainText("Revision 1");
+  revision = 2;
+  const cachedResponse = page.waitForResponse(response => response.url().includes("summary") && response.status() === 200);
+  await page.clock.runFor(8000);
+  await expect.poll(() => summaries).toBe(2);
+  await (await cachedResponse).finished();
+  await expect(log).toContainText("Revision 1");
+  revision = 3;
+  holdSummary = true;
+  await log.click();
+  await expect(log).toContainText("Revision 2");
+  await expect.poll(() => releaseSummary !== undefined).toBe(true);
+  releaseSummary!();
+  await expect(log).toContainText("Revision 3");
+  holdSummary = false;
+  revision = 4;
+  const automaticResponse = page.waitForResponse(response => response.url().includes("summary") && response.status() === 200);
+  await page.clock.runFor(10_000);
+  await (await automaticResponse).finished();
+  await expect.poll(() => summaries).toBe(4);
+  await expect(log).toContainText("Revision 3");
+  await page.clock.runFor(1999);
+  await expect(log).toContainText("Revision 3");
+  await page.clock.runFor(1);
+  await expect(log).toContainText("Revision 4");
 });

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { activeRedzoneGames, isRedzoneStream, normalizeRedzonePlays, sortRedzonePlays } from "../src/app_x/lib/redzone";
 import { useRedzoneLog } from "../src/app_x/hooks/useRedzoneLog";
@@ -184,14 +184,18 @@ it("retains rows on discovery errors and reports a successful empty discovery", 
   fetchMock.mockRejectedValue(new Error("offline")); await advance(10_000); expect(result.current.rows).toHaveLength(1);
   fetchMock.mockImplementation(async () => response(board())); await advance(10_000); expect(result.current.rows).toHaveLength(0); expect(result.current.activeGameCount).toBe(0); expect(result.current.errorMessage).toBe("");
 });
-it("coalesces targeted refreshes during a cycle without overlapping requests", async () => {
-  let resolveSlow!: (value: Response) => void;
-  fetchMock.mockReturnValueOnce(new Promise(resolve => { resolveSlow = resolve; }));
-  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary()));
-  const { result, rerender } = renderHook(({ refresh }) => useRedzoneLog(refresh), { initialProps: { refresh: 0 } });
-  rerender({ refresh: 1 }); rerender({ refresh: 2 }); await advance(1000); expect(fetchMock).toHaveBeenCalledTimes(1);
-  await act(async () => { resolveSlow(response(board("a"))); });
-  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("scoreboard"))).toHaveLength(2); expect(result.current.rows).toHaveLength(1);
+it("targeted rapid refreshes abort older discovery and ignore late results", async () => {
+  let resolveOld!: (value: Response) => void;
+  fetchMock.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }));
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("fresh")));
+  const { result, rerender } = renderHook(({ refresh }) => useRedzoneLog(60_000, refresh), { initialProps: { refresh: 0 } });
+  const signal = fetchMock.mock.calls[0][1]!.signal!;
+  rerender({ refresh: 1 }); rerender({ refresh: 2 }); await advance();
+  expect(signal.aborted).toBe(true);
+  expect(fetchMock.mock.calls.filter(([url]) => String(url).includes("scoreboard"))).toHaveLength(3);
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:fresh"]);
+  await act(async () => { resolveOld(response(board("obsolete"))); });
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:fresh"]);
 });
 it("times out stalled requests, retries and aborts on unmount", async () => {
   fetchMock.mockImplementation(() => new Promise(() => {}));
@@ -235,4 +239,113 @@ it("orders missing and invalid wallclocks last with stable ties regardless of in
   const rows = normalizeRedzonePlays("a", { drives: { current: { plays: [play("z", "invalid"), play("a", null), play("b", "1000"), play("c", 2000)] } } });
   expect(sortRedzonePlays(rows).map(row => row.key)).toEqual(["a:c", "a:b", "a:a", "a:z"]);
   expect(sortRedzonePlays(rows.reverse()).map(row => row.key)).toEqual(["a:c", "a:b", "a:a", "a:z"]);
+});
+
+
+it("delays immutable aggregate snapshots without resetting the queue on every poll", async () => {
+  let revision = 1;
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary(String(revision))));
+  const { result } = renderHook(() => useRedzoneLog(30_000));
+  await advance(); expect(result.current.rows).toEqual([]);
+  revision = 2;
+  await advance(29_999); expect(result.current.rows).toEqual([]);
+  await advance(1); expect(result.current.rows.map(row => row.key)).toEqual(["a:1"]);
+  await advance(10_000); expect(result.current.rows.map(row => row.key)).toEqual(["a:2"]);
+});
+
+it.each([0, 30_000])("publishes cached rows while manual summaries wait, publishes each fresh game, then resumes %ims delay", async delay => {
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a", "b") : summary("cached")));
+  const { result } = renderHook(() => useRedzoneLog(delay)); await advance();
+  const resolvers: Record<string, (value: Response) => void> = {};
+  fetchMock.mockImplementation(async input => String(input).includes("scoreboard") ? response(board("a", "b"))
+    : new Promise(resolve => { resolvers[String(input).slice(-1)] = resolve; }));
+  act(() => result.current.refresh());
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:cached", "b:cached"]);
+  await advance();
+  await act(async () => { resolvers.a(response(summary("fresh"))); });
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:fresh", "b:cached"]);
+  await act(async () => { resolvers.b(response(summary("fresh"))); });
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a", "b") : summary("automatic")));
+  await advance(9999 + delay);
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:fresh", "b:fresh"]);
+  await advance(1);
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:automatic", "b:automatic"]);
+});
+
+it.each(["discovery", "summary"])("retains cached rows and reports a failed manual %s", async failure => {
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("cached")));
+  const { result } = renderHook(() => useRedzoneLog(60_000)); await advance();
+  fetchMock.mockImplementation(async input => {
+    if (failure === "discovery" || !String(input).includes("scoreboard")) throw new Error("offline");
+    return response(board("a"));
+  });
+  act(() => result.current.refresh());
+  expect(result.current.rows[0]?.key).toBe("a:cached");
+  await advance();
+  expect(result.current.rows[0]?.key).toBe("a:cached");
+  expect(result.current.errorMessage).not.toBe("");
+});
+
+it("restarts the normalized delay scope, aborts pending summaries and cleans every timer", async () => {
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("old")));
+  const { result, rerender, unmount } = renderHook(({ delay }) => useRedzoneLog(delay), { initialProps: { delay: 30_000 } });
+  await advance();
+  let resolveOld!: (value: Response) => void;
+  fetchMock.mockImplementation(async input => String(input).includes("scoreboard") ? response(board("a")) : new Promise(resolve => { resolveOld = resolve; }));
+  await advance(10_000);
+  const signal = fetchMock.mock.calls.at(-1)![1]!.signal!;
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("new")));
+  rerender({ delay: 60_000 });
+  expect(signal.aborted).toBe(true);
+  await act(async () => { resolveOld(response(summary("obsolete"))); });
+  await advance(59_999); expect(result.current.rows).toEqual([]);
+  await advance(1); expect(result.current.rows[0]?.key).toBe("a:new");
+  rerender({ delay: -1 }); await advance(); expect(result.current.rows[0]?.key).toBe("a:new");
+  const calls = fetchMock.mock.calls.length;
+  rerender({ delay: NaN }); await advance(); expect(fetchMock).toHaveBeenCalledTimes(calls);
+  unmount(); expect(vi.getTimerCount()).toBe(0);
+});
+
+it.each(["click", "Enter", " "])("%s on the RedZone region shows cached rows before fetching finishes", async activation => {
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("cached")));
+  render(<RedzoneLog delayMs={60_000} />); await advance();
+  const region = screen.getByRole("region");
+  expect(region.textContent).toContain("Waiting for delayed live plays");
+  fetchMock.mockImplementation(() => new Promise(() => {}));
+  if (activation === "click") fireEvent.click(region);
+  else fireEvent.keyDown(region, { key: activation });
+  expect(region.querySelector("[data-play-key]")?.getAttribute("data-play-key")).toBe("a:cached");
+});
+
+it("invalidates old summaries and their finally handlers during a slower replacement refresh", async () => {
+  let resolveOld!: (value: Response) => void;
+  let resolveFresh!: (value: Response) => void;
+  let cycle = 0;
+  fetchMock.mockImplementation(async input => {
+    if (String(input).includes("scoreboard")) {
+      cycle++;
+      if (cycle === 2) return new Promise(resolve => { resolveFresh = resolve; });
+      return response(board("a"));
+    }
+    return new Promise(resolve => { resolveOld = resolve; });
+  });
+  const { result } = renderHook(() => useRedzoneLog(30_000)); await advance();
+  const oldSignal = fetchMock.mock.calls[1][1]!.signal!;
+  await advance(7000);
+  act(() => result.current.refresh());
+  expect(oldSignal.aborted).toBe(true);
+  await act(async () => { resolveOld(response(summary("obsolete"))); });
+  await advance(3000); expect(cycle).toBe(2); // Old finally must not permit this polling tick.
+  fetchMock.mockImplementation(async () => response(summary("fresh")));
+  await act(async () => { resolveFresh(response(board("a"))); });
+  expect(result.current.rows.map(row => row.key)).toEqual(["a:fresh"]);
+});
+
+it("does not resurrect a prior delay scope when settings change back before discovery resolves", async () => {
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary("old")));
+  const { result, rerender } = renderHook(({ delay }) => useRedzoneLog(delay), { initialProps: { delay: 1000 } });
+  await advance(1000); expect(result.current.rows[0]?.key).toBe("a:old");
+  fetchMock.mockImplementation(() => new Promise(() => {}));
+  rerender({ delay: 2000 }); expect(result.current.rows).toEqual([]);
+  rerender({ delay: 1000 }); expect(result.current.rows).toEqual([]);
 });

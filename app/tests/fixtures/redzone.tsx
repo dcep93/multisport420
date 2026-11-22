@@ -9,6 +9,7 @@ const streams = [{ title: "NFL RedZone", slug: "nfl-redzone", category: "NFL", e
   { title: "Other channel", slug: "other", category: "fixture", espn_id: -1, raw_url: "fixture" }];
 const host = { getLeagueCategories: () => ["NFL"], getStreams: async () => streams, getIframeParams: async () => ({}),
   getIframeDocStrElement: () => <html><body style={{ background: "#18212a", color: "white", fontFamily: "sans-serif" }}>Fixture video</body></html> };
+const delayMs = Number(new URLSearchParams(window.location.search).get("delay") ?? 60_000);
 function Fixture() {
   const [focus, setFocus] = useState("nfl-redzone"), [logs, setLogs] = useState(true), [layout, setLayout] = useState<ViewingLayout>("spotlight");
   const [refresh, setRefresh] = useState(0), [target, setTarget] = useState("nfl-redzone");
@@ -17,8 +18,8 @@ function Fixture() {
       <button onClick={() => setLayout(value => value === "spotlight" ? "grid" : "spotlight")}>Toggle layout</button>
       <button onClick={() => { setTarget("nfl-redzone"); setRefresh(value => value + 1); }}>Refresh RedZone</button>
       <button onClick={() => { setTarget("other"); setRefresh(value => value + 1); }}>Refresh other</button>
-      <span> Log delay: 60000ms</span></div>
-    <Multiscreen host={host} streams={streams} layout={layout} displayLogs={logs} logDelayMs={60_000} focusedSlug={focus}
+      <span> Log delay: {delayMs}ms</span></div>
+    <Multiscreen host={host} streams={streams} layout={layout} displayLogs={logs} logDelayMs={delayMs} focusedSlug={focus}
       logRefreshSlug={target} logRefreshRequestId={refresh} muteToggleRequestId={0} onRefreshStream={async () => null}
       onRemove={() => {}} onFocus={setFocus} />
   </div>;

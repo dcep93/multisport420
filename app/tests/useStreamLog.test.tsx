@@ -219,3 +219,64 @@ it.each([0, 48_000, 60_000])("retracts an overturned interception and restores t
   await advance(20_000);
   expect(result.current.bigPlay).toBe(false);
 });
+
+it.each([["NFL", 60_000], ["NBA", 60_000], ["NFL", 0], ["NBA", 0]] as const)("publishes cached %s data with %ims delay before refresh resolves, then resumes delayed polling", async (category, delay) => {
+  const { result } = renderHook(() => useStreamLog({ ...stream, category }, delay));
+  await advance(0);
+  fetchLog.mockResolvedValue(log("cached", 2));
+  await advance(10_000);
+  let resolveRefresh!: (value: LogType) => void;
+  fetchLog.mockReturnValueOnce(new Promise(resolve => { resolveRefresh = resolve; }));
+  let refresh!: Promise<void>;
+  act(() => { refresh = result.current.refresh(); });
+  expect(result.current.displayedLog?.timestamp).toBe(2);
+  expect(result.current.bigPlay).toBe(false);
+  await act(async () => { resolveRefresh(log("fresh", 3)); await refresh; });
+  expect(result.current.displayedLog?.timestamp).toBe(3);
+  fetchLog.mockResolvedValue(log("automatic", 4));
+  await advance(9999 + delay);
+  expect(result.current.displayedLog?.timestamp).toBe(3);
+  await advance(1);
+  expect(result.current.displayedLog?.timestamp).toBe(4);
+});
+
+it("retains cached data when refresh fails and rejects superseded rapid refreshes", async () => {
+  const { result } = renderHook(() => useStreamLog(stream, 60_000));
+  await advance(0);
+  let resolveOld!: (value: LogType) => void;
+  let rejectNew!: (reason: Error) => void;
+  fetchLog.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }));
+  fetchLog.mockReturnValueOnce(new Promise((_, reject) => { rejectNew = reject; }));
+  let old!: Promise<void>, latest!: Promise<void>;
+  act(() => { old = result.current.refresh(); latest = result.current.refresh(); });
+  expect(result.current.displayedLog?.timestamp).toBe(1);
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  await act(async () => { rejectNew(new Error("offline")); await latest; resolveOld(log("stale", 99)); await old; });
+  expect(result.current.displayedLog?.timestamp).toBe(1);
+  expect(result.current.errorMessage).toBe("Unable to load play-by-play.");
+  error.mockRestore();
+});
+
+it("clears old cached data, publications and requests when the delay changes", async () => {
+  const { result, rerender, unmount } = renderHook(({ delay }) => useStreamLog(stream, delay), { initialProps: { delay: 60_000 } });
+  await advance(0);
+  let resolveOld!: (value: LogType) => void;
+  fetchLog.mockReturnValueOnce(new Promise(resolve => { resolveOld = resolve; }));
+  await advance(10_000);
+  fetchLog.mockResolvedValue(log("new-scope", 2));
+  rerender({ delay: 120_000 });
+  await act(async () => { resolveOld(log("obsolete", 99)); });
+  await advance(119_999);
+  expect(result.current.displayedLog).toBeNull();
+  await advance(1);
+  expect(result.current.displayedLog?.timestamp).toBe(2);
+  unmount(); expect(vi.getTimerCount()).toBe(0);
+});
+
+it("does not resurrect a prior delay scope when settings change back before fetching resolves", async () => {
+  const { result, rerender } = renderHook(({ delay }) => useStreamLog(stream, delay), { initialProps: { delay: 1000 } });
+  await advance(1000); expect(result.current.displayedLog?.timestamp).toBe(1);
+  fetchLog.mockImplementation(() => new Promise(() => {}));
+  rerender({ delay: 2000 }); expect(result.current.displayedLog).toBeNull();
+  rerender({ delay: 1000 }); expect(result.current.displayedLog).toBeNull();
+});
