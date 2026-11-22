@@ -193,7 +193,8 @@ function ScreenCard<T>(props: {
         title={titleTooltip}
       />
       <div className={screenBodyClassName}>
-        {props.displayLogs && !isScoreboard ? (
+        {/* RedZone owns its delayed feed: hide the panel without clearing its queue. */}
+        {(props.displayLogs || isRedzone) && !isScoreboard ? (
           <div
             className={[
               "log-panel",
@@ -205,7 +206,7 @@ function ScreenCard<T>(props: {
             aria-hidden={!showLogPanel}
           >
             <div className={`log-entry${isRedzone ? " log-entry-redzone" : ""}`}>
-              {isRedzone ? (showLogPanel && <RedzoneLog delayMs={props.logDelayMs} refreshRequestId={props.shouldRefreshLog ? props.logRefreshRequestId : 0} />) : <StreamLog stream={props.stream} displayedLog={log.displayedLog}
+              {isRedzone ? <RedzoneLog visible={showLogPanel} delayMs={props.logDelayMs} refreshRequestId={props.shouldRefreshLog ? props.logRefreshRequestId : 0} /> : <StreamLog stream={props.stream} displayedLog={log.displayedLog}
                 errorMessage={log.errorMessage} refresh={log.refresh} />}
             </div>
           </div>

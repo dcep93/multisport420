@@ -7,7 +7,7 @@ type Snapshot = { rows: RedzonePlay[]; loading: boolean; activeGameCount: number
 type State = Snapshot & { delay: number; waitingForDelay: boolean };
 const emptySnapshot: Snapshot = { rows: [], loading: true, activeGameCount: null, errorMessage: "" };
 
-// Mount only while the RedZone spotlight log is visible.
+// Keep mounted while the stream is loaded so hiding its panel preserves the delay queue.
 export function useRedzoneLog(delayMs = 0, refreshRequestId = 0) {
   const delay = Number.isFinite(delayMs) ? Math.max(0, delayMs) : 0;
   const [state, setState] = useState<State>({ ...emptySnapshot, delay, waitingForDelay: false });

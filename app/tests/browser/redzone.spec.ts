@@ -72,18 +72,41 @@ test("zero-delay three-line live feed supports manual reading and preserves its 
   await page.screenshot({ path: "test-results/redzone-live-log.png" });
   await page.getByRole("button", { name: "Refresh other" }).click();
   await page.clock.runFor(1000); expect(cycle).toBe(3);
+  const pollWhileHidden = async (expectedCycle: number) => {
+    for (const nextCycle of [expectedCycle - 1, expectedCycle]) {
+      await page.clock.runFor(10_000);
+      await expect.poll(() => cycle).toBe(nextCycle);
+      // Let the network finish before advancing another polling interval.
+      await expect(page.locator(".redzone-play")).toHaveCount(79 + nextCycle);
+    }
+  };
   await page.getByRole("button", { name: "Toggle logs" }).click();
   await expect(log).toHaveCount(0);
-  await page.clock.runFor(20_000); expect(cycle).toBe(3);
+  await pollWhileHidden(5);
   await page.getByRole("button", { name: "Toggle logs" }).click();
-  await expect(log).toBeVisible(); await expect.poll(() => cycle).toBe(4);
+  await expect(log).toBeVisible(); expect(cycle).toBe(5);
   await page.locator(".screen-card-secondary .screen-focus-overlay").click();
   await expect(log).toHaveCount(0);
-  await page.clock.runFor(20_000); expect(cycle).toBe(4);
+  await pollWhileHidden(7);
   await page.locator(".screen-card-secondary .screen-focus-overlay").click();
-  await expect(log).toBeVisible(); await expect.poll(() => cycle).toBe(5);
+  await expect(log).toBeVisible(); expect(cycle).toBe(7);
   await page.getByRole("button", { name: "Toggle layout" }).click();
-  await expect(log).toHaveCount(0); await page.clock.runFor(20_000); expect(cycle).toBe(5);
+  await expect(log).toHaveCount(0); await pollWhileHidden(9);
+  await page.getByRole("button", { name: "Toggle layout" }).click();
+  await log.hover();
+  await page.mouse.wheel(0, 650);
+  await expect.poll(() => log.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
+  const hiddenAnchor = await log.evaluate(element => {
+    const edge = element.getBoundingClientRect().top;
+    const row = [...element.querySelectorAll<HTMLElement>("[data-play-key]")].find(item => item.getBoundingClientRect().bottom > edge)!;
+    return { key: row.dataset.playKey!, offset: row.getBoundingClientRect().top - edge };
+  });
+  await page.locator(".screen-card-secondary .screen-focus-overlay").click();
+  await pollWhileHidden(11);
+  await page.locator(".screen-card-secondary .screen-focus-overlay").click();
+  await expect(log).toBeVisible();
+  const restoredOffset = await log.locator(`[data-play-key="${hiddenAnchor.key}"]`).evaluate(element => element.getBoundingClientRect().top - element.parentElement!.getBoundingClientRect().top);
+  expect(restoredOffset).toBeCloseTo(hiddenAnchor.offset, 0);
 });
 
 
@@ -110,8 +133,12 @@ test("configured delay queues initial and automatic rows; clicking publishes cac
   await expect(log).toContainText("Waiting for delayed live plays");
   await page.clock.runFor(1999);
   await expect(log.locator(".redzone-play")).toHaveCount(0);
+  await page.locator(".screen-card-secondary .screen-focus-overlay").click();
+  await expect(log).toHaveCount(0);
   await page.clock.runFor(1);
+  await page.locator(".screen-card-secondary .screen-focus-overlay").click();
   await expect(log).toContainText("Revision 1");
+  expect(summaries).toBe(1);
   revision = 2;
   const cachedResponse = page.waitForResponse(response => response.url().includes("summary") && response.status() === 200);
   await page.clock.runFor(8000);

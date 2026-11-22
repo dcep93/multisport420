@@ -12,6 +12,8 @@ Clicking a log immediately displays the latest accepted data already in memory, 
 
 Delay changes clear the old queue and restart the delay scope. Unmount cancels requests and timers. Rapid clicks must not allow earlier refresh completions to override later results.
 
+RedZone's feed stays mounted for the lifetime of its loaded stream, including when another stream is spotlighted, logs are hidden, or another layout is selected. Visibility changes preserve polling, cached rows, and queued publication deadlines; they must not restart the viewing delay. Hidden updates preserve the reading anchor for when the panel returns. Removing the stream still cancels its requests and timers. This supersedes the earlier live-log design's instruction to stop polling when the panel is hidden.
+
 ## Implementation
 
 Keep the latest accepted ordinary log inside its existing effect scope, independently of the displayed log. Publish that cached log when refresh begins, then retain the existing request-epoch protection and immediate-fetch path.
@@ -31,3 +33,5 @@ The request is fully covered, with no new setting or unrelated scoreboard behavi
 ## Validation results
 
 The completed implementation passes 461 unit/integration tests across 31 files, both RedZone browser tests, the production build, and targeted ESLint. Held network responses verify the cached and fetched render phases independently. Coverage includes refresh failures with visible errors, keyboard activation, resumed delays, stream isolation, and returning to a previous delay while discovery remains unresolved. The browser screenshot preserves the existing feed layout and big-play coloring.
+
+The visibility regression fix passes 464 unit/integration tests and both RedZone browser tests. Added coverage verifies unchanged delay deadlines and continued hidden polling across spotlight, log-toggle, and layout transitions, cleanup on stream removal, and restoration of the reading anchor after hidden updates.

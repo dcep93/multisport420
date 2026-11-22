@@ -6,6 +6,8 @@ import { useRedzoneLog } from "../src/app_x/hooks/useRedzoneLog";
 import { useStreamLog } from "../src/app_x/hooks/useStreamLog";
 import { fetchLeagueLog } from "../src/app_x/lib/renderLog/leagues";
 import RedzoneLog from "../src/app_x/components/RedzoneLog";
+import Multiscreen from "../src/app_x/components/Multiscreen";
+import type { ViewingLayout } from "../src/app_x/lib/viewingLayouts";
 vi.mock("../src/app_x/lib/renderLog/leagues", () => ({ leagueConfigs: { NFL: {} }, fetchLeagueLog: vi.fn() }));
 const stream = { title: "NFL RedZone", slug: "nfl-red-zone-hd", category: "NFL", espn_id: 123, raw_url: "fixture" };
 const play = (id = "1", wallclock: string | number | null = "2026-11-22T19:35:01Z", text = "(Shotgun) J.Allen pass incomplete") => ({ id, wallclock, text, start: { downDistanceText: "1st & 10 at MIA 48" }, period: { number: 2 }, clock: { displayValue: "0:00" } });
@@ -25,6 +27,42 @@ const fetchMock = vi.fn<typeof fetch>();
 async function advance(ms = 0) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 beforeEach(() => { vi.useFakeTimers(); vi.stubGlobal("fetch", fetchMock); fetchMock.mockReset(); vi.mocked(fetchLeagueLog).mockReset(); });
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it.each(["spotlight", "logs", "layout"])("keeps RedZone's delay queue and polling alive through %s visibility changes", async change => {
+  let revision = "1";
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : summary(revision)));
+  const other = { ...stream, slug: "other", title: "Other channel", category: "fixture", espn_id: -1 };
+  const host = { getLeagueCategories: () => ["NFL"], getStreams: async () => [stream, other],
+    getIframeParams: async () => ({}), getIframeDocStrElement: () => <html><body>Video</body></html> };
+  const show = (hidden = false, removed = false) => <Multiscreen host={host} streams={removed ? [other] : [stream, other]}
+    focusedSlug={hidden && change === "spotlight" ? other.slug : stream.slug}
+    displayLogs={!(hidden && change === "logs")} layout={(hidden && change === "layout" ? "grid" : "spotlight") as ViewingLayout}
+    logDelayMs={30_000} logRefreshRequestId={0} muteToggleRequestId={0}
+    onRefreshStream={async () => null} onRemove={() => {}} onFocus={() => {}} />;
+  const view = render(show());
+  await advance();
+  const region = view.container.querySelector(".redzone-log")!;
+  await advance(5000);
+  view.rerender(show(true));
+  expect(view.container.querySelector(".redzone-log")).toBe(region);
+  expect(region.closest(".log-panel")?.getAttribute("aria-hidden")).toBe("true");
+  revision = "2";
+  await advance(24_999);
+  expect(region.querySelectorAll("[data-play-key]")).toHaveLength(0);
+  await advance(1);
+  expect(region.querySelector("[data-play-key]")?.getAttribute("data-play-key")).toBe("a:1");
+  view.rerender(show());
+  expect(view.container.querySelector(".redzone-log")).toBe(region);
+  expect(region.closest(".log-panel")?.getAttribute("aria-hidden")).toBe("false");
+  await advance(9999);
+  expect(region.querySelector("[data-play-key]")?.getAttribute("data-play-key")).toBe("a:1");
+  await advance(1);
+  expect(region.querySelector("[data-play-key]")?.getAttribute("data-play-key")).toBe("a:2");
+  view.rerender(show(false, true));
+  expect(view.container.querySelector(".redzone-log")).toBeNull();
+  fetchMock.mockClear();
+  await advance(60_000);
+  expect(fetchMock).not.toHaveBeenCalled();
+});
 it.each(["NFL RedZone", "nfl red zone HD", "NFL-RED-ZONE-2", "RedZone"])('detects %s without relying on an ESPN ID', title => {
   expect(isRedzoneStream({ ...stream, title, slug: "other", espn_id: -1 })).toBe(true);
   expect(isRedzoneStream({ ...stream, title: "Live channel", slug: title.toLowerCase().replaceAll(" ", "-") })).toBe(true);
