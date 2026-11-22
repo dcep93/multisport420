@@ -1126,3 +1126,35 @@ html:has(.multisport-shell)::-webkit-scrollbar,
     display: inline-flex;
   }
 }
+
+/* RedZone is one full-height, manually scrollable feed. */
+.log-entry-redzone {
+  overflow: hidden;
+}
+
+.redzone-log {
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+}
+
+.redzone-log:focus-visible {
+  outline: 2px solid var(--ww-text-soft);
+  outline-offset: -2px;
+}
+
+.redzone-play {
+  padding: 10px 14px;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+
+.redzone-play-detail {
+  margin-top: 3px;
+  color: var(--ww-text-soft);
+  font-size: 0.85em;
+}

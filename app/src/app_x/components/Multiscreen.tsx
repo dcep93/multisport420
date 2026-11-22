@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useState, type CSSProperties, type Ref } from "react";
 import ReactDomServer from "react-dom/server";
 import type { Host, Stream, StreamSlug } from "../config/types";
+import RedzoneLog from "./RedzoneLog";
+import { isRedzoneStream } from "../lib/redzone";
 import StreamLog from "../lib/renderLog";
 import { useStreamLog } from "../hooks/useStreamLog";
 import { useScreenMuted } from "../hooks/useScreenMuted";
@@ -135,6 +137,7 @@ function ScreenCard<T>(props: {
   }, []);
   const indexedTitle = formatIndexedStreamTitle(props.stream.title, props.streamIndex);
   const isScoreboard = isFantasyScoreboard(props.stream);
+  const isRedzone = isRedzoneStream(props.stream);
   const log = useStreamLog(props.stream, props.logDelayMs,
     props.shouldRefreshLog ? props.logRefreshRequestId : 0);
   const screenBodyClassName = [
@@ -201,9 +204,9 @@ function ScreenCard<T>(props: {
               .join(" ")}
             aria-hidden={!showLogPanel}
           >
-            <div className="log-entry">
-              <StreamLog stream={props.stream} displayedLog={log.displayedLog}
-                errorMessage={log.errorMessage} refresh={log.refresh} />
+            <div className={`log-entry${isRedzone ? " log-entry-redzone" : ""}`}>
+              {isRedzone ? (showLogPanel && <RedzoneLog refreshRequestId={props.shouldRefreshLog ? props.logRefreshRequestId : 0} />) : <StreamLog stream={props.stream} displayedLog={log.displayedLog}
+                errorMessage={log.errorMessage} refresh={log.refresh} />}
             </div>
           </div>
         ) : null}

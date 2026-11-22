@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { isRedzoneStream } from "../lib/redzone";
 import type { Stream } from "../config/types";
 import { fetchLeagueLog, leagueConfigs } from "../lib/renderLog/leagues";
 import { BIG_PLAY_DURATION_MS, BIG_PLAY_WARNING_MS, getBigPlay, getPlayKey } from "../lib/renderLog/indicators";
@@ -13,14 +14,15 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
   const streamRef = useRef(stream);
   useEffect(() => { streamRef.current = stream; }, [stream]);
   const delay = Number.isFinite(delayMs) ? Math.max(0, delayMs) : 0;
-  const key = JSON.stringify([slug, category, espn_id, delay]);
+  const redzone = isRedzoneStream(stream);
+  const key = JSON.stringify([slug, category, espn_id, delay, redzone]);
   const [state, setState] = useState<LogState>({ key: "", log: null, error: "", bigPlay: false });
   const refreshRef = useRef<() => Promise<void>>(async () => {});
   const refresh = useCallback(() => refreshRef.current(), []);
 
   useEffect(() => {
     const config = leagueConfigs[category];
-    if (!config || espn_id <= 0) return;
+    if (redzone || !config || espn_id <= 0) return;
     let active = true;
     let latestTimestamp = -Infinity;
     let requestSequence = 0;
@@ -140,7 +142,7 @@ export function useStreamLog(stream: Stream, delayMs: number, refreshRequestId =
       clearTimers();
       refreshRef.current = async () => {};
     };
-  }, [category, espn_id, key, delay]);
+  }, [category, espn_id, key, delay, redzone]);
 
   const previousRefresh = useRef(refreshRequestId);
   useEffect(() => {
