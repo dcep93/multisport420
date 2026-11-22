@@ -1,4 +1,5 @@
 import type { Stream } from "../config/types";
+import { getBigPlay } from "./renderLog/indicators";
 
 export const REDZONE_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?limit=100";
 export const redzoneSummaryUrl = (gameId: string) => `https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary?event=${encodeURIComponent(gameId)}`;
@@ -15,8 +16,11 @@ type EspnTeam = { id?: string | number; abbreviation?: string; shortDisplayName?
 type EspnPlay = {
   id?: string | number;
   text?: string;
+  shortText?: string;
+  review?: { upheld?: boolean };
+  statYardage?: number;
   wallclock?: string | number | null;
-  start?: { downDistanceText?: string; team?: EspnTeam };
+  start?: { downDistanceText?: string; team?: EspnTeam; yardsToEndzone?: number };
   homeScore?: string | number | null;
   awayScore?: string | number | null;
   period?: { number?: number };
@@ -27,7 +31,7 @@ type EspnSummary = {
   header?: { competitions?: { competitors?: { homeAway?: string; team?: EspnTeam }[] }[] };
   drives?: { previous?: EspnDrive[]; current?: EspnDrive };
 };
-export type RedzonePlay = { key: string; text: string; detail: string; timestamp: number | null; matchup?: string };
+export type RedzonePlay = { key: string; text: string; detail: string; timestamp: number | null; matchup?: string; bigPlay: boolean };
 
 export function activeRedzoneGames(data: unknown): string[] {
   const scoreboard = data as EspnScoreboard | null;
@@ -95,7 +99,11 @@ export function normalizeRedzonePlays(gameId: string, data: unknown): RedzonePla
       const down = play.start?.downDistanceText ?? "";
       const time = play.clock?.displayValue;
       const clock = time ? [play.period?.number ? `Q${play.period.number}` : "", time].filter(Boolean).join(" ") : "";
-      plays.set(key, { key, text: play.text, detail: [down, clock].filter(Boolean).join(" - "), timestamp: timestamp(play.wallclock), matchup: matchupLabel(play, drive, home, away) });
+      const bigPlay = Boolean(getBigPlay({
+        text: play.text, shortText: play.shortText, reviewReversed: play.review?.upheld === false,
+        distance: play.statYardage, startYardsToEndzone: play.start?.yardsToEndzone, down, clock,
+      }));
+      plays.set(key, { key, text: play.text, detail: [down, clock].filter(Boolean).join(" - "), timestamp: timestamp(play.wallclock), matchup: matchupLabel(play, drive, home, away), bigPlay });
     });
   }
   return [...plays.values()];

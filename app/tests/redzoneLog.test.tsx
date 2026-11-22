@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
-import { act, cleanup, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { activeRedzoneGames, isRedzoneStream, normalizeRedzonePlays, sortRedzonePlays } from "../src/app_x/lib/redzone";
 import { useRedzoneLog } from "../src/app_x/hooks/useRedzoneLog";
 import { useStreamLog } from "../src/app_x/hooks/useStreamLog";
 import { fetchLeagueLog } from "../src/app_x/lib/renderLog/leagues";
+import RedzoneLog from "../src/app_x/components/RedzoneLog";
 vi.mock("../src/app_x/lib/renderLog/leagues", () => ({ leagueConfigs: { NFL: {} }, fetchLeagueLog: vi.fn() }));
 const stream = { title: "NFL RedZone", slug: "nfl-red-zone-hd", category: "NFL", espn_id: 123, raw_url: "fixture" };
 const play = (id = "1", wallclock: string | number | null = "2026-11-22T19:35:01Z", text = "(Shotgun) J.Allen pass incomplete") => ({ id, wallclock, text, start: { downDistanceText: "1st & 10 at MIA 48" }, period: { number: 2 }, clock: { displayValue: "0:00" } });
@@ -16,6 +17,7 @@ const competitors = [
   { homeAway: "away", score: "28", team: { id: "15", abbreviation: "MIA" } },
 ];
 const scoredPlay = (teamId: string | number = "2") => ({ ...play(), homeScore: 20, awayScore: 6, start: { ...play().start, team: { id: teamId } } });
+const bigPlay = () => ({ ...scoredPlay(), text: "J.Allen pass complete for 30 yards", statYardage: 30, start: { ...scoredPlay().start, yardsToEndzone: 48 } });
 const matchupSummary = (plays: unknown[], teams: unknown[] = competitors, driveTeam?: unknown) => ({
   header: { competitions: [{ competitors: teams }] }, drives: { current: { id: "d1", team: driveTeam, plays } },
 });
@@ -58,6 +60,50 @@ it("keeps missing IDs stable across drive movement/corrections and missing wallc
   const before = normalizeRedzonePlays("a", { drives: { current: { id: "d1", plays: [anonymous] } } });
   const after = normalizeRedzonePlays("a", { drives: { previous: [{ id: "d1", plays: [{ ...anonymous, text: "corrected" }] }] } });
   expect(before[0].key).toBe(after[0].key); expect(before[0].timestamp).toBeNull();
+});
+it("classifies a 30-yard gain immediately while leaving ordinary plays unhighlighted", () => {
+  const rows = normalizeRedzonePlays("a", matchupSummary([bigPlay(), { ...scoredPlay(), id: "ordinary", statYardage: 0 }]));
+  expect(rows.map(row => row.bigPlay)).toEqual([true, false]);
+});
+it.each([1, 15, 20])("excludes big plays starting %s yards from the end zone", yardsToEndzone => {
+  const event = bigPlay();
+  expect(normalizeRedzonePlays("a", matchupSummary([{ ...event, start: { ...event.start, yardsToEndzone } }]))[0].bigPlay).toBe(false);
+});
+it.each(["J.Allen pass for 30 yards. No Play.", "Touchdown nullified by penalty", "Kick returned for 30 yards, touchback"])("excludes %s", text => {
+  expect(normalizeRedzonePlays("a", matchupSummary([{ ...bigPlay(), text }]))[0].bigPlay).toBe(false);
+});
+it.each([
+  { shortText: "Pass incomplete", statYardage: 0, expected: false },
+  { shortText: "Touchdown", statYardage: 0, expected: true },
+  { shortText: undefined, statYardage: 30, expected: false },
+])("uses the surviving shortText after a reversed review: $shortText", ({ shortText, statYardage, expected }) => {
+  const event = { ...bigPlay(), text: "Original call: touchdown", review: { upheld: false }, shortText, statYardage };
+  expect(normalizeRedzonePlays("a", matchupSummary([event]))[0].bigPlay).toBe(expected);
+});
+it("recomputes a corrected duplicate so its big-play flag can be removed", () => {
+  const original = bigPlay();
+  const data = matchupSummary([{ ...original, text: "Pass incomplete", statYardage: 0 }]);
+  const rows = normalizeRedzonePlays("a", { ...data, drives: { ...data.drives, previous: [{ id: "d1", plays: [original] }] } });
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ key: "a:1", text: "Pass incomplete", bigPlay: false });
+});
+it("highlights the whole event and updates the same row when polling corrects its classification", async () => {
+  let event = bigPlay();
+  fetchMock.mockImplementation(async input => response(String(input).includes("scoreboard") ? board("a") : matchupSummary([event])));
+  render(<RedzoneLog />); await advance();
+  const row = screen.getByText(event.text).parentElement!;
+  expect(row.className).toBe("redzone-play redzone-play-big");
+  expect(row.children).toHaveLength(3);
+  expect(row.textContent).toContain("BUF 20 vs MIA 6");
+  expect(row.textContent).toContain("1st & 10 at MIA 48 - Q2 0:00");
+  event = { ...event, text: "Pass incomplete", statYardage: 0 };
+  await advance(10_000);
+  expect(screen.getByText(event.text).parentElement).toBe(row);
+  expect(row.className).toBe("redzone-play");
+  event = bigPlay();
+  await advance(10_000);
+  expect(screen.getByText(event.text).parentElement).toBe(row);
+  expect(row.className).toBe("redzone-play redzone-play-big");
 });
 it.each([["2", "BUF 20 vs MIA 6"], ["15", "MIA 6 @ BUF 20"]])("puts starting possession %s first with the correct home/away separator", (id, expected) => {
   expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay(id)]))[0].matchup).toBe(expected);

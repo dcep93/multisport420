@@ -4,9 +4,10 @@ const teams = {
   a: [{ homeAway: "home", team: { id: "2", abbreviation: "BUF" } }, { homeAway: "away", team: { id: "15", abbreviation: "MIA" } }],
   b: [{ homeAway: "home", team: { id: "12", abbreviation: "KC" } }, { homeAway: "away", team: { id: "7", abbreviation: "DEN" } }],
 };
-const play = (id: number, game: "a" | "b") => ({ id: String(id), text: id === 80 ? "(Shotgun) J.Allen pass incomplete short right to T.Shavers." : `Live play ${id}: PENALTY, administrative update or complete play text.`,
+const play = (id: number, game: "a" | "b") => ({ id: String(id), text: id === 80 ? "(Shotgun) J.Allen pass incomplete short right to T.Shavers." : id === 79 ? "B.Nix pass complete for 30 yards." : `Live play ${id}: PENALTY, administrative update or complete play text.`,
+  statYardage: id === 79 ? 30 : 0,
   homeScore: game === "a" ? 20 : 14, awayScore: game === "a" ? 6 : 10,
-  wallclock: new Date(Date.UTC(2026, 10, 22, 19, 0, id)).toISOString(), start: { downDistanceText: game === "a" ? "1st & 10 at MIA 48" : "2nd & 5 at KC 30", team: { id: game === "a" ? "2" : "7" } }, period: { number: 2 }, clock: { displayValue: "0:00" } });
+  wallclock: new Date(Date.UTC(2026, 10, 22, 19, 0, id)).toISOString(), start: { downDistanceText: game === "a" ? "1st & 10 at MIA 48" : "2nd & 5 at KC 30", team: { id: game === "a" ? "2" : "7" }, yardsToEndzone: game === "a" ? 48 : 30 }, period: { number: 2 }, clock: { displayValue: "0:00" } });
 
 test("immediate three-line live feed supports manual reading and preserves its anchor after polling", async ({ page }) => {
   let cycle = 0;
@@ -30,6 +31,14 @@ test("immediate three-line live feed supports manual reading and preserves its a
   await expect(log.locator(".redzone-play").first().locator(":scope > div")).toHaveCount(3);
   await expect(log.locator(".redzone-play").first().locator(":scope > div").first()).toHaveClass("redzone-play-matchup");
   await expect(log.locator('[data-play-key="b:79"] .redzone-play-matchup')).toHaveText("DEN 10 @ KC 14");
+  const highlighted = log.locator('[data-play-key="b:79"]');
+  const ordinary = log.locator('[data-play-key="a:80"]');
+  await expect(highlighted).toHaveClass("redzone-play redzone-play-big");
+  await expect(highlighted).toHaveCSS("background-color", "rgba(102, 95, 32, 0.78)");
+  await expect(highlighted.locator(":scope > div")).toHaveCount(3);
+  await expect(highlighted).toHaveCSS("animation-name", "none");
+  await expect(ordinary).toHaveClass("redzone-play");
+  await expect(ordinary).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   await expect(log.locator("table, .multisport-log, .autoscroller")).toHaveCount(0);
   await expect(log).not.toContainText("Drive");
   await expect(log).not.toContainText("Away");
@@ -38,6 +47,7 @@ test("immediate three-line live feed supports manual reading and preserves its a
   await expect.poll(() => log.evaluate(element => element.scrollTop)).toBeGreaterThan(100);
   const top = await log.evaluate(element => element.scrollTop);
   await page.clock.runFor(4000);
+  await expect(highlighted).toHaveCSS("background-color", "rgba(102, 95, 32, 0.78)");
   expect(await log.evaluate(element => element.scrollTop)).toBeCloseTo(top, 0);
   const anchor = await log.evaluate(element => {
     const edge = element.getBoundingClientRect().top;
@@ -46,6 +56,7 @@ test("immediate three-line live feed supports manual reading and preserves its a
   });
   await page.clock.runFor(6000);
   await expect(log.locator(".redzone-play")).toHaveCount(81);
+  await expect(highlighted).toHaveCSS("background-color", "rgba(102, 95, 32, 0.78)");
   const offset = await log.locator(`[data-play-key="${anchor.key}"]`).evaluate(element => element.getBoundingClientRect().top - element.parentElement!.getBoundingClientRect().top);
   expect(offset).toBeCloseTo(anchor.offset, 0);
   await log.focus();
@@ -55,6 +66,8 @@ test("immediate three-line live feed supports manual reading and preserves its a
   await page.getByRole("button", { name: "Refresh RedZone" }).click();
   await expect.poll(() => cycle).toBe(3);
   await expect(log.locator(".redzone-play")).toHaveCount(82);
+  await expect(highlighted).toHaveCSS("background-color", "rgba(102, 95, 32, 0.78)");
+  await expect(ordinary).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   expect(await log.evaluate(element => element.scrollTop)).toBe(0);
   await page.screenshot({ path: "test-results/redzone-live-log.png" });
   await page.getByRole("button", { name: "Refresh other" }).click();

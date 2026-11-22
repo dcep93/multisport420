@@ -32,7 +32,7 @@ export default function RedzoneLog({ refreshRequestId = 0 }: { refreshRequestId?
 
   const emptyMessage = loading ? "Loading live plays…" : activeGameCount === 0 ? "No NFL games are live." : "Waiting for live plays…";
   return <div ref={region} className="redzone-log" role="region" aria-label="Live NFL RedZone plays" tabIndex={0} onScroll={capture}>
-    {rows.map(row => <div className="redzone-play" data-play-key={row.key} key={row.key}>
+    {rows.map(row => <div className={row.bigPlay ? "redzone-play redzone-play-big" : "redzone-play"} data-play-key={row.key} key={row.key}>
       {row.matchup && <div className="redzone-play-matchup">{row.matchup}</div>}
       <div className="redzone-play-text">{row.text}</div>
       {row.detail && <div className="redzone-play-detail">{row.detail}</div>}
