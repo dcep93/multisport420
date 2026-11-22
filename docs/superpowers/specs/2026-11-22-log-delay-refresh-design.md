@@ -2,6 +2,8 @@
 
 Approved with `yesi` on 2026-11-22.
 
+This supersedes the delay-bypass behavior in the earlier RedZone live-log, matchup-label, and big-play-highlight designs. Highlighting now appears with the delayed row, or immediately when manually refreshed.
+
 ## Behavior
 
 All ordinary league logs and the RedZone full play-by-play use the configured log delay for initial loading and automatic updates. Zero delay publishes immediately. RedZone retains its combined chronological feed, matchup labels, big-play highlights, per-game error recovery, and scroll anchor.
@@ -25,3 +27,7 @@ Use controlled promises and fake timers to prove cache-first display while the n
 ## Review
 
 The request is fully covered, with no new setting or unrelated scoreboard behavior change. Observation-based delay matches existing logs and works when ESPN play timestamps are absent or corrected. No unresolved design questions remain.
+
+## Validation results
+
+The completed implementation passes 461 unit/integration tests across 31 files, both RedZone browser tests, the production build, and targeted ESLint. Held network responses verify the cached and fetched render phases independently. Coverage includes refresh failures with visible errors, keyboard activation, resumed delays, stream isolation, and returning to a previous delay while discovery remains unresolved. The browser screenshot preserves the existing feed layout and big-play coloring.
