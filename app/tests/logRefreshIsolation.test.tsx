@@ -88,3 +88,26 @@ it("successive targeted refresh commands do not refresh the previously targeted 
   expect(panels[0].textContent).toContain("a play 2");
   expect(panels[1].textContent).toContain("b play 3");
 });
+
+it("shows a failed refresh alongside cached plays and clears the error on a successful retry", async () => {
+  const { container } = render(<Multiscreen {...base} />);
+  await advance(0);
+  let rejectRefresh!: (reason: Error) => void;
+  fetchLog.mockReturnValueOnce(new Promise((_, reject) => { rejectRefresh = reject; }));
+  fireEvent.click(container.querySelector(".multisport-log-empty-refreshable")!);
+  const panel = container.querySelector(".multisport-log")!;
+  expect(panel.textContent).toContain("a play 1");
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await act(async () => { rejectRefresh(new Error("offline")); });
+    expect(panel.textContent).toContain("a play 1");
+    expect(panel.querySelector('[role="status"]')?.textContent).toBe("Unable to load play-by-play.");
+    expect(panel.querySelector(".multisport-log-link")?.getAttribute("href")).toBe("https://www.espn.com/nfl/game?gameId=1");
+    revision = 2;
+    await act(async () => { fireEvent.keyDown(panel, { key: "Enter" }); });
+    expect(panel.textContent).toContain("a play 2");
+    expect(panel.querySelector('[role="status"]')).toBeNull();
+  } finally {
+    consoleError.mockRestore();
+  }
+});

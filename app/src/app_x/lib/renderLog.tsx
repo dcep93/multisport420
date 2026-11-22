@@ -46,6 +46,7 @@ export default function StreamLog(props: {
   return (
     <LogView
       log={displayedLog}
+      errorMessage={errorMessage}
       espnGameUrl={espnGameUrl}
       leagueCategory={props.stream.category}
       onClick={() => {
@@ -61,6 +62,7 @@ function hasEspnGame(stream: Stream) {
 
 function LogView(props: {
   log: LogType;
+  errorMessage: string;
   espnGameUrl: string | null;
   leagueCategory: string;
   onClick: () => void;
@@ -96,6 +98,7 @@ function LogView(props: {
           <LogWinProbability winProbability={props.log.winProbability} />
           <LogActions espnGameUrl={props.espnGameUrl} />
         </div>
+        {props.errorMessage && <div className="multisport-log-topbar-muted" role="status">{props.errorMessage}</div>}
         <div className={`multisport-log-team-summary-row${props.leagueCategory === "NFL" ? " multisport-log-team-summary-nfl" : ""}`}>
           {props.log.teams.map((team) => (
             <div
