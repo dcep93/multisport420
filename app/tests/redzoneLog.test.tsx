@@ -11,6 +11,14 @@ const play = (id = "1", wallclock: string | number | null = "2026-11-22T19:35:01
 const summary = (id = "1") => ({ drives: { current: { id: "d1", plays: [play(id)] } } });
 const board = (...ids: string[]) => ({ events: ids.map(id => ({ id, status: { type: { state: "in", completed: false } } })) });
 const response = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
+const competitors = [
+  { homeAway: "home", score: "35", team: { id: "2", abbreviation: "BUF" } },
+  { homeAway: "away", score: "28", team: { id: "15", abbreviation: "MIA" } },
+];
+const scoredPlay = (teamId: string | number = "2") => ({ ...play(), homeScore: 20, awayScore: 6, start: { ...play().start, team: { id: teamId } } });
+const matchupSummary = (plays: unknown[], teams: unknown[] = competitors, driveTeam?: unknown) => ({
+  header: { competitions: [{ competitors: teams }] }, drives: { current: { id: "d1", team: driveTeam, plays } },
+});
 const fetchMock = vi.fn<typeof fetch>();
 async function advance(ms = 0) { await act(async () => { await vi.advanceTimersByTimeAsync(ms); }); }
 beforeEach(() => { vi.useFakeTimers(); vi.stubGlobal("fetch", fetchMock); fetchMock.mockReset(); vi.mocked(fetchLeagueLog).mockReset(); });
@@ -50,6 +58,55 @@ it("keeps missing IDs stable across drive movement/corrections and missing wallc
   const before = normalizeRedzonePlays("a", { drives: { current: { id: "d1", plays: [anonymous] } } });
   const after = normalizeRedzonePlays("a", { drives: { previous: [{ id: "d1", plays: [{ ...anonymous, text: "corrected" }] }] } });
   expect(before[0].key).toBe(after[0].key); expect(before[0].timestamp).toBeNull();
+});
+it.each([["2", "BUF 20 vs MIA 6"], ["15", "MIA 6 @ BUF 20"]])("puts starting possession %s first with the correct home/away separator", (id, expected) => {
+  expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay(id)]))[0].matchup).toBe(expected);
+});
+it("uses starting possession for turnovers instead of the ending or current team", () => {
+  const data = matchupSummary([{ ...scoredPlay("15"), end: { team: { id: "2" } } }], competitors, { id: "2" });
+  expect(normalizeRedzonePlays("a", { ...data, situation: { possession: "2" } })[0].matchup).toBe("MIA 6 @ BUF 20");
+});
+it("uses each historical event's scores instead of the latest header scores", () => {
+  const rows = normalizeRedzonePlays("a", matchupSummary([
+    { ...scoredPlay(), id: "old", homeScore: 0, awayScore: 0 },
+    { ...scoredPlay(), id: "new", homeScore: 20, awayScore: 6 },
+  ]));
+  expect(rows.map(row => row.matchup)).toEqual(["BUF 0 vs MIA 0", "BUF 20 vs MIA 6"]);
+});
+it.each([undefined, null, "", "  ", "invalid", NaN, Infinity, -1, false])("shows an em dash for invalid event score %s while retaining zero", score => {
+  expect(normalizeRedzonePlays("a", matchupSummary([{ ...scoredPlay(), homeScore: 0, awayScore: score }]))[0].matchup).toBe("BUF 0 vs MIA —");
+});
+it("accepts numeric/string team IDs and scores", () => {
+  const teams = competitors.map(item => ({ ...item, team: { ...item.team, id: Number(item.team.id) } }));
+  expect(normalizeRedzonePlays("a", matchupSummary([{ ...scoredPlay("2"), homeScore: "20", awayScore: "6" }], teams))[0].matchup).toBe("BUF 20 vs MIA 6");
+  expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay(15)]))[0].matchup).toBe("MIA 6 @ BUF 20");
+});
+it.each([undefined, "unknown"])("falls back to drive possession when starting team %s cannot be resolved", id => {
+  const event = { ...scoredPlay(), start: { team: { id } } };
+  expect(normalizeRedzonePlays("a", matchupSummary([event], competitors, { id: 15 }))[0].matchup).toBe("MIA 6 @ BUF 20");
+});
+it.each(["shortDisplayName", "displayName", "name"])("falls back to %s when abbreviation is unavailable", field => {
+  const teams = competitors.map(item => ({ ...item, team: { id: item.team.id, abbreviation: " ", [field]: item.homeAway === "home" ? "Bills" : "Dolphins" } }));
+  expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay()], teams))[0].matchup).toBe("Bills 20 vs Dolphins 6");
+});
+it("omits the label when possession or either team identity/name is unavailable", () => {
+  expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay("unknown")]))[0].matchup).toBeUndefined();
+  expect(normalizeRedzonePlays("a", summary())[0].matchup).toBeUndefined();
+  for (const homeAway of ["home", "away"]) {
+    for (const team of [{ abbreviation: "BUF" }, { id: homeAway === "home" ? "2" : "15" }, { id: undefined }]) {
+      const teams = competitors.map(item => item.homeAway === homeAway ? { ...item, team } : item);
+      const event = { ...scoredPlay(), start: {} };
+      expect(normalizeRedzonePlays("a", matchupSummary([event], teams))[0].matchup).toBeUndefined();
+      expect(normalizeRedzonePlays("a", matchupSummary([scoredPlay()], teams))[0].matchup).toBeUndefined();
+    }
+  }
+});
+it("updates corrected matchup labels under the existing deduplication key", () => {
+  const data = matchupSummary([{ ...scoredPlay("15"), homeScore: 21 }]);
+  const rows = normalizeRedzonePlays("a", { ...data, drives: { ...data.drives, previous: [{ id: "d1", plays: [scoredPlay()] }] } });
+  expect(rows).toHaveLength(1);
+  expect(rows[0].key).toBe("a:1");
+  expect(rows[0].matchup).toBe("MIA 6 @ BUF 21");
 });
 it("skips the ordinary delayed pipeline for RedZone even with a positive ESPN ID", async () => {
   renderHook(() => useStreamLog(stream, 60_000)); await advance(60_000); expect(fetchLeagueLog).not.toHaveBeenCalled();

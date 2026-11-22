@@ -1,9 +1,14 @@
 import { expect, test } from "@playwright/test";
 
-const play = (id: number) => ({ id: String(id), text: id === 80 ? "(Shotgun) J.Allen pass incomplete short right to T.Shavers." : `Live play ${id}: PENALTY, administrative update or complete play text.`,
-  wallclock: new Date(Date.UTC(2026, 10, 22, 19, 0, id)).toISOString(), start: { downDistanceText: "1st & 10 at MIA 48" }, period: { number: 2 }, clock: { displayValue: "0:00" } });
+const teams = {
+  a: [{ homeAway: "home", team: { id: "2", abbreviation: "BUF" } }, { homeAway: "away", team: { id: "15", abbreviation: "MIA" } }],
+  b: [{ homeAway: "home", team: { id: "12", abbreviation: "KC" } }, { homeAway: "away", team: { id: "7", abbreviation: "DEN" } }],
+};
+const play = (id: number, game: "a" | "b") => ({ id: String(id), text: id === 80 ? "(Shotgun) J.Allen pass incomplete short right to T.Shavers." : `Live play ${id}: PENALTY, administrative update or complete play text.`,
+  homeScore: game === "a" ? 20 : 14, awayScore: game === "a" ? 6 : 10,
+  wallclock: new Date(Date.UTC(2026, 10, 22, 19, 0, id)).toISOString(), start: { downDistanceText: game === "a" ? "1st & 10 at MIA 48" : "2nd & 5 at KC 30", team: { id: game === "a" ? "2" : "7" } }, period: { number: 2 }, clock: { displayValue: "0:00" } });
 
-test("immediate two-line live feed supports manual reading and preserves its anchor after polling", async ({ page }) => {
+test("immediate three-line live feed supports manual reading and preserves its anchor after polling", async ({ page }) => {
   let cycle = 0;
   await page.clock.install();
   await page.route("**/sports/football/nfl/**", async route => {
@@ -12,17 +17,19 @@ test("immediate two-line live feed supports manual reading and preserves its anc
       cycle++;
       await route.fulfill({ json: { events: ["a", "b"].map(id => ({ id, status: { type: { state: "in", completed: false } } })) } });
     } else {
-      const game = url.searchParams.get("event");
-      const plays = Array.from({ length: 40 }, (_, index) => play(index * 2 + (game === "a" ? 2 : 1)));
-      if (game === "a") for (let extra = 2; extra <= cycle; extra++) plays.push(play(80 + extra));
-      await route.fulfill({ json: { drives: { previous: [{ id: "drive", plays }], current: { id: "drive", plays: plays.slice(-1) } } } });
+      const game = url.searchParams.get("event") === "a" ? "a" : "b";
+      const plays = Array.from({ length: 40 }, (_, index) => play(index * 2 + (game === "a" ? 2 : 1), game));
+      if (game === "a") for (let extra = 2; extra <= cycle; extra++) plays.push(play(80 + extra, game));
+      await route.fulfill({ json: { header: { competitions: [{ competitors: teams[game] }] }, drives: { previous: [{ id: "drive", plays }], current: { id: "drive", plays: plays.slice(-1) } } } });
     }
   });
   await page.goto("/tests/fixtures/redzone.html");
   const log = page.getByRole("region", { name: "Live NFL RedZone plays" });
   await expect(log.locator(".redzone-play")).toHaveCount(80);
-  await expect(log.locator(".redzone-play").first()).toHaveText("(Shotgun) J.Allen pass incomplete short right to T.Shavers.1st & 10 at MIA 48 - Q2 0:00");
-  await expect(log.locator(".redzone-play").first().locator(":scope > div")).toHaveCount(2);
+  await expect(log.locator(".redzone-play").first()).toHaveText("BUF 20 vs MIA 6(Shotgun) J.Allen pass incomplete short right to T.Shavers.1st & 10 at MIA 48 - Q2 0:00");
+  await expect(log.locator(".redzone-play").first().locator(":scope > div")).toHaveCount(3);
+  await expect(log.locator(".redzone-play").first().locator(":scope > div").first()).toHaveClass("redzone-play-matchup");
+  await expect(log.locator('[data-play-key="b:79"] .redzone-play-matchup')).toHaveText("DEN 10 @ KC 14");
   await expect(log.locator("table, .multisport-log, .autoscroller")).toHaveCount(0);
   await expect(log).not.toContainText("Drive");
   await expect(log).not.toContainText("Away");

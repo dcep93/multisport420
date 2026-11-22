@@ -1153,6 +1153,13 @@ html:has(.multisport-shell)::-webkit-scrollbar,
   border-bottom: 1px solid rgb(255 255 255 / 8%);
 }
 
+.redzone-play-matchup {
+  margin-bottom: 4px;
+  color: var(--ww-text-strong);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
 .redzone-play-detail {
   margin-top: 3px;
   color: var(--ww-text-soft);
